@@ -16,8 +16,8 @@ steps:
         - ${DRONE_TAG}
         - latest
     when:
-      event:
-        - tag
+      ref:
+        - refs/tags/v*
 
   - name: update-deployment-yaml
     image: alpine/git
