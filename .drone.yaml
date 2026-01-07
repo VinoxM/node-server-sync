@@ -1,21 +1,24 @@
 kind: pipeline
 type: docker
 name: build-and-deploy
+
 steps:
   - name: publish-image
     image: plugins/docker
     settings:
-      repo: gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server
+      repo: 192.168.1.110:30003/vinoxm/node-server
+      insecure: true
       username:
-        from_secret: VinoxM
+        from_secret: GITEA_USERNAME
       password:
-        from_secret: 59b91e197f7b045703abc1cf86c6ba38d990ee00
+        from_secret: GITEA_PASSWORD
       tags:
         - ${DRONE_TAG}
         - latest
     when:
       event:
         - tag
+
   - name: update-deployment-yaml
     image: alpine/git
     environment:
@@ -25,15 +28,15 @@ steps:
       - mkdir -p ~/.ssh
       - echo "$SSH_KEY" > ~/.ssh/id_ed25519
       - chmod 600 ~/.ssh/id_ed25519
-      - ssh-keyscan gitea-ssh.gitea.svc.cluster.local >> ~/.ssh/known_hosts
-      - git clone ssh://git@gitea-ssh.gitea.svc.cluster.local/VinoxM/k3s-deployments.git
+      - ssh-keyscan -p 32222 192.168.1.110 >> ~/.ssh/known_hosts
+      - git clone ssh://git@192.168.1.110:32222/VinoxM/k3s-deployments.git
       - cd k3s-deployments
       - |
-        sed -i "s|image: node-server:.*|image: gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server:${DRONE_TAG}|g" node-server.yaml
+        sed -i "s|image: .*node-server:.*|image: 192.168.1.110:30003/vinoxm/node-server:${DRONE_TAG}|g" node-server.yaml
       - git config user.name "Drone CI"
       - git config user.email "drone@vinoxm.cloud"
       - git add node-server.yaml
-      - git commit -m "chore:update node-server image to ${DRONE_TAG} [skip ci]"
+      - git commit -m "chore: update node-server image to ${DRONE_TAG} [skip ci]"
       - git push origin main
     when:
       ref:
