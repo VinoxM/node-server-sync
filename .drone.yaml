@@ -29,7 +29,7 @@ steps:
       - mkdir -p ~/.ssh
       - echo "$SSH_KEY" > ~/.ssh/id_ed25519
       - chmod 600 ~/.ssh/id_ed25519
-      - ssh-keyscan -p 32222 gitea-http.gitea.svc.cluster.local >> ~/.ssh/known_hosts
+      - ssh-keyscan -p 22 gitea-http.gitea.svc.cluster.local >> ~/.ssh/known_hosts
       - git clone ssh://git@gitea-http.gitea.svc.cluster.local:3000/VinoxM/k3s-deployments.git
       - cd k3s-deployments
       - |
