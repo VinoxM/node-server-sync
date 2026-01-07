@@ -6,8 +6,8 @@ steps:
   - name: publish-image
     image: plugins/docker
     settings:
-      registry: 192.168.1.110:30003
-      repo: 192.168.1.110:30003/vinoxm/node-server
+      registry: gitea-http.gitea.svc.cluster.local:3000
+      repo: gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server
       insecure: true
       username:
         from_secret: GITEA_USERNAME
@@ -29,8 +29,8 @@ steps:
       - mkdir -p ~/.ssh
       - echo "$SSH_KEY" > ~/.ssh/id_ed25519
       - chmod 600 ~/.ssh/id_ed25519
-      - ssh-keyscan -p 32222 192.168.1.110 >> ~/.ssh/known_hosts
-      - git clone ssh://git@192.168.1.110:32222/VinoxM/k3s-deployments.git
+      - ssh-keyscan -p 32222 gitea-http.gitea.svc.cluster.local >> ~/.ssh/known_hosts
+      - git clone ssh://git@gitea-http.gitea.svc.cluster.local:3000/VinoxM/k3s-deployments.git
       - cd k3s-deployments
       - |
         sed -i "s|image: .*node-server:.*|image: 192.168.1.110:30003/vinoxm/node-server:${DRONE_TAG}|g" node-server.yaml
