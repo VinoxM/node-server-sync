@@ -1,0 +1,246 @@
+logger:
+  level: info
+  savePath: /home/maou/.github/node-server/log
+sqlite:
+  db:
+    rss:
+      - tableName: rss_result
+        DDL: |
+          CREATE TABLE rss_result (
+            `id` integer PRIMARY KEY NOT NULL,
+            `pid` integer NOT NULL,
+            `title` varchar(500) NOT NULL,
+            `torrent` varchar(100) NOT NULL,
+            `pub_date` varchar(100) DEFAULT NULL,
+            `hide` integer NOT NULL DEFAULT '0',
+            `tracker` varchar(5000),
+            `episode` varchar(10) DEFAULT NULL,
+            `up_date` varchar(100) DEFAULT NULL,
+            `sort` integer NOT NULL DEFAULT 0,
+            CONSTRAINT `idx_pid_title` UNIQUE (`pid`, `title`)
+          )
+        SqlScript: "@/resource/script/rss_result.sql"
+        forceImport: false
+      - tableName: rss_subscribe
+        DDL: |
+          CREATE TABLE rss_subscribe (
+            `id` integer PRIMARY KEY NOT NULL,
+            `name` varchar(50) NOT NULL,
+            `name_jp` varchar(50) DEFAULT NULL,
+            `url` varchar(500) DEFAULT NULL,
+            `regex` varchar(100) NOT NULL,
+            `season` varchar(50) NOT NULL,
+            `start_time` datetime DEFAULT NULL,
+            `cover` varchar(500) DEFAULT NULL,
+            `fin` varchar(1) DEFAULT 'N',
+            `is_short` int NOT NULL DEFAULT '0',
+            `anime_type` int NOT NULL DEFAULT '1',
+            `goon` int NOT NULL DEFAULT '0',
+            `staff` varchar(500) DEFAULT NULL,
+            `cast` varchar(500) DEFAULT NULL,
+            `origin_type` varchar(20) DEFAULT NULL,
+            `type_tag` varchar(100) DEFAULT NULL,
+            `broadcast` varchar(100) DEFAULT NULL,
+            CONSTRAINT `idx_name` UNIQUE (`name`),
+            CONSTRAINT `idx_season_cover` UNIQUE (`season`, `cover`)
+          )
+        SqlScript: "@/resource/script/rss_subscribe.sql"
+        forceImport: false
+      - tableName: rss_link
+        DDL: |
+          CREATE TABLE rss_link (
+            `id` integer PRIMARY KEY NOT NULL,
+            `pid` integer NOT NULL,
+            `title` varchar(100) DEFAULT NULL,
+            `href` varchar(500) DEFAULT NULL,
+            CONSTRAINT `rss_link_unique` UNIQUE (`pid`, `title`, `href`)
+          )
+        SqlScript: "@/resource/script/rss_link.sql"
+        forceImport: false
+      - tableName: rss_copyright
+        DDL: |
+          CREATE TABLE rss_copyright (
+            `id` integer PRIMARY KEY NOT NULL,
+            `pid` integer NOT NULL,
+            `area` varchar(20) DEFAULT NULL,
+            `href` varchar(500) DEFAULT NULL,
+            `image` varchar(200) DEFAULT NULL,
+            CONSTRAINT `rss_copyright_unique` UNIQUE (
+              `pid`,
+              `area`,
+              `href`,
+              `image`
+            )
+          )
+        SqlScript: "@/resource/script/rss_copyright.sql"
+        forceImport: false
+      - tableName: rss_tracker
+        DDL: |
+          CREATE TABLE rss_tracker (
+            `id` integer PRIMARY KEY NOT NULL,
+            `host` varchar(100) NOT NULL,
+            CONSTRAINT `idx_host` UNIQUE (`host`)
+          )
+        SqlScript: "@/resource/script/rss_tracker.sql"
+        forceImport: false
+      - tableName: rss_regex_history
+        DDL: |
+          CREATE TABLE rss_regex_history (
+            `id` integer PRIMARY KEY NOT NULL,
+            `regex` varchar(256) NOT NULL,
+            `score` bigint NOT NULL,
+            CONSTRAINT `idx_regex` UNIQUE (`regex`)
+          )
+        SqlScript: "@/resource/script/rss_regex_history.sql"
+        forceImport: false
+    kuro:
+      - tableName: kuro_community_account
+        DDL: |
+          CREATE TABLE kuro_community_account (
+            `uid` integer PRIMARY KEY NOT NULL,
+            `token` varchar(500) NOT NULL
+          )
+      - tableName: kuro_game_sign
+        DDL: |
+          CREATE TABLE kuro_game_sign (
+            `uid` integer PRIMARY KEY NOT NULL,
+            `game_ids` varchar(500) DEFAULT NULL
+          )
+    socket:
+      - tableName: channel_notification
+        DDL: |
+          CREATE TABLE channel_notification (
+            `id` integer PRIMARY KEY NOT NULL,
+            `channel` varchar(50) NOT NULL,
+            `message` varchar(5000),
+            `extra` varchar(5000),
+            `create_by` varchar(100) NOT NULL,
+            `create_time` datetime NOT NULL
+          )
+    account:
+      - tableName: auth_user
+        DDL: |
+          CREATE TABLE auth_user (
+            `id` integer PRIMARY KEY NOT NULL,
+            `uname` varchar(50) NOT NULL,
+            `password` varchar(64) NOT NULL,
+            `update_time` datetime,
+            `create_time` datetime NOT NULL,
+            CONSTRAINT `idx_uname` UNIQUE (`uname`)
+          )
+      - tableName: user_rss_favorites
+        DDL: |
+          CREATE TABLE user_rss_favorites (
+            `id` integer PRIMARY KEY NOT NULL,
+            `uid` integer NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            CONSTRAINT `idx_uid_rss_id` UNIQUE (`uid`, `rss_subs_id`)
+          )
+  defaultDB: rss
+  dbPath: "@/db"
+redis:
+  enable: false
+  host: 127.0.0.1
+  port: 6379
+  database: 1
+  username: default
+  password: redis-mAou5820
+  keepAlive: 30
+server:
+  port: 8800
+  cors: true
+axios:
+  proxy:
+    protocol: http
+    host: frp
+    port: 7890
+api:
+  defaultSecret: mAou5820
+  apiDisabled: []
+  tokenBucket:
+    config:
+      enable: true
+      initSize: 10
+      maxSize: 100
+      rate: 0.5
+    needToken:
+      - /rss(/v2)?/get((?!/|Matchers).)*$
+      - /rss/tracker/getAll
+  ipBlocker:
+    enable: true
+    maxInterval:
+      - 1000
+      - 60
+    maxCount: 100
+    blockTime:
+      - 1000
+      - 60
+      - 60
+      - 24
+    blockIgnore:
+      - /common/*
+      - /rss/subscribe/*
+      - /rss/[copyright|link]/[add|edit|del].*
+      - /rss/result/*
+      - /rss/regex/*
+schedule:
+  rssSubscribe:
+    enable: true
+    corn: 0 7/30 * * * *
+  clashSubscribe:
+    enable: true
+    corn: 0 0 0/12 * * *
+  ipBlockerClean:
+    enable: true
+    corn: 0 0/10 * * * *
+  kuroGameSign:
+    enable: true
+    corn: 0 0 0 * * *
+rss:
+  subscribeHandler:
+    parallelNum: 3
+    everyHandleCount: 30
+    handleDelay: 5000
+  regex:
+    historyLimit: 20
+  matchers:
+    - name: 末日动漫
+      source: https://share.acgnx.se/
+      regex: .*acgnx.*
+      keyword: true
+      match: https://share.acgnx.se/rss.xml?sort_id=0&keyword=#{keyword}
+    - name: 动漫花园
+      source: https://share.dmhy.org/
+      regex: .*dmhy.*
+      keyword: true
+      match: https://share.dmhy.org/topics/rss/rss.xml?keyword=#{keyword}
+  awaitRssUpdating:
+    - /rss/[copyright|link|result|subscribe]/[add|edit|replace|update].*
+    - /rss/subscribe/[subTest|setFin]
+clash:
+  savePath: /home/maou/Documents/clash-config
+  backupPath: /home/maou/Documents/clash-config/backup
+  deployPath: /mnt/data/.config/clash-conf
+  backupFileMaxNum: 20
+  updateUrl: https://bayoeorescentpossessicoanseparateuneforescenphocommitte.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/link/aA0RNq3taJC9bIZF?clash=1
+  excludeKeys: ["external-controller", "external-ui", "secret", "update"]
+  mixin:
+    external-controller: 0.0.0.0:9900
+    external-ui: /home/frp/programs/clash-for-linux/dashboard/public
+    secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
+    socks-port: 7890
+    redir-port: 7890
+auth:
+  secretKey: mAou.authorization.jwt
+  maxTokenStore: 3
+  defaultTokenExpire: 30s
+crypto:
+  aes: # 长度 16
+    key: mAou.aes.key.3ca
+    iv: mAou.aes.iv.a6b7
+totp:
+  timeStep: 30
+  digits: 6
+  algorithm: sha256
+  secret: mAou5820.TOTP.secret
+  tolerance: 2

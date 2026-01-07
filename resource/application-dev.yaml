@@ -1,0 +1,6 @@
+logger:
+  level: debug
+schedule:
+  rssSubscribe:
+    enable: true
+    corn: 0 19/30 * * * *

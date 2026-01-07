@@ -1,0 +1,8 @@
+logger:
+  savePath: /data/log
+sqlite:
+  dbPath: /data/db
+clash:
+  savePath: /clash-config
+  backupPath: /clash-config/backup
+  deployPath: /clash-deploy

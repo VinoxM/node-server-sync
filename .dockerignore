@@ -1,0 +1,14 @@
+# 排除数据库文件夹
+db/
+
+# 排除日志文件夹
+log/
+*.log
+
+# 排除 node_modules (通常在容器内重新 npm install)
+node_modules/
+
+# 排除 Git 目录和 Dockerfile 自身
+.git/
+Dockerfile
+.dockerignore

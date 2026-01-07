@@ -1,0 +1,35 @@
+api:
+  filterDisabled: 
+    - authorizationFilter
+  apiDisabled:
+    - /auth/*
+    - /favorites/*
+    - /rss/*
+    - /notification/*
+    - /kuro/*
+    - /schedule/*
+    - ^/upload/*
+    - /clash/(?!upload)
+    - /common/(?!animeGroup)
+  tokenBucket:
+    config:
+      enable: false
+  ipBlocker:
+    enable: false
+server:
+  port: 8800
+socket:
+  disabled: 
+    - notification
+    - rssSubscription
+clash:
+  savePath: /home/maou/Programs/clash-for-linux/conf
+  backupPath: /home/maou/Programs/clash-for-linux/conf/backup
+  deployPath: /home/maou/Programs/clash-for-linux/conf
+  backupFileMaxNum: 20
+  updateUrl: https://bayoeorescentpossessicoanseparateuneforescenphocommitte.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/link/aA0RNq3taJC9bIZF?clash=1
+  excludeKeys: ["external-controller", "external-ui", "secret", "update"]
+  mixin:
+    external-controller: 0.0.0.0:9090
+    external-ui: /home/maou/Programs/clash-for-linux/dashboard/public
+    secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
