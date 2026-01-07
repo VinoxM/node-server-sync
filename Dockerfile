@@ -10,13 +10,4 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
-RUN npm install --production
-
-# 拷贝源代码
-COPY . .
-
-# 暴露服务端口（假设你的 Node 服务监听 8800）
-EXPOSE 8800
-
-# 启动命令
-CMD ["node", "src/application.js", "--active=main,docker"]
+RUN npm config set registry https://mirrors.cloud.tencent.com/npm/ && npm install
