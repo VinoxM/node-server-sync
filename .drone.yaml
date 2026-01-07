@@ -1,7 +1,33 @@
 kind: pipeline
 type: kubernetes
+name: build-base-image
+trigger:
+  branch:
+    - base
+  event:
+    - push
+steps:
+  - name: build-and-push-base
+    image: plugins/docker
+    privileged: true
+    settings:
+      registry: gitea-http.gitea.svc.cluster.local:3000
+      repo: gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server-base
+      insecure: true
+      dockerfile: Dockerfile.base
+      username:
+        from_secret: GITEA_USERNAME
+      password:
+        from_secret: GITEA_PASSWORD
+      tags:
+        - latest
+---
+kind: pipeline
+type: kubernetes
 name: build-and-deploy
-
+trigger:
+  event:
+    - tag
 steps:
   - name: publish-image
     image: plugins/docker
@@ -19,7 +45,6 @@ steps:
     when:
       ref:
         - refs/tags/v*
-
   - name: update-deployment-yaml
     image: alpine/git
     environment:

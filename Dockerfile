@@ -1,16 +1,10 @@
 # 使用官方 Node.js 镜像作为基础镜像
 # 如果官方还没有 24.12.2 的镜像，可以使用 node:current-slim 或自行构建
 # FROM node:24.12-slim
-FROM gitea-http.gitea.svc.cluster.local:3000/library/node:24.12-slim
+FROM gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server-base:latest
 
 # 设置工作目录
 WORKDIR /app
-
-# 先拷贝 package.json 和 lock 文件以利用缓存加速构建
-COPY package*.json ./
-
-# 安装依赖
-RUN npm install --production
 
 # 拷贝源代码
 COPY . .
