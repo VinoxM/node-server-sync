@@ -9,7 +9,6 @@ trigger:
 steps:
   - name: build-and-push-base
     image: plugins/docker
-    privileged: true
     settings:
       registry: gitea-http.gitea.svc.cluster.local:3000
       repo: gitea-http.gitea.svc.cluster.local:3000/vinoxm/node-server-base
