@@ -1,7 +1,15 @@
 # 使用官方 Node.js 镜像作为基础镜像
 # 如果官方还没有 24.12.2 的镜像，可以使用 node:current-slim 或自行构建
 # FROM node:24.12-slim
-FROM gitea-http.gitea.svc.cluster.local:3000/library/node:24.12
+FROM gitea-http.gitea.svc.cluster.local:3000/library/node:24.12-slim
+
+# 安装 sqlite3 编译所需的依赖
+# python3, make, g++ 是 node-gyp 必须的
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
