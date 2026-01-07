@@ -36,7 +36,8 @@ steps:
       - git config user.name "Drone CI"
       - git config user.email "drone@vinoxm.cloud"
       - git add node-server.yaml
-      - git commit -m "chore: update node-server image to ${DRONE_TAG} [skip ci]"
+      - |
+        git commit -m "chore: update node-server image to ${DRONE_TAG} [skip ci]"
       - git push origin main
     when:
       ref:
