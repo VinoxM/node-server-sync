@@ -226,7 +226,7 @@ clash:
   excludeKeys: ["external-controller", "external-ui", "secret", "update"]
   mixin:
     external-controller: 0.0.0.0:9900
-    external-ui: /shared_media/.config/mihomo/dashboard/public
+    external-ui: /shared_media/.config/mihomo/conf/dashboard/public
     secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
     socks-port: 7890
     redir-port: 7890
