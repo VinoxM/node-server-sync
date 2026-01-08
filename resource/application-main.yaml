@@ -220,13 +220,13 @@ rss:
 clash:
   savePath: /home/maou/Documents/clash-config
   backupPath: /home/maou/Documents/clash-config/backup
-  deployPath: /mnt/data/.config/clash-conf
+  deployPath: /mnt/data/.config/mihomo/conf
   backupFileMaxNum: 20
-  updateUrl: https://bayoeorescentpossessicoanseparateuneforescenphocommitte.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/link/aA0RNq3taJC9bIZF?clash=1
+  updateUrl: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
   excludeKeys: ["external-controller", "external-ui", "secret", "update"]
   mixin:
     external-controller: 0.0.0.0:9900
-    external-ui: /home/frp/programs/clash-for-linux/dashboard/public
+    external-ui: /shared_media/.config/mihomo/dashboard/public
     secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
     socks-port: 7890
     redir-port: 7890
