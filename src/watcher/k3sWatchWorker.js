@@ -15,6 +15,7 @@ function startWatch() {
             }
         },
         (err) => {
+            console.error('Watch configMap error.', err)
             setTimeout(startWatch, 5000);
         }
     );
