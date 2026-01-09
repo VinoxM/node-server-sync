@@ -27,7 +27,7 @@ export class LogWorker {
             throw new Error(`${folder} not a directory.`)
         }
         this.log('debug', `Logger use basePath: ${basePath}`)
-        this.#worker = new Worker(join('@/src/logger/logWorker.js'), {
+        this.#worker = new Worker(__join('@/src/logger/logWorker.js'), {
             workerData: {
                 basePath,
                 ...workerOptions

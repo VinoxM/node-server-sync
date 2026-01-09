@@ -20,7 +20,7 @@ export class SqliteDB {
                 dbPath: "./"
             }
         }
-        this.#dbPath = join(config.dbPath);
+        this.#dbPath = __join(config.dbPath);
         if (!existsSync(this.#dbPath)) {
             mkdirSync(this.#dbPath);
         }
@@ -29,7 +29,7 @@ export class SqliteDB {
 
     #connect(dbName) {
         if (!this.#schema.hasOwnProperty(dbName)) {
-            const db = new sqlite3.Database(join(this.#dbPath, dbName + '.db'));
+            const db = new sqlite3.Database(__join(this.#dbPath, dbName + '.db'));
             db.run('PRAGMA journal_mode = DELETE;');
             db.run('PRAGMA busy_timeout = 5000;');
             this.#schema[dbName] = db
@@ -119,7 +119,7 @@ export class SqliteDB {
 
     async #tableImport(sqlScript, dbName, tableName) {
         if (isBlank(sqlScript)) return Promise.resolve();
-        const importSql = readFileSync(join(sqlScript)).toString();
+        const importSql = readFileSync(__join(sqlScript)).toString();
         return new Promise(resolve => {
             const db = this.#connect(dbName);
             db.serialize(() => {
@@ -214,7 +214,7 @@ class TransactionSqliteDB {
     #transactionOver = false;
 
     constructor(dbName, dbPath) {
-        this.#connection = new sqlite3.Database(join(dbPath, dbName + '.db'));
+        this.#connection = new sqlite3.Database(__join(dbPath, dbName + '.db'));
     }
 
     async #exec(sql, params, options = defaultOptions) {

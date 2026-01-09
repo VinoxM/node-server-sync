@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 8800
 
 # 启动命令
-CMD ["node", "src/application.js", "--active=main,docker"]
+CMD ["node", "src/application.js", "--active=main,k3s-secret"]

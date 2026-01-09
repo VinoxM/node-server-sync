@@ -1,26 +1,18 @@
 import apiMethodConst from '../constraints/apiMethodConst.js';
 import apiHeaderConst from '../constraints/apiHeaderConst.js';
-import apiContentTypeConst from '../constraints/apiContentTypeConst.js';
 import { checkHeaderKeyValue, checkQueryKeyValue } from '../common/apiPreCheck.js';
-import { updateClashSubInfo, getClashFileContent, backupConfigYaml } from '../handler/clashHandler.js';
+import { getClashFileContent } from '../handler/clash/clashHandler.js';
 import { getRequestRealIp } from '../common/httpUtil.js';
+import { subscribeSources } from '../handler/clash/clashSubscribeHandler.js';
+import { concatClashYaml } from '../handler/clash/clashConcatHandler.js';
 
 const { POST, GET } = apiMethodConst;
 const { SECRET } = apiHeaderConst;
-const { TYPE_TEXT } = apiContentTypeConst;
 
 const needSecret = () => "mAou5820.clash";
 
 export default {
     basePath: "/clash",
-    "/update": {
-        method: POST,
-        needSecret,
-        callback: req => {
-            const realIp = getRequestRealIp(req)
-            return updateClashSubInfo(realIp);
-        }
-    },
     "/config.yml": {
         method: GET,
         ignoreReturn: true,
@@ -44,15 +36,17 @@ export default {
             })
         }
     },
-    "/upload": {
+    "/subscribe": {
         method: POST,
         needSecret,
-        acceptType: TYPE_TEXT,
-        callback: (req) => {
-            return new Promise(resolve => {
-                backupConfigYaml(req.body);
-                resolve();
-            })
+        callback: req => {
+            const realIp = getRequestRealIp(req)
+            return subscribeSources(realIp);
         }
+    },
+    "/concat": {
+        method: POST,
+        needSecret,
+        callback: () => concatClashYaml()
     }
 }

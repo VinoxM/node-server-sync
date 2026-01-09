@@ -64,7 +64,7 @@ export async function setupGlobal(rootPath) {
     Object.assign(globalThis, globalUtils)
 
     // replace '@' to root path
-    globalThis.join = (...args) => {
+    globalThis.__join = (...args) => {
         if (!args) return "";
         if (args[0].startsWith("@")) {
             args[0] = args[0].replace("@", rootPath);

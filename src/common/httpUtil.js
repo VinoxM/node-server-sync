@@ -4,7 +4,7 @@ export const getUrlContent = (url, useProxy = true) => {
     return getUrlFull(url, useProxy).then(res => res.data);
 }
 
-export const getUrlFull = (url, useProxy = true) => {
+export const getUrlFull = async (url, useProxy = true) => {
     const config = {};
     if (useProxy) {
         config.proxy = __env.get("axios.proxy", {

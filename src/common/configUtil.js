@@ -11,8 +11,8 @@ function getFolderScripts(folder, recursive = false) {
     const resultFiles = [];
     while (folderStack.length > 0) {
         const folder_ = folderStack.pop()
-        fs.readdirSync(join(folder_)).forEach(f => {
-            const fileName = join(folder_, f);
+        fs.readdirSync(__join(folder_)).forEach(f => {
+            const fileName = __join(folder_, f);
             if (fs.lstatSync(fileName).isDirectory()) {
                 if (recursive) folderStack.push(fileName);
             } else if (f.endsWith(".js") && f !== 'index.js') {

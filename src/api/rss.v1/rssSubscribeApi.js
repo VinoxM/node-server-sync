@@ -176,11 +176,11 @@ export default {
             const delLinkIds = [], delCopyrightIds = [];
             const addLinkArr = [], addCopyrightArr = [];
             const dbPath = __env.get('sqlite.dbPath', '@/db')
-            const backDir = join(dbPath, 'backup')
+            const backDir = __join(dbPath, 'backup')
             if (!fs.existsSync(backDir)) {
                 fs.mkdirSync(backDir)
             }
-            fs.copyFileSync(join(dbPath, 'rss.db'), join(backDir, 'rss_' + new Date().getTime() + '.db'))
+            fs.copyFileSync(__join(dbPath, 'rss.db'), __join(backDir, 'rss_' + new Date().getTime() + '.db'))
             return sqliteDB.getTransactionDB((db) => {
                 return new Promise((resolve, reject) => {
                     new Executor(async () => {

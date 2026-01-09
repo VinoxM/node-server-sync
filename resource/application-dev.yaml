@@ -1,6 +1,42 @@
 logger:
   level: debug
+  savePath: "@/log"
+sqlite:
+  dbPath: "@/db"
+socket:
+  disabled: 
+    - notification
+    - rssSubscription
+api:
+  filterDisabled: 
+    - authorizationFilter
+  apiDisabled:
+    - /auth/*
+    - /favorites/*
+    - /rss/*
+    - /notification/*
+    - /kuro/*
+    - /schedule/*
+    - ^/upload/*
+    # - /clash/(?!update)
+    - /common/*
+    - /qbitTorrent/*
+    - /aria2/*
+  tokenBucket:
+    config:
+      enable: false
+  ipBlocker:
+    enable: false
 schedule:
   rssSubscribe:
-    enable: true
-    corn: 0 19/30 * * * *
+    enable: false
+    corn: 0 7/30 * * * *
+  clashSubscribe:
+    enable: false
+    corn: 0 0 0/12 * * *
+  ipBlockerClean:
+    enable: false
+    corn: 0 0/10 * * * *
+  kuroGameSign:
+    enable: false
+    corn: 0 0 0 * * *

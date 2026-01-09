@@ -218,18 +218,49 @@ rss:
     - /rss/[copyright|link|result|subscribe]/[add|edit|replace|update].*
     - /rss/subscribe/[subTest|setFin]
 clash:
-  savePath: /home/maou/Documents/clash-config
-  backupPath: /home/maou/Documents/clash-config/backup
-  deployPath: /mnt/data/.config/mihomo/conf
-  backupFileMaxNum: 20
-  updateUrl: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
-  excludeKeys: ["external-controller", "external-ui", "secret", "update"]
-  mixin:
-    external-controller: 0.0.0.0:9900
-    external-ui: /shared_media/.config/mihomo/conf/dashboard/public
-    secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
-    socks-port: 7890
-    redir-port: 7890
+  path:
+    deployment: /mnt/data/.config/mihomo/conf
+    persistence: /mnt/data/.config/clash
+    subscription: /mnt/data/.config/clash/subscription
+    concat: /mnt/data/.config/clash/concat
+    backup: /mnt/data/.config/clash/backup
+  deployment:
+    excludeKeys:
+      - "external-controller"
+      - "external-ui"
+      - "secret"
+    mixin:
+      external-controller: 0.0.0.0:9900
+      external-ui: /shared_media/.config/mihomo/conf/dashboard/public
+      secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
+      socks-port: 7890
+      redir-port: 7890
+  subscription:
+    sources:
+      - url: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
+        label: Cloud
+        isDefault: true
+      - url: https://suburl.mimemi.net/link/RGIssK2aHDxdtwyP?clashr=1
+        label: Mimemi
+  concat:
+    proxyFilters:
+      - "IPV6"
+      - "官网"
+      - "二手倒卖"
+      - "试用"
+      - "重大漏洞"
+      - "备用"
+      - "登录"
+      - "工作室"
+    proxyGroupFilters:
+      - "Special Traffic - Hanime1 Download"
+    fallbackUrl: "http://www.gstatic.com/generate_204"
+    groupMapping:
+      JP: ["日"]
+      HT: ["港", "台"]
+      KR: ["韩"]
+  backup:
+    fileLimit: 10
 auth:
   secretKey: mAou.authorization.jwt
   maxTokenStore: 3

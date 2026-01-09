@@ -114,7 +114,7 @@ export function setupGlobalLogFunc() {
 
 export function initializeLogger(logPath) {
     if (logPath) {
-        logWorker?.initialize(logPath)
+        logWorker?.initialize(__join(logPath))
     }
 }
 
