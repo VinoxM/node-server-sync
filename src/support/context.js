@@ -20,7 +20,7 @@ export class ApplicationContext {
         this.#parser = parserHandler[this.#type] ?? JSON;
     }
 
-    #initialize() {
+    #initialize(ignoreActives = []) {
         const suffix = this.#type;
         const configFile = join(this.#resourcePath, `application.${suffix}`);
         if (!existsSync(configFile)) {
@@ -28,7 +28,7 @@ export class ApplicationContext {
         }
         this.#context = this.#parser.parse(readFileSync(configFile).toString());
         logger(`[Configuration] Loaded configuration: application.${suffix}.`);
-        const actives = getActives(this.#context)
+        const actives = getActives(this.#context, ignoreActives)
         if (actives.length > 0) {
             logger(`[Configuration] Configuration actives: ${actives.join(',')}`)
             actives.forEach(active => {
@@ -53,8 +53,8 @@ export class ApplicationContext {
         return JSON.parse(JSON.stringify(this.#context));
     }
 
-    load() {
-        return this.#initialize();
+    load(ignoreActives) {
+        return this.#initialize(ignoreActives);
     }
 
     getProperty(key, defaultValue) {
@@ -64,9 +64,16 @@ export class ApplicationContext {
             return defaultValue;
         }
     }
+
+    mergeContext(obj) {
+        if (obj && !Array.isArray(obj) && typeof obj === 'object') {            
+            mergeObject(this.#context, obj);
+        }
+        return JSON.parse(JSON.stringify(this.#context));
+    }
 }
 
-function getActives(context) {
+function getActives(context, ignoreActives = []) {
     const result = [];
     const args = __args;
     let activeStr = "";
@@ -81,5 +88,5 @@ function getActives(context) {
         } catch (error) { }
     }
     activeStr.length > 0 && result.push(...activeStr.split(",").map((s) => s.trim()));
-    return result;
+    return result.filter(r => !ignoreActives.includes(r));
 }
