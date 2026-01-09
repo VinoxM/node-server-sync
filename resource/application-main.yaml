@@ -253,7 +253,7 @@ clash:
       - "登录"
       - "工作室"
     proxyGroupFilters:
-      - "Special Traffic - Hanime1 Download"
+      - "🥀Special Traffic - Hanime1 Download"
     fallbackUrl: "http://www.gstatic.com/generate_204"
     groupMapping:
       JP: ["日"]
