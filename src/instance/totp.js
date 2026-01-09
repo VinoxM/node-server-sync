@@ -79,8 +79,9 @@ export class TOTP {
     static verify(token, options = {}) {
         const currentTimestamp = Math.floor(Date.now() / 1000);
         const tolerance = options.tolerance ?? defaultTOTPOptions.tolerance;
+        const timeStep = options.timeStep ?? defaultTOTPOptions.timeStep;
 
-        for (let t = currentTimestamp - tolerance; t <= currentTimestamp + tolerance; t++) {
+        for (let t = currentTimestamp - tolerance * timeStep; t <= currentTimestamp + tolerance * timeStep; t++) {
             const generate = TOTP.generate(t, options)
             console.log(generate, token, generate === token)
             if (generate === token) {
