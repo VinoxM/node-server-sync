@@ -4,13 +4,14 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "dev": "node ./src/application.js --active=dev",
+        "dev": "node ./src/application.js --active=main,dev",
         "normal": "node ./src/application.js"
     },
     "author": "",
     "license": "ISC",
     "description": "",
     "dependencies": {
+        "@kubernetes/client-node": "^1.4.0",
         "axios": "^1.13.1",
         "content-type": "^1.0.5",
         "cors": "^2.8.5",
