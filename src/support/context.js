@@ -65,9 +65,12 @@ export class ApplicationContext {
         }
     }
 
-    mergeContext(obj) {
-        if (obj && !Array.isArray(obj) && typeof obj === 'object') {            
+    mergeContext(obj, label = 'Unknown') {
+        if (obj && !Array.isArray(obj) && typeof obj === 'object') {
             mergeObject(this.#context, obj);
+            logger(
+                `[Configuration] Merged configuration: ${label}.`
+            );
         }
         return JSON.parse(JSON.stringify(this.#context));
     }

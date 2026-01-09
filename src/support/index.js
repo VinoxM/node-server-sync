@@ -88,8 +88,11 @@ export async function setupGlobal(rootPath) {
     globalThis.redisClient = getRedisClient();
 }
 
-export function reloadApplicationContext(ignoreActives, extraContext) {
+export function reloadApplicationContext(ignoreActives, extraContexts = []) {
     let config = applicationContext.load(ignoreActives)
-    config = applicationContext.mergeContext?.(extraContext) ?? config
+    for (const context of extraContexts) {
+        const { data, label } = context
+        config = applicationContext.mergeContext?.(data, label) ?? config
+    }
     setupLoggerLevel(config?.logger?.level)
 }
