@@ -13,11 +13,11 @@ export function initK3SConfigurationWatcher() {
             const label = 'application-k3s-secret.yaml'
             const data = yaml.parse(message.data[label])
             reloadApplicationContext(['k3s-secret'], [{ data, label }])
-            const message = {
+            const notifyMessage = {
                 event: 'log',
                 message: `[K3S Configuration Watcher] Configuration changed: ${label}.`
             }
-            pushNotification(JSON.stringify(message))
+            pushNotification(JSON.stringify(notifyMessage))
         }
     });
     logger(`[K3S Configuration Watcher] Initialized watcher.`);
