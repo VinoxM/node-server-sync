@@ -240,8 +240,8 @@ clash:
       - url: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
         label: Cloud
         isDefault: true
-      - url: https://suburl.mimemi.net/link/RGIssK2aHDxdtwyP?clashr=1
-        label: Mimemi
+      # - url: https://suburl.mimemi.net/link/RGIssK2aHDxdtwyP?clashr=1
+      #   label: Mimemi
   concat:
     proxyFilters:
       - "IPV6"
