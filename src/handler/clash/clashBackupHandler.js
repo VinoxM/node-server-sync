@@ -4,6 +4,7 @@ import clashConst from '../../constraints/clashFileNameConst.js';
 
 const latestClashFileName = clashConst.LATEST_FILE_NAME
 const deploymentFileName = clashConst.DEPLOYMENT_FILE_NAME
+const clashFileSuffixName = clashConst.CONFIG_SUFFIX
 
 export function updateLatestConfig(dataObj) {
     const clashPathConfig = __env.get('clash.path', {})
@@ -38,19 +39,24 @@ function backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum) {
             fs.mkdirSync(backupPath_, { recursive: true })
         }
         if (!!backupFileMaxNum && backupFileMaxNum > 0) {
-            const backupFilesArr = fs.readdirSync(backupPath_).filter(o => /.*\.yml$/.test(o)).map(o => o.replace('.yaml', ''))
+            // /.*\.yaml$/
+            const backupFilesArr = fs.readdirSync(backupPath_)
+                .filter(o => new RegExp(`.*${clashFileSuffixName}$`).test(o))
+                .map(o => o.replace(clashFileSuffixName, ''))
             if (backupFilesArr.length >= backupFileMaxNum) {
-                backupFilesArr.sort((a, b) => Number(a) - Number(b)).slice(0, backupFilesArr.length - backupFileMaxNum + 1).map(o => o + '.yaml').forEach(f => {
-                    try {
-                        fs.unlinkSync(__join(backupPath_, f))
-                        logger(`[Clash Backup] File delete: ${f} -> SUCCESS`)
-                    } catch (error) {
-                        logger(`[Clash Backup] File delete: ${f} -> FAIL`)
-                    }
-                })
+                backupFilesArr.sort((a, b) => Number(a) - Number(b))
+                    .slice(0, backupFilesArr.length - backupFileMaxNum + 1)
+                    .map(o => o + clashFileSuffixName).forEach(f => {
+                        try {
+                            fs.unlinkSync(__join(backupPath_, f))
+                            logger(`[Clash Backup] File delete: ${f} -> SUCCESS`)
+                        } catch (error) {
+                            logger(`[Clash Backup] File delete: ${f} -> FAIL`)
+                        }
+                    })
             }
         }
-        const backup = __join(backupPath_, new Date().getTime() + '.yaml')
+        const backup = __join(backupPath_, new Date().getTime() + clashFileSuffixName)
         fs.copyFileSync(saveFile, backup);
         logger(`[Clash Backup] File backup: ${backup}`);
     }

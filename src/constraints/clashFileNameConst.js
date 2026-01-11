@@ -1,4 +1,5 @@
 export default {
+    CONFIG_SUFFIX: '.yaml',
     LATEST_FILE_NAME: 'latest.yaml',
     DEPLOYMENT_FILE_NAME: 'config.yaml',
     SUBSCRIPTION_FILE_NAME: 'subscription.yaml',
