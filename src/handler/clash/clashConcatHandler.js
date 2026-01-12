@@ -22,12 +22,11 @@ export function concatClashYaml() {
 function mixinModule(content, concatPath, sources = []) {
     let proxies = []
 
-    const sourceProxies = sources.length <= 1 ?
-        sources.map(o => o?.obj?.proxies ?? []) :
-        sources.reduce((prev, cur) => {
-            const { label, obj } = cur
-            return [...prev, ...(obj?.proxies ?? []).map(p => (p.name = `${label} - ${p.name}`, p))]
-        }, [])
+    const isSingleSources = sources.length <= 1
+    const sourceProxies = sources.reduce((prev, cur) => {
+        const { label, obj } = cur
+        return [...prev, ...(obj?.proxies ?? []).map(p => (p.name = isSingleSources ? p.name : `${label} - ${p.name}`, p))]
+    }, [])
 
     proxies = [...proxies, ...sourceProxies]
 
@@ -74,7 +73,7 @@ function mixinModule(content, concatPath, sources = []) {
             arr = [...arr, ...proxiesConcat.get(index).map(o => o.name)]
             lastIndex = index + 1
             return arr
-        }, [])
+        }, []).filter(p => !!p)
         if (proxiesConcat.size > 0) {
             g.proxies = result
         }
