@@ -11,6 +11,7 @@ const needSecret = () => "mAou5820.upload";
 export default {
     basePath: "/upload",
     "/SSL/update": {
+        disabled: true,
         method: POST,
         acceptType: TYPE_MULTIPART,
         needSecret,

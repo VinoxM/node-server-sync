@@ -27,4 +27,15 @@ export const getRequestRealIp = (req) => {
     return "Unknown";
 }
 
+export const getRequestHost = (req) => {
+    if (req) {
+        const hostKey = "host"
+        const hosts = req?.get?.(hostKey) || req?.headers?.[hostKey.toLocaleLowerCase()] || '';
+        if (hosts && hosts !== "") {
+            return hosts.split(",")[0] || 'Unknown';
+        }
+    }
+    return "Unknown";
+}
+
 export const getTokenHash = req => (req.headers?.['authorization'] ?? '').replace('Bearer ', '')

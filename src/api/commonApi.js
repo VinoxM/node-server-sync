@@ -54,5 +54,10 @@ export default {
             doAnimeGroup();
             return 'ok';
         }
+    },
+    "/doNothing": {
+        method: GET,
+        needSecret: () => 'mAou5820.doNothing',
+        callback: () => "Ok"
     }
 }

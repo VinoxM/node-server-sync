@@ -139,12 +139,12 @@ sqlite:
   defaultDB: rss
   dbPath: "@/db"
 redis:
-  enable: false
-  host: 127.0.0.1
+  enable: true
+  host: valkey-loadbalancer.cache.svc.cluster.local
   port: 6379
   database: 1
   username: default
-  password: redis-mAou5820
+  password: "redis-mAou5820"
   keepAlive: 30
 server:
   port: 8800
@@ -156,7 +156,11 @@ axios:
     port: 7890
 api:
   defaultSecret: mAou5820
-  apiDisabled: []
+  apiDisabled:
+    - /common/doNothing
+  allowHosts:
+    - api: /common/animeGroup
+      cidr: ['192.168.31.0/24']
   tokenBucket:
     config:
       enable: true

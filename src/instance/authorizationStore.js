@@ -35,6 +35,10 @@ export class AuthorizationStore {
     #hashStore = new Map()
     constructor() { }
 
+    initialization() {
+        
+    }
+
     generateToken(payload, expire) {
         const { id } = payload
         const token = generateJWT(payload, expire)

@@ -8,6 +8,9 @@ socket:
     - notification
     - rssSubscription
 api:
+  allowHosts:
+    - api: /common/doNothing
+      hosts: ['server-dev.vinoxm.cloud']
   filterDisabled: 
     - authorizationFilter
   apiDisabled:
@@ -19,7 +22,7 @@ api:
     - /schedule/*
     - ^/upload/*
     # - /clash/(?!update)
-    - /common/*
+    # - /common/*
     - /qbitTorrent/*
     - /aria2/*
   tokenBucket:
@@ -39,4 +42,12 @@ schedule:
     corn: 0 0/10 * * * *
   kuroGameSign:
     enable: false
-    corn: 0 0 0 * * *
+    corn: 0 0 0 * * *    
+redis:
+  enable: true
+  host: 192.168.31.110
+  port: 6379
+  database: 1
+  username: default
+  password: "redis-mAou5820"
+  keepAlive: 30
