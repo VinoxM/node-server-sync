@@ -248,7 +248,6 @@ clash:
       #   label: Mimemi
   concat:
     proxyFilters:
-      - "IPV6"
       - "官网"
       - "二手倒卖"
       - "试用"
