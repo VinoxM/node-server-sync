@@ -47,7 +47,7 @@ class Schedule {
                 executeJob();
             })
         }
-        logger(`[Schedule] Job Added: ${jobName}`);
+        __log.info(`[Schedule] Job Added: ${jobName}`);
         if (immediate || scheduleCorn[scheduleKey]?.immediate) {
             executeJob();
         }
@@ -63,7 +63,7 @@ class Schedule {
             schedule.job = null;
         }
         Reflect.deleteProperty(this.#schedule, scheduleKey);
-        logger(`[Schedule] Job Cancel: ${schedule?.name || 'unknown jobName'}`);
+        __log.info(`[Schedule] Job Cancel: ${schedule?.name || 'unknown jobName'}`);
     }
 
     cancelAllJob() {
@@ -73,7 +73,7 @@ class Schedule {
                 schedule.job.cancel();
                 schedule.job = null;
             }
-            logger(`[Schedule] Job Cancel: ${schedule?.name || 'unknown jobName'}`);
+            __log.info(`[Schedule] Job Cancel: ${schedule?.name || 'unknown jobName'}`);
         })
         this.#schedule = {};
     }

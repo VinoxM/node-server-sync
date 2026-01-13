@@ -1,5 +1,5 @@
 import { dateFormatForLog } from '../common/dateUtil.js';
-import { LogWorker } from '../logger/logger.js';
+import { LogWorker } from './logger.js';
 
 function print(...message) {
     const msgArr = formatMessage(message)
@@ -104,11 +104,13 @@ let logWorker = null
 export function setupGlobalLogFunc() {
     logWorker = new LogWorker()
     Object.assign(globalThis, {
-        print,
-        logger,
-        warning,
-        debug,
-        error,
+        __log: {
+            print,
+            info: logger,
+            warn: warning,
+            debug,
+            error
+        }
     })
 }
 

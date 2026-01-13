@@ -76,7 +76,7 @@ class ApiServer {
                 continue;
             }
             server[method](key, (req, res) => {
-                logger(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
+                __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
                 const requestData = { req, res, config };
                 this.#doRequestFilters(() => {
                     try {
@@ -92,16 +92,16 @@ class ApiServer {
                     }
                 }, (err) => reject(err, requestData), requestData);
             })
-            logger(`[Server] Request Mapping: [${methodFormat(method)}] ${key}`)
+            __log.info(`[Server] Request Mapping: [${methodFormat(method)}] ${key}`)
         }
         server.use((req, res) => {
-            logger(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
+            __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
             reject({ code: -404, status: 404 }, { req, res });
         })
-        logger(`[Server] Request Mapping: [ALL ] * -> 404 Not Found.`)
+        __log.info(`[Server] Request Mapping: [ALL ] * -> 404 Not Found.`)
         return new Promise(resolve => {
             app.listen(port, () => {
-                logger(`[Server] Started on port: ${port}.`);
+                __log.info(`[Server] Started on port: ${port}.`);
                 this.#server = server;
                 this.#wsServer = app;
                 resolve();
@@ -112,7 +112,7 @@ class ApiServer {
 
 const resolve = (obj, { req, res, config }) => {
     if (config?.ignoreReturn) {
-        logger(`[Request Return] ${req.method}:${req.url}`)
+        __log.info(`[Request Return] ${req.method}:${req.url}`)
         return;
     }
     const result = {
@@ -122,9 +122,9 @@ const resolve = (obj, { req, res, config }) => {
     if (obj) result.data = obj
     res.send(result);
     if (config?.ignoreOutput) {
-        logger(`[Request Return] [${methodFormat(req.method)}] ${req.url}`)
+        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url}`)
     } else {
-        logger(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==> `, result);
+        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==> `, result);
     }
 }
 
@@ -140,7 +140,7 @@ const reject = (ex, { req, res }) => {
     }
     res.status(status);
     res.send(resultObj);
-    logger(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
+    __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
 }
 
 const methodFormat = (method) => {

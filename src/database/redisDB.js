@@ -27,7 +27,7 @@ export class RedisClient {
         const { host, port = 6379, database = 1, username = 'default', password = '', keepAlive = 30 } = redisOptions
         this.#keepAlive = keepAlive
         this.#url = `redis://${username}:${password}@${host}:${port}/${database}`
-        logger(`[Redis] Used database: ${database}.`)
+        __log.info(`[Redis] Used database: ${database}.`)
     }
 
     initialization() {
@@ -65,7 +65,7 @@ export class RedisClient {
                 .on('ready', () => {
                     if (!this.#initialized) {
                         this.#initialized = true
-                        logger(`[Redis] Initialized.`)
+                        __log.info(`[Redis] Initialized.`)
                     }
                     resolve()
                     this.#ready = true

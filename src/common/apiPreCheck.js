@@ -23,7 +23,7 @@ function requestValidate(request, options) {
     if (from in dataFrom && valid in validator) {
         let keys = Array.isArray(key) ? key : [key]
         if (print) {
-            logger(`[Request Validate] ${request.method}:${request.url} -> ${infoMessage}: ${keys.join(',')}`)
+            __log.info(`[Request Validate] ${request.method}:${request.url} -> ${infoMessage}: ${keys.join(',')}`)
         }
         const errKeys = []
         for (const k of keys) {

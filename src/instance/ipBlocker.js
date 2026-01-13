@@ -8,7 +8,7 @@ export class IpBlocker {
         this.#maxCount = maxCount;
         this.#maxInterval = maxInterval;
         this.#blockTime = blockTime;
-        logger("[IP Blocker] Enabled.");
+        __log.info("[IP Blocker] Enabled.");
     }
 
     checkIp(realIp) {
@@ -46,7 +46,7 @@ export class IpBlocker {
 
     destroy() {
         this.#cache = null;
-        logger("[IP Blocker] Destroy.")
+        __log.info("[IP Blocker] Destroy.")
     }
 
     unblock(realIp) {

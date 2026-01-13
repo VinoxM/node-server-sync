@@ -175,7 +175,7 @@ function getRuleProviders(content, concatPath) {
             try {
                 ruleProviders[key] = yaml.parse(fs.readFileSync(fPath).toString()).payload.map(o => o.split(",").slice(0, 2).join(","))
             } catch (e) {
-                error(`read file error: ${fPath}`)
+                __log.error(`read file error: ${fPath}`)
             }
         }
         delete content['rule-providers']

@@ -19,9 +19,9 @@ export async function addTorrent(torrents, savePath = 'Anime') {
     });
 
     if (addResponse.data === 'Ok.') {
-        logger('qbitorrent task added.');
+        __log.info('qbitorrent task added.');
     } else {
-        error('add qbitorrent task failed.', addResponse.data);
+        __log.error('add qbitorrent task failed.', addResponse.data);
         throwMessage('add qbitorrent task failed.')
     }
 }

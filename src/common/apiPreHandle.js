@@ -10,7 +10,7 @@ export function decryptionBodyKeys(req, bodyKeys) {
             try {
                 decryptedKeyValue = decryptData(keyValue)            
             } catch (e) {
-                error(`Decrypt bodyKey error: ${key}.`, e)
+                __log.error(`Decrypt bodyKey error: ${key}.`, e)
                 continue
             }
             setItemSilently(req.body, key, decryptedKeyValue)

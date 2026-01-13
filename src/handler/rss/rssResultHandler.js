@@ -46,7 +46,7 @@ const addManyResult = async (resultArr) => {
                         resolve();
                     })
                     .catch(ex => {
-                        error(`Insert Rss Results error. Cause: ${ex.message}`);
+                        __log.error(`Insert Rss Results error. Cause: ${ex.message}`);
                         resolve();
                     })
             })
