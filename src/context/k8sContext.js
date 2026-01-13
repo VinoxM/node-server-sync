@@ -44,7 +44,7 @@ export class K8SApplicationContext extends ApplicationContext {
     #watchConfiguration() {
         const placeholder = this.logPlaceholder()
         const this_ = this
-        const watcherWorker = new Worker(__join('@/src/watcher', 'k3sWatchWorker.js'), { configMap: this.#configMap });
+        const watcherWorker = new Worker(__join('@/src/watcher', 'k3sWatchWorker.js'), { workerData: { configMap: this.#configMap } });
         watcherWorker.on('message', (message) => {
             if (message.event === 'CONFIG_UPDATED') {
                 __log.info(`[${placeholder}] Configuration changed.`);
