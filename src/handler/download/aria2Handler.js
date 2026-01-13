@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { join } from 'path';
-import { generateUUID } from '../common/stringUtil.js';
+import { generateUUID } from '../../common/stringUtil.js';
 
 const RPC_URL = 'http://frp:6800/jsonrpc';
 const RPC_SECRET = 'mAou5820';

@@ -129,7 +129,7 @@ const resolve = (obj, { req, res, config }) => {
 }
 
 const reject = (ex, { req, res }) => {
-    if (isError(ex)) error(`[Request Error] Message: ${ex.msg || ex.message} ${ex.error ? `Cause: ${ex.error.message}` : ''}`, ex);
+    if (isError(ex)) __log.error(`[Request Error] Message: ${ex.msg || ex.message} ${ex.error ? `Cause: ${ex.error.message}` : ''}`, ex);
     const resultObj = {
         code: ex?.code < 0 ? ex.code : -1,
         message: [-2, -3, -404].includes(ex?.code) ? "Bad Request." : (ex?.msg || "Server Error.")

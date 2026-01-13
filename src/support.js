@@ -77,7 +77,9 @@ export async function setupGlobal(rootPath) {
     // load environment
     await reloadApplicationContext()
     globalThis.__env = {
-        get: (key, defaultValue) => applicationContext.getProperty(key, defaultValue)
+        get: (key, defaultValue) => applicationContext.getProperty(key, defaultValue),
+        subscribe: (sub) => applicationContext.addListen(sub),
+        unsbuscribe: (sub) => applicationContext.removeListen(sub),
     }
 
     initializeLogger(__env.get('logger.savePath'))

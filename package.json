@@ -11,6 +11,7 @@
     "license": "ISC",
     "description": "",
     "dependencies": {
+        "@ctrl/transmission": "^7.4.0",
         "@kubernetes/client-node": "^1.4.0",
         "axios": "^1.13.1",
         "content-type": "^1.0.5",

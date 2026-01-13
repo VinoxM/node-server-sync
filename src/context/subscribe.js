@@ -7,6 +7,7 @@ export class ContextSubcribe {
     constructor(label = 'Unknown', onRefresh) {
         this.#label = label
         this.#onRefreshCallback = onRefresh
+        __env.subscribe?.(this)
     }
 
     setupSubscribeId(subscribeId) {
@@ -27,5 +28,9 @@ export class ContextSubcribe {
 
     getLabel() {
         return this.#label
+    }
+
+    destroy() {
+        __env.unsbuscribe?.(this)
     }
 }

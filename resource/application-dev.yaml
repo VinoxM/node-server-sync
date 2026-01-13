@@ -23,8 +23,7 @@ api:
     - ^/upload/*
     # - /clash/(?!update)
     # - /common/*
-    - /qbitTorrent/*
-    - /aria2/*
+    - ^/download/(aria2)/*
   tokenBucket:
     config:
       enable: false
