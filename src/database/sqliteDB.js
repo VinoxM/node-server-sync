@@ -4,6 +4,10 @@ import { Executor } from '../common/executor.js'
 
 const defaultOptions = { print: false, resultMap: null }
 
+function getPrinter(options) {
+    return options?.print ? __log.info : __log.debug
+}
+
 export class SqliteDB {
     #schema = {};
     #defaultDbName;
@@ -43,7 +47,7 @@ export class SqliteDB {
         }
         const db = this.#connect(dbName);
         return new Promise((resolve, reject) => {
-            const printer = options?.print ? logger : debug
+            const printer = getPrinter(options)
             printer(`===> Preparing: ${sql}`);
             if (params && params.length > 0) {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
@@ -67,7 +71,7 @@ export class SqliteDB {
         const { resultMap } = options ?? defaultOptions
         const db = this.#connect(dbName);
         return new Promise((resolve, reject) => {
-            const printer = options?.print ? logger : debug
+            const printer = getPrinter(options)
             printer(`===> Preparing: ${sql}`);
             if (params && params.length > 0) {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
@@ -94,18 +98,18 @@ export class SqliteDB {
         return new Promise(resolve => {
             this.#queryOne(sql, [tableName], null, dbName).then(({ count }) => {
                 const tableImport = () => {
-                    logger(`[Initialize Table] ${tableName}`);
+                    __log.info(`[Initialize Table] ${tableName}`);
                     this.#tableImport(SqlScript, dbName, tableName).then(() => {
-                        logger(`[Initialize Over] ${tableName}`);
+                        __log.info(`[Initialize Over] ${tableName}`);
                         resolve();
                     })
                 }
                 if (count === 0) {
-                    logger(`[Create Table] ${tableName}`)
+                    __log.info(`[Create Table] ${tableName}`)
                     this.#exec(DDL, [], null, dbName).then(() => {
                         tableImport();
                     }).catch(ex => {
-                        error(`[Create Error] ${tableName}. Cause: ${ex.message}`)
+                        __log.error(`[Create Error] ${tableName}. Cause: ${ex.message}`)
                         resolve()
                     });
                 } else if (forceImport) {
@@ -123,18 +127,18 @@ export class SqliteDB {
         return new Promise(resolve => {
             const db = this.#connect(dbName);
             db.serialize(() => {
-                logger(`[Sql Script] execute sql.`)
+                __log.info(`[Sql Script] execute sql.`)
                 db.run('PRAGMA foreign_keys=OFF;');
                 db.run('BEGIN TRANSACTION;');
                 const executor = new Executor(() => {
                     db.run(`ANALYZE ${tableName};`, (err) => {
                         if (err) error(`[Analyze Error] ${err.message}`);
-                        logger("[Sql Script] execute & analyze over.");
+                        __log.info("[Sql Script] execute & analyze over.");
                         db.run("COMMIT;");
                         resolve();
                     });
                 }, (err) => {
-                    error(`[Sql Script] execute error. Cause: ${err.message}`);
+                    __log.error(`[Sql Script] execute error. Cause: ${err.message}`);
                     db.run("ROLLBACK;");
                     resolve();
                 });
@@ -169,7 +173,7 @@ export class SqliteDB {
             }, null).submitAll(Object.keys(config.db).map(dbName => {
                 return (resolve_1) => {
                     const executor = new Executor(() => {
-                        logger(`[Sqlite] Loaded database schema: ${dbName}.`);
+                        __log.info(`[Sqlite] Loaded database schema: ${dbName}.`);
                         resolve_1()
                     }, null).submitAll(config.db[dbName].map(table => (resolve_2) => {
                         this_.#tableExists(table, dbName).then(resolve_2);
@@ -220,7 +224,7 @@ class TransactionSqliteDB {
     async #exec(sql, params, options = defaultOptions) {
         const db = this.#connection;
         return new Promise((resolve, reject) => {
-            const printer = options?.print ? logger : debug
+            const printer = getPrinter(options)
             printer(`===> Preparing: ${sql}`);
             if (params && params.length > 0) {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
@@ -241,7 +245,7 @@ class TransactionSqliteDB {
         const { resultMap } = options ?? defaultOptions
         const db = this.#connection;
         return new Promise((resolve, reject) => {
-            const printer = options?.print ? logger : debug
+            const printer = getPrinter(options)
             printer(`===> Preparing: ${sql}`);
             if (params && params.length > 0 && print) {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
@@ -269,7 +273,7 @@ class TransactionSqliteDB {
             this.#connection.serialize(async () => {
                 db.run('PRAGMA foreign_keys=OFF;');
                 db.run('BEGIN TRANSACTION;');
-                logger("====> begin transaction!");
+                __log.info("====> begin transaction!");
                 try {
                     const cbResult = await callback(this);
                     this.#commit();
@@ -277,7 +281,7 @@ class TransactionSqliteDB {
                 } catch (error) {
                     db.run("ROLLBACK;");
                     this.#transactionOver = true;
-                    logger("====x rollback!");
+                    __log.info("====x rollback!");
                     reject(error);
                 } finally {
                     db.close();
@@ -291,7 +295,7 @@ class TransactionSqliteDB {
         if (!this.#transactionOver) {
             this.#connection.run('COMMIT;');
             this.#transactionOver = true;
-            logger("====> commit!");
+            __log.info("====> commit!");
         }
     }
 

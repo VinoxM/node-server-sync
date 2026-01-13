@@ -10,7 +10,7 @@ function checkSubnet(inputIp, cidr) {
             return addr.match(range, bits);
         }
     } catch (ex) {
-        error(`[Allow Hosts] Check subnet failed.`, ex?.message || ex)
+        __log.error(`[Allow Hosts] Check subnet failed.`, ex?.message || ex)
     }
     return false;
 }
@@ -31,7 +31,7 @@ function urlMatch(url, reg) {
     try {
         return new RegExp(reg).test(url)
     } catch (ex) {
-        error(`[Allow Hosts] UrlMatch failed.`, ex?.message || ex)
+        __log.error(`[Allow Hosts] UrlMatch failed.`, ex?.message || ex)
     }
     return false
 }

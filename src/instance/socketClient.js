@@ -25,7 +25,7 @@ export class SocketClient {
                 return;
             }
         } else return;
-        logger(`[Socket] ${this.#channelPath} ==> ${this.#realIp}${ignorePrint ? '' : (': ' + msg)}`);
+        __log.info(`[Socket] ${this.#channelPath} ==> ${this.#realIp}${ignorePrint ? '' : (': ' + msg)}`);
         this.#socket.send(msg);
     }
 
@@ -44,19 +44,19 @@ export class SocketClient {
     setInfo(key, value) {
         try {
             setItem(this.#infomation, key, value)
-            debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info ${key} => `, value)
+            __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info ${key} => `, value)
         } catch (e) {
-            error(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info error. ${key} =x `, value, e)
+            __log.error(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info error. ${key} =x `, value, e)
         }
     }
 
     getInfo(key, defaultValue) {
         try {
             const value = getItem(this.#infomation, key)
-            debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info ${key} => `, value)
+            __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info ${key} => `, value)
             return value
         } catch (e) {
-            error(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info error. ${key}`, e)
+            __log.error(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info error. ${key}`, e)
             return defaultValue ?? null
         }
     }

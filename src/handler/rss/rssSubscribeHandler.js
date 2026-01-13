@@ -25,7 +25,7 @@ const updateRssSubscribe = (ids) => {
         return Promise.reject({ code: -5, msg: "Rss is updating!" });
     }
     return new Promise(async (resolve, reject) => {
-        debug("[RSS Subscribe] Update Rss Subscribe.");
+        __log.debug("[RSS Subscribe] Update Rss Subscribe.");
         let data = []
         try {
             if (isNotEmptyArray(ids)) {
@@ -34,7 +34,7 @@ const updateRssSubscribe = (ids) => {
                 data = await selectRssSubscribeWithoutFin().then(res => res.data);
             }
         } catch (err) {
-            error(`[RSS Subscribe] Get rss subscribe list failed. Cause: ${err.message}`);
+            __log.error(`[RSS Subscribe] Get rss subscribe list failed. Cause: ${err.message}`);
             return reject(err);
         }
         let result = [];
@@ -57,12 +57,12 @@ const updateRssSubscribe = (ids) => {
         const executor = new Executor(() => {
             const handled = handledCount + errorCount;
             if (handled < arr.length) {
-                debug(`Analysis Rss Subscribe delay ${handleDelay}ms. Handled: ${handled}, error: ${errorCount}.`);
+                __log.debug(`Analysis Rss Subscribe delay ${handleDelay}ms. Handled: ${handled}, error: ${errorCount}.`);
                 setTimeout(() => {
                     submitAndRun();
                 }, handleDelay);
             } else {
-                debug(`Analysis Rss Subscribe complete. Total: ${arr.length}, Error: ${errorCount}, Results: ${result.length}`);
+                __log.debug(`Analysis Rss Subscribe complete. Total: ${arr.length}, Error: ${errorCount}, Results: ${result.length}`);
                 if (result.length > 0) {
                     addManyResult(result).then((rows) => {
                         if (rows > 0) logger(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
@@ -76,7 +76,7 @@ const updateRssSubscribe = (ids) => {
                 }
             }
         }, (err) => {
-            logger("[RSS Subscribe] Analysis Rss Subscribe error!", err);
+            __log.info("[RSS Subscribe] Analysis Rss Subscribe error!", err);
             rssUpdate.isUpdating = false;
             reject(err);
         }, parallelNum);
@@ -90,7 +90,7 @@ const updateRssSubscribe = (ids) => {
 }
 
 const analysisRssSubscribe = (obj, resolve, reject) => {
-    debug(`[RssSubscribe Handler] Analysis RSS url: ${decodeURI(obj.url)}`);
+    __log.debug(`[RssSubscribe Handler] Analysis RSS url: ${decodeURI(obj.url)}`);
     getUrlContent(obj.url).then(convertRssXml2Json).then(res => {
         let results = res.items ? (Array.isArray(res.items) ? res.items : [res.items]) : [];
         results = results.filter(item => {
@@ -108,7 +108,7 @@ const analysisRssSubscribe = (obj, resolve, reject) => {
         resolve(results);
     }).catch(err => {
         const idStr = !!obj?.id ? `[${obj.id}]` : ''
-        error(`[RssSubscribe Handler] Analysis Error: ${idStr}${decodeURI(obj.url)} , Cause: ${err.message}`);
+        __log.error(`[RssSubscribe Handler] Analysis Error: ${idStr}${decodeURI(obj.url)} , Cause: ${err.message}`);
         reject(err);
     });
 }

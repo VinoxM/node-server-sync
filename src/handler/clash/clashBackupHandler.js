@@ -49,16 +49,16 @@ function backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum) {
                     .map(o => o + clashFileSuffixName).forEach(f => {
                         try {
                             fs.unlinkSync(__join(backupPath_, f))
-                            logger(`[Clash Backup] File delete: ${f} -> SUCCESS`)
+                            __log.info(`[Clash Backup] File delete: ${f} -> SUCCESS`)
                         } catch (error) {
-                            logger(`[Clash Backup] File delete: ${f} -> FAIL`)
+                            __log.info(`[Clash Backup] File delete: ${f} -> FAIL`)
                         }
                     })
             }
         }
         const backup = __join(backupPath_, new Date().getTime() + clashFileSuffixName)
         fs.copyFileSync(saveFile, backup);
-        logger(`[Clash Backup] File backup: ${backup}`);
+        __log.info(`[Clash Backup] File backup: ${backup}`);
     }
 }
 
@@ -66,7 +66,7 @@ function savePersistenceYaml(obj, saveFile, date) {
     let objStr = generateUpdatetime(obj, date)
     if (isBlank(objStr)) return
     fs.writeFileSync(saveFile, objStr)
-    logger(`[Clash Backup] File saved: ${saveFile}`);
+    __log.info(`[Clash Backup] File saved: ${saveFile}`);
 }
 
 function saveDeployClashYaml(obj, deployPath, mixin, date) {
@@ -77,7 +77,7 @@ function saveDeployClashYaml(obj, deployPath, mixin, date) {
     let objStr = generateUpdatetime(obj, date)
     if (isBlank(objStr)) return
     fs.writeFileSync(deploymentFile, objStr)
-    logger(`[Clash Deploy] File saved: ${deploymentFile}`);
+    __log.info(`[Clash Deploy] File saved: ${deploymentFile}`);
 }
 
 function generateUpdatetime(clashYaml, date) {

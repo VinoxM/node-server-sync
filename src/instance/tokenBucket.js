@@ -13,7 +13,7 @@ export class TokenBucket {
         this.#maxSize = maxSize > 0 ? maxSize : 100;
         this.#rate = rate > 0 ? rate : 1;
         this.#lastTakeTime = this.#getNow();
-        logger("[Token Bucket] Enabled.");
+        __log.info("[Token Bucket] Enabled.");
     }
 
     #getNow() {
@@ -39,7 +39,7 @@ export class TokenBucket {
     }
 
     destroy() {
-        logger("[Token Bucket] Destroy.");
+        __log.info("[Token Bucket] Destroy.");
         return this.#token;
     }
 }

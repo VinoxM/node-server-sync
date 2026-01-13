@@ -24,11 +24,11 @@ export async function addTorrent(torrents, savePath = 'Anime') {
     const addResponse = await axios.post(RPC_URL, requestData);
 
     if (addResponse.data.error) {
-        error('add qbitorrent task failed.', addResponse.data);
+        __log.error('add qbitorrent task failed.', addResponse.data);
         throwMessage('add qbitorrent task failed.')
     } else {
         const gid = addResponse.data.result;
-        logger(`qbitorrent task added. GID: ${gid}`);
+        __log.info(`qbitorrent task added. GID: ${gid}`);
         return gid
     }
 }

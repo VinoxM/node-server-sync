@@ -21,14 +21,14 @@ function saveSubscribeInfo(label = 'Unknown', subInfo) {
         fs.mkdirSync(subscriptionPath, { recursive: true })
     }
     fs.writeFileSync(subInfoFile, subInfo)
-    logger(`[Clash Subscribe] Save clash source[${label}] subInfo success.`);
+    __log.info(`[Clash Subscribe] Save clash source[${label}] subInfo success.`);
 }
 
 async function subscribeSources(from) {
     const subscription = __env.get('clash.subscription', {})
     const sources = Array.from(subscription.sources ?? [])
     if (sources.length === 0) {
-        warning('[Clash Subscribe] Subscribe clash sources skipped, cause sources empty.')
+        __log.warn('[Clash Subscribe] Subscribe clash sources skipped, cause sources empty.')
         return
     }
     for (const source of sources) {
@@ -37,7 +37,7 @@ async function subscribeSources(from) {
             continue
         }
         if (isBlank(url)) {
-            warning(`[Clash Subscribe] Subscribe clash source[${label}] skipped.`)
+            __log.warn(`[Clash Subscribe] Subscribe clash source[${label}] skipped.`)
             continue
         }
         await getUrlFull(url).then(res => {
@@ -60,7 +60,7 @@ function saveSubscription(data, label) {
     }
     fs.writeFileSync(subscribeClashFile, data)
     fs.writeFileSync(subscribeClashUpdatetimeFile, new Date().getTime() + '')
-    logger(`[Clash Subscribe] Subscription[${label}] saved: `, subscribeClashFile)
+    __log.info(`[Clash Subscribe] Subscription[${label}] saved: `, subscribeClashFile)
 }
 
 function getSubscriptionSourcesObj() {
@@ -78,7 +78,7 @@ function getSubscriptionSourcesObj() {
             const objStr = fs.readFileSync(subscribeClashFile).toString()
             obj = yaml.parse(objStr)
         } catch (ex) {
-            error(`[Clash Subscribe] Parse clash source[${label}] failed.`, ex)
+            __log.error(`[Clash Subscribe] Parse clash source[${label}] failed.`, ex)
         }
         return obj === null ? null : { label, obj }
     }).filter(o => o !== null)

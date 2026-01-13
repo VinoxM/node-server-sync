@@ -41,7 +41,7 @@ const storeConnection = (config) => {
                 validationFlag = validation(realIp, url.searchParams)
             } catch (e) {
                 validationFlag = false
-                error(`[Socket] client connect validation failed.`, e)
+                __log.error(`[Socket] client connect validation failed.`, e)
             }
         }
         if (!validationFlag) {
@@ -49,7 +49,7 @@ const storeConnection = (config) => {
             return;
         }
         // connect success.
-        logger(`[Socket] ${realIp} ->- ${connection.path}`);
+        __log.info(`[Socket] ${realIp} ->- ${connection.path}`);
         const client = new SocketClient(ws, channel, channelPath, realIp);
         connection.clients.push(client);
         if (isFunction(onConnect)) onConnect(client, url.searchParams);
@@ -58,7 +58,7 @@ const storeConnection = (config) => {
             isFunction(onMessage) && onMessage(d, client);
         });
         ws.on('close', () => {
-            logger(`[Socket] ${realIp} -x- ${connection.path}`);
+            __log.info(`[Socket] ${realIp} -x- ${connection.path}`);
             const index = connection.clients.indexOf(client);
             connection.clients.splice(index, 1);
         })

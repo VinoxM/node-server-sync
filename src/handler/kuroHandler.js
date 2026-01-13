@@ -141,7 +141,7 @@ const kuroGameSign = (uid, token_, gameId = 3) => {
             try {
                 token = await kuroRep.selectTokenByUid(uid);
             } catch (e) {
-                logger(e.message);
+                __log.info(e.message);
             }
         }
         if (!token) reject({ msg: `account token not found: ${uid}` })
@@ -175,7 +175,7 @@ const kuroGameSignAll = () => {
         try {
             accounts = await kuroRep.selectAllSignAccount();
         } catch (e) {
-            logger(e.message);
+            __log.info(e.message);
         }
         const { rows, data } = accounts;
         const successed = () => resolve({ handleCount, errorCount, reasons });
@@ -193,11 +193,11 @@ const kuroGameSignAll = () => {
             const { uid, token, gameId } = obj;
             executor.submit((resolve_) => {
                 kuroGameSign(uid, token, gameId).then(msg => {
-                    logger(`[Kuro Game Sign] ${uid} => ${msg}`);
+                    __log.info(`[Kuro Game Sign] ${uid} => ${msg}`);
                     handleCount++;
                     resolve_();
                 }).catch(e => {
-                    logger(`[Kuro Game Sign] ${uid} => ${e.msg ?? e.message}`);
+                    __log.info(`[Kuro Game Sign] ${uid} => ${e.msg ?? e.message}`);
                     handleCount++;
                     errorCount++;
                     reasons.push(`${uid} => ${e.msg ?? e.message}`);

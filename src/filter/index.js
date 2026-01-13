@@ -8,7 +8,7 @@ export async function getApiFilters() {
         (!disabledFilters.includes(name) && !m.disabled && isFunction(m.doFilter)) && filter.push({ name, ...m })
     }).then(() => filter.sort((a, b) => (a.order || 0) - (b.order || 0)).map(obj => {
         const { name, doFilter } = obj
-        logger(`[Server] Loaded Request Filter: ${name}`)
+        __log.info(`[Server] Loaded Request Filter: ${name}`)
         return doFilter
     }))
 }

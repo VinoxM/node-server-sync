@@ -1,5 +1,5 @@
 import apiMethodConst from '../constraints/apiMethodConst.js';
-import { reloadApplicationContext } from '../support/index.js';
+import { reloadApplicationContext } from '../support.js';
 import { startTokenBucket } from '../common/apiTokenBucket.js';
 import { startIpBlocker,cleanBlocker, unblockIp } from '../common/apiIpBlock.js';
 import { getRequestRealIp } from '../common/httpUtil.js';

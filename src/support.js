@@ -1,7 +1,7 @@
 import { join as pathJoin } from "path";
-import { ApplicationContext } from "./context.js";
-import { initializeDB, getSqliteDB, getRedisClient } from "../database/index.js";
-import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./logger.js";
+import { initializeDB, getSqliteDB, getRedisClient } from "./database/index.js";
+import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./logger/index.js";
+import { createContext } from "./context/index.js";
 
 const globalUtils = {
     isBlank: (str) => {
@@ -53,11 +53,6 @@ let applicationContext = null;
 export async function setupGlobal(rootPath) {
     if (applicationContext !== null) return
 
-    applicationContext = new ApplicationContext(pathJoin(rootPath, 'resource'), 'yaml')
-
-    // load process arguments
-    globalThis.__args = getProcessArgs()
-
     globalThis.__dirname = rootPath
 
     // console logger with date time
@@ -71,6 +66,11 @@ export async function setupGlobal(rootPath) {
         }
         return pathJoin(...args);
     }
+
+    applicationContext = createContext(pathJoin(rootPath, 'resource'), 'yaml')
+
+    // load process arguments
+    globalThis.__args = getProcessArgs()
 
     setupGlobalLogFunc()
 
@@ -88,11 +88,7 @@ export async function setupGlobal(rootPath) {
     globalThis.redisClient = getRedisClient();
 }
 
-export function reloadApplicationContext(ignoreActives, extraContexts = []) {
-    let config = applicationContext.load(ignoreActives)
-    for (const context of extraContexts) {
-        const { data, label } = context
-        config = applicationContext.mergeContext?.(data, label) ?? config
-    }
+export function reloadApplicationContext() {
+    const config = applicationContext.load()
     setupLoggerLevel(config?.logger?.level)
 }

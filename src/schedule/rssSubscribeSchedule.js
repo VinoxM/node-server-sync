@@ -22,7 +22,7 @@ export default {
         let afterUpdate = []
         return selectRssSubscribeCountsWithoutFin().then(res => (beforeUpdate = [...res.data], res.data.map(o => o.id))).then(updateRssSubscribe).then(async res => {
             const { effectRows } = res
-            debug(`[RssSubscribe Schedule] effect rows: ${effectRows}`)
+            __log.debug(`[RssSubscribe Schedule] effect rows: ${effectRows}`)
             if (effectRows > 0) {
                 await selectRssSubscribeCountsWithoutFin().then(r => afterUpdate = r.data)
                 const updated = []
@@ -62,7 +62,7 @@ export default {
                 })
             }
         }).catch(e => {
-            logger(e)
+            __log.info(e)
         })
     }
 }
