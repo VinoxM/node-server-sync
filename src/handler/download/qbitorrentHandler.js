@@ -2,7 +2,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { join } from 'path';
 
-const QB_URL = 'http://frp:9801';
+const QB_URL = 'http://fedora:9801';
 
 export async function addTorrent(torrents, savePath = 'Anime') {
     if (!Array.isArray(torrents)) torrents = [torrents]
