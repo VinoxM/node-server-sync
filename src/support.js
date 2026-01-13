@@ -75,7 +75,7 @@ export async function setupGlobal(rootPath) {
     setupGlobalLogFunc()
 
     // load environment
-    reloadApplicationContext()
+    await reloadApplicationContext()
     globalThis.__env = {
         get: (key, defaultValue) => applicationContext.getProperty(key, defaultValue)
     }
@@ -88,7 +88,7 @@ export async function setupGlobal(rootPath) {
     globalThis.redisClient = getRedisClient();
 }
 
-export function reloadApplicationContext() {
-    const config = applicationContext.load()
+export async function reloadApplicationContext() {
+    const config = await applicationContext.load()
     setupLoggerLevel(config?.logger?.level)
 }
