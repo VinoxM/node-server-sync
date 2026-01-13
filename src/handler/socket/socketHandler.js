@@ -54,7 +54,7 @@ const storeConnection = (config) => {
         connection.clients.push(client);
         if (isFunction(onConnect)) onConnect(client, url.searchParams);
         ws.on('message', d => {
-            // logger(`[Socket] ${realIp} ==> ${connection.path}${printMessage ? (': ' + d) : ''}`);
+            // __log.info(`[Socket] ${realIp} ==> ${connection.path}${printMessage ? (': ' + d) : ''}`);
             isFunction(onMessage) && onMessage(d, client);
         });
         ws.on('close', () => {

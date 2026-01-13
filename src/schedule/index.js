@@ -11,7 +11,7 @@ class Schedule {
         if (isBlank(scheduleKey) || isBlank(jobName) || isBlank(defaultCorn) || !jobCallback) return;
         const scheduleCorn = getScheduleConfig();
         if (!scheduleCorn[scheduleKey]?.enable) return;
-        const resolve = () => (!ignoreOutput && logger(`[Schedule] Job Finished: ${jobName}.`));
+        const resolve = () => (!ignoreOutput && __log.info(`[Schedule] Job Finished: ${jobName}.`));
         const reject = (ex, errCallback) => (error(`[Schedule] Job Execute error: ${jobName}. Cause: ${ex.msg || ex.message}`), isFunction(errCallback) && errCallback());
         const executeJob = () => {            
             const doJob = (errCallback) => {
@@ -43,7 +43,7 @@ class Schedule {
         this.#schedule[scheduleKey] = {
             name: jobName,
             job: nodeSchedule.scheduleJob(scheduleCorn[scheduleKey]?.corn || defaultCorn, () => {
-                !ignoreOutput && logger(`[Schedule] Job Execute: ${jobName}`);
+                !ignoreOutput && __log.info(`[Schedule] Job Execute: ${jobName}`);
                 executeJob();
             })
         }

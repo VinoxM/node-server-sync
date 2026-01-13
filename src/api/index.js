@@ -173,5 +173,5 @@ export function setupSocketChannels(channels) {
             channel.emit('connection', ws, request);
         });
     });
-    channels.forEach(con => logger(`[Socket] Channel Mapping: [${con.channel}] ${con.path}`));
+    channels.forEach(con => __log.info(`[Socket] Channel Mapping: [${con.channel}] ${con.path}`));
 }

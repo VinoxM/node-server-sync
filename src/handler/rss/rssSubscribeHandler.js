@@ -65,7 +65,7 @@ const updateRssSubscribe = (ids) => {
                 __log.debug(`Analysis Rss Subscribe complete. Total: ${arr.length}, Error: ${errorCount}, Results: ${result.length}`);
                 if (result.length > 0) {
                     addManyResult(result).then((rows) => {
-                        if (rows > 0) logger(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
+                        if (rows > 0) __log.info(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
                         effectRows += rows;
                         resolve({ handledCount: handledCount, effectRows });
                         rssUpdate.isUpdating = false;

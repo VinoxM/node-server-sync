@@ -35,6 +35,6 @@ export default {
         sendNotificationByLastId(client, lastId);
     },
     onMessage: (data, client) => {
-        // logger(`[Socket] notification -> ${data}`);
+        // __log.info(`[Socket] notification -> ${data}`);
     }
 }
