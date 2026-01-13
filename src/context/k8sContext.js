@@ -2,7 +2,8 @@ import { ApplicationContext } from "./context.js"
 import * as k8s from '@kubernetes/client-node'
 import yaml from 'yaml'
 import k3sConst from "../constraints/k3sConst.js"
-import { pushNotification } from '../sockets/notification.js';
+import { pushNotification } from '../sockets/notification.js'
+import { Worker } from 'worker_threads'
 
 export class K8SApplicationContext extends ApplicationContext {
 
