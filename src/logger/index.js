@@ -1,6 +1,13 @@
 import { dateFormatForLog } from '../common/dateUtil.js';
 import { LogWorker } from './logger.js';
 
+const generateLogNowFormat = process.env.APP_ENV === 'k3s-pod' ? 
+    () => '' :
+    timestamp => {
+        const now = dateFormatForLog(timestamp)
+        return ` [${now}]`
+    }
+
 function print(...message) {
     const msgArr = formatMessage(message)
     if (message && message.length > 0) {
@@ -13,8 +20,8 @@ function logger(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
     if (loggerLevel >= 1 && message && message.length > 0) {
-        const now = dateFormatForLog(timestamp);
-        console.log(`[INFO ] [${now}]`, ...msgArr);
+        const now = generateLogNowFormat(timestamp)
+        console.log(`[INFO ]${now}`, ...msgArr);
     }
     logWorker?.log('info', msgArr.join(' '), timestamp)
 }
@@ -23,8 +30,8 @@ function warning(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
     if (loggerLevel >= 2 && message && message.length > 0) {
-        const now = dateFormatForLog(timestamp);
-        console.log(`[WARN ] [${now}]`, ...msgArr);
+        const now = generateLogNowFormat(timestamp)
+        console.log(`[WARN ]${now}`, ...msgArr);
     }
     logWorker?.log('warn', msgArr.join(' '), timestamp)
 }
@@ -33,8 +40,8 @@ function debug(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
     if (loggerLevel >= 3 && message && message.length > 0) {
-        const now = dateFormatForLog(timestamp);
-        console.log(`[DEBUG] [${now}]`, ...msgArr);
+        const now = generateLogNowFormat(timestamp)
+        console.log(`[DEBUG]${now}`, ...msgArr);
     }
     logWorker?.log('debug', msgArr.join(' '), timestamp)
 }
@@ -43,8 +50,8 @@ function error(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
     if (message && message.length > 0) {
-        const now = dateFormatForLog(timestamp);
-        console.error(`[ERROR] [${now}]`, ...msgArr);
+        const now = generateLogNowFormat(timestamp)
+        console.error(`[ERROR]${now}`, ...msgArr);
     }
     logWorker?.log('error', msgArr.join(' '), timestamp)
 }
