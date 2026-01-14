@@ -7,10 +7,12 @@ socket:
   disabled: 
     - notification
     - rssSubscription
+server:
+  port: 28000
 api:
   allowHosts:
     - api: /common/doNothing
-      hosts: ['server-dev.vinoxm.cloud']
+      hosts: ['*-code-dev.vinoxm.cloud']
   filterDisabled: 
     - authorizationFilter
   apiDisabled:
