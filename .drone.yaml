@@ -67,16 +67,16 @@ steps:
     when:
       ref:
         - refs/tags/v*
-  # - name: trigger-argocd-sync
-  #   image: gitea-http.gitea.svc.cluster.local:3000/library/argocli:3.2.3
-  #   environment:
-  #     ARGOCD_SERVER: argocd-server.argocd.svc.cluster.local
-  #     ARGOCD_AUTH_TOKEN:
-  #       from_secret: argocd_token
-  #   commands:
-  #     - argocd app get node-server-deployment --refresh --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
-  #     - argocd app sync node-server-deployment --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
-  #     - argocd app wait node-server-deployment --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
-  #   when:
-  #     ref:
-  #       - refs/tags/v*
+  - name: trigger-argocd-sync
+    image: gitea-http.gitea.svc.cluster.local:3000/library/argocli:3.2.3
+    environment:
+      ARGOCD_SERVER: argocd-server.argocd.svc.cluster.local
+      ARGOCD_AUTH_TOKEN:
+        from_secret: argocd_token
+    commands:
+      - argocd app get node-server-deployment --refresh --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
+      - argocd app sync node-server-deployment --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
+      - argocd app wait node-server-deployment --server $ARGOCD_SERVER --insecure --auth-token $ARGOCD_AUTH_TOKEN
+    when:
+      ref:
+        - refs/tags/v*
