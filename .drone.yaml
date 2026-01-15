@@ -75,7 +75,6 @@ steps:
         from_secret: argocd_token
     commands:
       - argocd app get prod-node-server --refresh --server $ARGOCD_SERVER --plaintext --insecure --auth-token $ARGOCD_AUTH_TOKEN
-      - argocd app sync prod-node-server --server $ARGOCD_SERVER --plaintext --insecure --auth-token $ARGOCD_AUTH_TOKEN
       - argocd app wait prod-node-server --server $ARGOCD_SERVER --plaintext --insecure --auth-token $ARGOCD_AUTH_TOKEN
     when:
       ref:
