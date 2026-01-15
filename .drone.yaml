@@ -57,10 +57,10 @@ steps:
       - git clone ssh://git@gitea-ssh.gitea.svc.cluster.local/VinoxM/k3s-deployments.git
       - cd k3s-deployments
       - |
-        sed -i "s|image: .*node-server:.*|image: 192.168.31.110:30003/vinoxm/node-server:${DRONE_TAG}|g" node-server.yaml
+        sed -i "s|image: .*node-server:.*|image: 192.168.31.110:30003/vinoxm/node-server:${DRONE_TAG}|g" node-server/deployment.yaml
       - git config user.name "Drone CI"
       - git config user.email "drone@vinoxm.cloud"
-      - git add node-server.yaml
+      - git add node-server/deployment.yaml
       - |
         git commit -m "chore: update node-server image to ${DRONE_TAG} [skip ci]"
       - git push origin main
