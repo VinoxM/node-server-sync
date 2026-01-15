@@ -68,7 +68,7 @@ steps:
       ref:
         - refs/tags/v*
   - name: trigger-argocd-sync
-    image: argoproj/argocli
+    image: gitea.vinoxm.cloud/library/argocd:2.3.0
     environment:
       ARGOCD_SERVER: argocd-server.argocd.svc.cluster.local
       ARGOCD_AUTH_TOKEN:
