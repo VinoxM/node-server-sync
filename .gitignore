@@ -1,0 +1,14 @@
+node_modules
+package-lock.json
+# /db/*
+.idea
+/static/*
+/log/*
+.vscode
+test/*
+src-temp/*
+src-commonjs/*
+package-temp.json
+/scripts/.env
+*.db-shm
+*.db-wal

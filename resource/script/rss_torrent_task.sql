@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_rss_result_id ON rss_torrent_task (rss_result_id);

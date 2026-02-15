@@ -1,0 +1,70 @@
+logger:
+  level: debug
+  savePath: "@/log"
+sqlite:
+  dbPath: "@/db"
+socket:
+  disabled:
+    - notification
+    - rssSubscription
+server:
+  port: 28000
+api:
+  allowHosts:
+    - api: /common/doNothing
+      hosts: ["*-coder.vinoxm.cloud"]
+  filterDisabled: []
+  apiDisabled:
+    # - /auth/*
+    # - /favorites/*
+    # - /rss/*
+    - /notification/*
+    - /kuro/*
+    - /schedule/*
+    - ^/upload/*
+    # - /clash/(?!update)
+    # - /common/*
+    - ^/download/(aria2)/*
+  tokenBucket:
+    config:
+      enable: false
+  ipBlocker:
+    enable: false
+schedule:
+  rssSubscribe:
+    enable: false
+    immediate: true
+    corn: 0 7/30 * * * *
+  clashSubscribe:
+    enable: false
+    corn: 0 0 0/12 * * *
+  ipBlockerClean:
+    enable: false
+    corn: 0 0/10 * * * *
+  kuroGameSign:
+    enable: false
+    corn: 0 0 0 * * *
+redis:
+  enable: true
+  host: 192.168.31.110
+  port: 6379
+  database: 1
+  username: default
+  password: "redis-mAou5820"
+  failureThreshold: 5
+  recoveryTimeout: 30
+minio:
+  host: 192.168.31.120
+  port: 9000
+  username: admin
+  password: mAou5820
+  expiry: 7200
+ssh:
+  privateKey: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    QyNTUxOQAAACBrB7uIn3LbvP06oLw3IU/h0n3aY/Xrqjv3To+QL1ZkbQAAAJAoAqloKAKp
+    aAAAAAtzc2gtZWQyNTUxOQAAACBrB7uIn3LbvP06oLw3IU/h0n3aY/Xrqjv3To+QL1ZkbQ
+    AAAECxI9S0e8BJERiVwh3S6E7r1HbwMCOGU3gXduCnoEg0VGsHu4ifctu8/TqgvDchT+HS
+    fdpj9euqO/dOj5AvVmRtAAAADW5vZGUtc3NoLW1hb3U=
+    -----END OPENSSH PRIVATE KEY-----

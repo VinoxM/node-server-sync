@@ -1,0 +1,1 @@
+INSERT INTO rss_episode_failed (rss_task_id, rss_subs_id, episode, minio_link, root_path, file_name, reason, create_time) VALUES (29999,1404,NULL,NULL,'/mnt/media/Downloads/Anime/test','[ANi] 魔王的女兒太溫柔了!! - 10 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4','1','2026-02-03 16:55:00');

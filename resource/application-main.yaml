@@ -1,0 +1,181 @@
+logger:
+  level: info
+  savePath: /home/maou/.github/node-server/log
+sqlite:
+  defaultDB: rss
+  dbPath: "@/db"
+redis:
+  enable: true
+  host: valkey-loadbalancer.cache.svc.cluster.local
+  port: 6379
+  database: 1
+  username: default
+  password: "redis-mAou5820"
+  failureThreshold: 5
+  recoveryTimeout: 30
+server:
+  port: 8800
+  cors: true
+axios:
+  proxy:
+    protocol: http
+    host: frp
+    port: 7890
+api:
+  defaultSecret: mAou5820
+  apiDisabled:
+    - /common/doNothing
+  allowHosts:
+    - api: /common/animeGroup
+      cidr: ["192.168.31.0/24"]
+  filterDisabled: []
+  needAuth:
+    - /rss(/v2)?/[(?!get)|Matchers]*$
+    - /rss/subscribe/*
+    - /rss/[copyright|link]/[add|edit|del].*
+    - /rss/result/*
+    - /rss/regex/*
+  tokenBucket:
+    config:
+      enable: true
+      initSize: 10
+      maxSize: 100
+      rate: 0.5
+    needToken:
+      - /rss(/v2)?/get((?!/|Matchers).)*$
+      - /rss/tracker/getAll
+  ipBlocker:
+    enable: true
+    maxInterval:
+      - 1000
+      - 60
+    maxCount: 100
+    blockTime:
+      - 1000
+      - 60
+      - 60
+      - 24
+    blockIgnore:
+      - /common/*
+      - /rss/subscribe/*
+      - /rss/[copyright|link]/[add|edit|del].*
+      - /rss/result/*
+      - /rss/regex/*
+      - /rss/task/*
+sse:
+  disabled: 
+    - barrage
+schedule:
+  rssSubscribe:
+    enable: true
+    corn: 0 7/30 * * * *
+  clashSubscribe:
+    enable: true
+    corn: 0 0 0/12 * * *
+  ipBlockerClean:
+    enable: true
+    corn: 0 0/10 * * * *
+  kuroGameSign:
+    enable: true
+    corn: 0 0 0 * * *
+rss:
+  subscribeHandler:
+    parallelNum: 3
+    everyHandleCount: 30
+    handleDelay: 5000
+  regex:
+    historyLimit: 20
+  matchers:
+    - name: 末日动漫
+      source: https://share.acgnx.se/
+      regex: .*acgnx.*
+      keyword: true
+      match: https://share.acgnx.se/rss.xml?sort_id=0&keyword=#{keyword}
+    - name: 动漫花园
+      source: https://share.dmhy.org/
+      regex: .*dmhy.*
+      keyword: true
+      match: https://share.dmhy.org/topics/rss/rss.xml?keyword=#{keyword}
+  awaitRssUpdating:
+    - /rss/[copyright|link|result|subscribe]/[add|edit|replace|update].*
+    - /rss/subscribe/[subTest|setFin]
+  episodeMatches:
+    - .*?\[([0-9]{1,4}(\.5)?)(v[0-3])?\].*
+    - .*?[-～] ([0-9]{1,4}(\.5)?)(v[0-3])? .*
+    - .*?第([0-9]{1,4}(\.5)?)(v[0-3])?(集|话)(v[0-3])?.*
+    - .*?【([0-9]{1,4}(\.5)?)(v[0-3])?】.*
+    - .*? ([0-9]{1,4}(\.5)?)(v[0-3])? .*
+    - .*?E([0-9]{1,4}(\.5)?)(v[0-3])? .*
+    - .*?[S[1-9]{1}E([0-9]{1,4}(\.5)?)(v[0-3])?].*
+    - .*?★([0-9]{1,4}(\.5)?)(v[0-3])?★.
+    - .*?\.S[0-9]{1,2}E([0-9]{1,3})\.
+  animeExtRegex: ^\.(mp4|avi|flv|mkv|mov|wmv|rmvb|3gp|mpeg|mpg)$
+clash:
+  path:
+    deployment: /mnt/data/.config/mihomo/conf
+    persistence: /mnt/data/.config/clash
+    subscription: /mnt/data/.config/clash/subscription
+    concat: /mnt/data/.config/clash/concat
+    backup: /mnt/data/.config/clash/backup
+  deployment:
+    excludeKeys:
+      - "external-controller"
+      - "external-ui"
+      - "secret"
+    mixin:
+      external-controller: 0.0.0.0:9900
+      external-ui: /shared_media/.config/mihomo/conf/dashboard/public
+      secret: 9fbcc5b16365b44ac6433eea9ce02adb323b1338ec1e2e7dbd68073765b9d03e
+      socks-port: 7890
+      redir-port: 7890
+  subscription:
+    sources:
+      - url: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
+        label: Cloud
+        isDefault: true
+      # - url: https://suburl.mimemi.net/link/RGIssK2aHDxdtwyP?clashr=1
+      #   label: Mimemi
+  concat:
+    proxyFilters:
+      - "官网"
+      - "二手倒卖"
+      - "试用"
+      - "重大漏洞"
+      - "备用"
+      - "登录"
+      - "工作室"
+    proxyGroupFilters:
+      - "🥀Special Traffic - Hanime1 Download"
+    fallbackUrl: "http://www.gstatic.com/generate_204"
+    groupMapping:
+      JP: ["日"]
+      HT: ["港", "台"]
+      KR: ["韩"]
+  backup:
+    fileLimit: 10
+auth:
+  secretKey: mAou.authorization.jwt
+  maxTokenStore: 3
+  defaultTokenExpire: 30d
+crypto:
+  aes: # 长度 16
+    key: mAou.aes.key.3ca
+    iv: mAou.aes.iv.a6b7
+totp:
+  timeStep: 30
+  digits: 6
+  algorithm: sha256
+  secret: mAou5820.TOTP.secret
+  tolerance: 2
+minio:
+  host: 192.168.31.120
+  port: 9000
+  username: admin
+  password: mAou5820
+  expiry: 7200
+ssh:
+  fedora:
+    host: 192.168.31.120
+    port: 22
+    username: maou
+    privateKey: ''
