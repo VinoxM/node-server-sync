@@ -25,19 +25,22 @@ function saveSubscribeInfo(label = 'Unknown', subInfo) {
 }
 
 async function subscribeSources(from) {
+    const result = { success: 0, skipped: 0, failed: 0 }
     const subscription = __env.get('clash.subscription', {})
     const sources = Array.from(subscription.sources ?? [])
     if (sources.length === 0) {
         __log.warn('[Clash Subscribe] Subscribe clash sources skipped, cause sources empty.')
-        return
+        return result
     }
     for (const source of sources) {
         const { url, label, isDefault = false } = source
         if (isBlank(label)) {
+            result.skipped++
             continue
         }
         if (isBlank(url)) {
             __log.warn(`[Clash Subscribe] Subscribe clash source[${label}] skipped.`)
+            result.skipped++
             continue
         }
         await getUrlFull(url).then(res => {
@@ -47,8 +50,10 @@ async function subscribeSources(from) {
                 pushSubscribedInfoNotification(subInfo, from)
             }
             saveSubscription(res.data, label)
-        }).catch(ex => __log.error(`[Clash Subscribe] Subscribe clash source[${label}] failed.`, ex))
+            result.success++
+        }).catch(ex => (__log.error(`[Clash Subscribe] Subscribe clash source[${label}] failed.`, ex), result.failed++))
     }
+    return result
 }
 
 function saveSubscription(data, label) {
@@ -84,7 +89,7 @@ function getSubscriptionSourcesObj() {
     }).filter(o => o !== null)
 }
 
-function pushSubscribedInfoNotification(subInfo, from) {    
+function pushSubscribedInfoNotification(subInfo, from) {
     let info = subInfo.split('; ')
     const message = { event: 'Clash Subscribe' }
     info.forEach(str => {

@@ -193,7 +193,7 @@ const kuroGameSignAll = () => {
             const { uid, token, gameId } = obj;
             executor.submit((resolve_) => {
                 kuroGameSign(uid, token, gameId).then(msg => {
-                    __log.info(`[Kuro Game Sign] ${uid} => ${msg}`);
+                    __log.info(`[Kuro Game Sign] ${uid} => ${msg || 'Success.'}`);
                     handleCount++;
                     resolve_();
                 }).catch(e => {

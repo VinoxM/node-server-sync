@@ -6,11 +6,6 @@ sqlite:
   dbPath: "@/db"
 redis:
   enable: true
-  host: valkey-loadbalancer.cache.svc.cluster.local
-  port: 6379
-  database: 1
-  username: default
-  password: "redis-mAou5820"
   failureThreshold: 5
   recoveryTimeout: 30
 server:
