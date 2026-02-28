@@ -61,7 +61,8 @@ export async function addRssTask(rssTask) {
         taskId = await saveTask(toSaveRssTask, taskStatus)
     }
     if (TASK_STATUS.DOWNLOADING === taskStatus) {
-        pushNotification(`[Added] Torrent task: ${title}`)
+        const rssResult = await rssResultRep.selectResultTitleById(resultId)
+        pushNotification(`[Added] Torrent task: ${rssResult?.title}`)
     }
     return { id: taskId, status: taskStatus }
 }
