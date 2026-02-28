@@ -1,4 +1,4 @@
-import { checkBodyKeyNotBlank, checkBodyKeysNotBlank } from '../common/apiPreCheck.js';
+import { checkBodyKeyNotBlank, checkBodyKeysNotBlank, checkBodyKeysExists } from '../common/apiPreCheck.js';
 import { kuroGameSign, kuroTokenLogin, kuroLogout, kuroGameSignAll, kuroSignGameUpdate, kuroSDKLogin } from '../handler/kuroHandler.js';
 
 const needSecret = () => "mAou5820.kuro";
