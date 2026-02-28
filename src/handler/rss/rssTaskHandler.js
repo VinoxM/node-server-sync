@@ -62,7 +62,7 @@ export async function addRssTask(rssTask) {
     }
     if (TASK_STATUS.DOWNLOADING === taskStatus) {
         const rssResult = await rssResultRep.selectResultTitleById(resultId)
-        pushNotification(`[Added] Torrent task: ${rssResult?.title}`)
+        pushNotification(`[Task Added] ${rssResult?.title}`)
     }
     return { id: taskId, status: taskStatus }
 }
@@ -242,7 +242,7 @@ async function taskCompleted(rssTask) {
 
     const rssResultId = rssTask.rssResultId
     const rssResult = await rssResultRep.selectResultTitleById(rssResultId)
-    pushNotification(`[Complete] Torrent task: ${rssResult?.title}`)
+    pushNotification(`[Torrent Complete] ${rssResult?.title}`)
 }
 
 function saveTask(rssTask, status = TASK_STATUS.FAILED) {
