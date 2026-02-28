@@ -56,5 +56,9 @@ export default {
             'INNER JOIN rss_subscribe rs ON rr.pid=rs.id ' +
             'WHERE rr.id=? AND rr.pid=?'
         return sqliteDB.selectOne(sql, [id, pid], null, dbName);
+    },
+    selectResultTitleById: (id) => {
+        const sql = 'SELECT title FROM rss_result WHERE id=?'
+        return sqliteDB.selectOne(sql, [id], null, dbName);
     }
 }

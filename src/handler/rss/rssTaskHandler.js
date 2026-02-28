@@ -11,6 +11,7 @@ import path, { join } from 'path';
 import rssEpisodeRep from "../../repository/rss/rssEpisodeRep.js";
 import { pushNotification } from "../../sockets/notification.js";
 import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisodeHandler.js";
+import rssResultRep from "../../repository/rss/rssResultRep.js";
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -58,6 +59,9 @@ export async function addRssTask(rssTask) {
         __log.error(`[RssTask] Add torrent task([${rssSubsId}:${resultId}] ${title}) failed. Cause: `, e)
     } finally {
         taskId = await saveTask(toSaveRssTask, taskStatus)
+    }
+    if (TASK_STATUS.DOWNLOADING === taskStatus) {
+        pushNotification(`[Added] Torrent task: ${title}`)
     }
     return { id: taskId, status: taskStatus }
 }
@@ -234,6 +238,10 @@ async function taskCompleted(rssTask) {
 
     await deleteTag(uuid)
     await deleteTorrent(hash)
+
+    const rssResultId = rssTask.rssResultId
+    const rssResult = await rssResultRep.selectResultTitleById(rssResultId)
+    pushNotification(`[Complete] Torrent task: ${rssResult?.title}`)
 }
 
 function saveTask(rssTask, status = TASK_STATUS.FAILED) {
