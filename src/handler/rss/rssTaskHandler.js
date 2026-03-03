@@ -365,5 +365,5 @@ function pushTaskNotification(taskTitle, type) {
         out: taskTitle,
         type
     }
-    pushNotification(JSON.stringify({event: 'motrix' , ...message}))
+    pushNotification("JSONObject::" + JSON.stringify({ event: 'motrix', ...message }))
 }
