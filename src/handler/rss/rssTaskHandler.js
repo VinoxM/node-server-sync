@@ -81,7 +81,7 @@ export async function updateTaskStatus(uuid, status) {
             try {
                 return await resolveTaskEpisode(rssTask);
             } catch (error) {
-                pushNotification(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`)
+                pushTaskLog(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`)
                 throw error
             }
         case TASK_STATUS.COMPLETE:
@@ -365,5 +365,9 @@ function pushTaskNotification(taskTitle, type) {
         out: taskTitle,
         type
     }
-    pushNotification("JSONObject::" + JSON.stringify({ event: 'motrix', ...message }))
+    pushNotification("EventObject::motrix::" + JSON.stringify(message))
+}
+
+function pushTaskLog(message) {
+    pushNotification("EventObject::log::" + message)
 }
