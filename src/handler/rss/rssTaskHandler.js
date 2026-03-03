@@ -62,7 +62,7 @@ export async function addRssTask(rssTask) {
     }
     if (TASK_STATUS.DOWNLOADING === taskStatus) {
         const rssResult = await rssResultRep.selectResultTitleById(resultId)
-        pushNotification(`[Task Added] ${rssResult?.title}`)
+        pushTaskNotification(rssResult?.title, 'start')
     }
     return { id: taskId, status: taskStatus }
 }
@@ -242,7 +242,7 @@ async function taskCompleted(rssTask) {
 
     const rssResultId = rssTask.rssResultId
     const rssResult = await rssResultRep.selectResultTitleById(rssResultId)
-    pushNotification(`[Torrent Complete] ${rssResult?.title}`)
+    pushTaskNotification(rssResult?.title, 'complete')
 }
 
 function saveTask(rssTask, status = TASK_STATUS.FAILED) {
@@ -358,4 +358,12 @@ export async function completeTask(taskId) {
         await deleteTorrent(hash, true)
     }
     return rssTaskRep.updateStatusById(taskId, TASK_STATUS.COMPLETE)
+}
+
+function pushTaskNotification(taskTitle, type) {
+    const message = {
+        out: taskTitle,
+        type
+    }
+    pushNotification(JSON.stringify({event: 'motrix' , ...message}))
 }
