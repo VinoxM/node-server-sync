@@ -62,7 +62,7 @@ export async function addRssTask(rssTask) {
     }
     if (TASK_STATUS.DOWNLOADING === taskStatus) {
         const rssResult = await rssResultRep.selectResultTitleById(resultId)
-        pushTaskNotification(rssResult?.title, 'start')
+        pushNotification(`[Task Added] ${rssResult?.title}`)
     }
     return { id: taskId, status: taskStatus }
 }
@@ -81,7 +81,7 @@ export async function updateTaskStatus(uuid, status) {
             try {
                 return await resolveTaskEpisode(rssTask);
             } catch (error) {
-                pushTaskLog(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`)
+                pushNotification(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`)
                 throw error
             }
         case TASK_STATUS.COMPLETE:
@@ -242,7 +242,7 @@ async function taskCompleted(rssTask) {
 
     const rssResultId = rssTask.rssResultId
     const rssResult = await rssResultRep.selectResultTitleById(rssResultId)
-    pushTaskNotification(rssResult?.title, 'complete')
+    pushNotification(`[Torrent Complete] ${rssResult?.title}`)
 }
 
 function saveTask(rssTask, status = TASK_STATUS.FAILED) {
@@ -358,16 +358,4 @@ export async function completeTask(taskId) {
         await deleteTorrent(hash, true)
     }
     return rssTaskRep.updateStatusById(taskId, TASK_STATUS.COMPLETE)
-}
-
-function pushTaskNotification(taskTitle, type) {
-    const message = {
-        out: taskTitle,
-        type
-    }
-    pushNotification("EventObject::motrix::" + JSON.stringify(message))
-}
-
-function pushTaskLog(message) {
-    pushNotification("EventObject::log::" + message)
 }
