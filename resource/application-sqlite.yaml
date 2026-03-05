@@ -194,19 +194,22 @@ sqlite:
         DDL: |
           CREATE TABLE authors (
             `id` integer PRIMARY KEY NOT NULL,
-            `name` varchar(100) NOT NULL
+            `name` varchar(100) NOT NULL,
+            CONSTRAINT `idx_author_name` UNIQUE (`name`)
           )
       - tableName: categories
         DDL: |
           CREATE TABLE categories (
             `id` integer PRIMARY KEY NOT NULL,
-            `name` varchar(100) NOT NULL
+            `name` varchar(100) NOT NULL,
+            CONSTRAINT `idx_category_name` UNIQUE (`name`)
           )
       - tableName: tags
         DDL: |
           CREATE TABLE tags (
             `id` integer PRIMARY KEY NOT NULL,
-            `name` varchar(100) NOT NULL          
+            `name` varchar(100) NOT NULL,
+            CONSTRAINT `idx_tag_name` UNIQUE (`name`)   
           )
       - tableName: video_tag_map
         DDL: |
@@ -229,10 +232,13 @@ sqlite:
       - tableName: whitelist
         DDL: |
           CREATE TABLE whitelist (
-            `unique_id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY NOT NULL,
+            `target_type` varchar(1) NOT NULL,
+            `target_id` integer NOT NULL,
             `reason` varchar(500) DEFAULT NULL,
             `create_time` datetime DEFAULT (datetime('now', 'localtime'))
           );
+          CREATE INDEX idx_whitelist_target ON whitelist(`target_type`, `target_id`);
       - tableName: aria2_task
         DDL: |
           CREATE TABLE aria2_task (

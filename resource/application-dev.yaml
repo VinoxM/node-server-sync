@@ -46,11 +46,11 @@ schedule:
     corn: 0 0 0 * * *
 redis:
   enable: true
-  host: 192.168.31.110
+  host: 192.168.31.120
   port: 6379
   database: 1
   username: default
-  password: "redis-mAou5820"
+  password: "mAou5820-redis"
   failureThreshold: 5
   recoveryTimeout: 30
 minio:
