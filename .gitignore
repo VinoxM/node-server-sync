@@ -12,4 +12,4 @@ package-temp.json
 /scripts/.env
 *.db-shm
 *.db-wal
-/resource/application-dev.yaml
+resource/application-dev.yaml
