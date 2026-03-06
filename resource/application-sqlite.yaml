@@ -186,6 +186,7 @@ sqlite:
             `author_id` integer,
             `category_id` integer,
             `upload_time` datetime,
+            `status` integer NOT NULL,
             `create_time` datetime NOT NULL
           );
           CREATE INDEX `idx_video_author` ON videos(`author_id`);
@@ -254,18 +255,19 @@ sqlite:
         DDL: |
           CREATE TABLE video_minio (
             `video_id` integer NOT NULL,
+            `type` integer NOT NULL,
             `link` varchar(1000) NOT NULL,
-            `status` varchar(1) NOT NULL,
-            CONSTRAINT `idx_video_id` UNIQUE (`video_id`)
+            `status` integer NOT NULL,
+            CONSTRAINT `idx_video_type` UNIQUE (`video_id`, `type`)
           )
       - tableName: video_minio_failed
         DDL: |
           CREATE TABLE video_minio_failed (
             `video_id` integer NOT NULL,
+            `type` integer NOT NULL,
             `link` varchar(1000) NOT NULL,
-            `root_path` varchar(500) NOT NULL,
-            `file_name` varchar(500) NOT NULL,
-            `reason` varchar(1) NOT NULL,
+            `uri` varchar(2000) NOT NULL,
+            `reason` integer NOT NULL,
             `create_time` datetime NOT NULL,
-            CONSTRAINT `idx_video_id` UNIQUE (`video_id`)
+            CONSTRAINT `idx_video_type` UNIQUE (`video_id`, `type`)
           )

@@ -1,16 +1,17 @@
 import { ContextSubcribe } from "../context/subscribe.js";
 import * as Minio from 'minio';
 
-export class MinioClient extends ContextSubcribe {
+class MinioClient extends ContextSubcribe {
+
+    static instance = new MinioClient()
 
     #client = null
 
     constructor() {
-        super('Minio', () => this.#initialize())
-        this.#initialize()
+        super('Minio', () => this.initialize(), true)
     }
 
-    #initialize() {
+    initialize() {
         const minioOpt = __env.get('minio', null)
         if (minioOpt === null) {
             this.#client = null
@@ -31,7 +32,7 @@ export class MinioClient extends ContextSubcribe {
     }
 
     async generateShareLink(bucket, objectName) {
-        if (!this.ready()) return Promise.resolve(null);
+        if (!this.ready()) return Promise.reject('Minio not ready.');
         const expiry = __env.get('minio.expiry', 2 * 60 * 60)
         return this.#client.presignedGetObject(bucket, objectName, expiry)
     }
@@ -40,4 +41,11 @@ export class MinioClient extends ContextSubcribe {
         if (!this.ready()) return Promise.reject('Minio not ready.');
         return this.#client.removeObject(bucket, objectName)
     }
+}
+
+export function getMinioClient() {
+    if (!MinioClient.instance.ready()) {
+        MinioClient.instance.initialize()
+    }
+    return MinioClient.instance
 }

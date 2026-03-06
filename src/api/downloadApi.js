@@ -1,6 +1,5 @@
 import { checkBodyKeysNotBlank } from "../common/apiPreCheck.js";
 import apiMethodConst from "../constraints/apiMethodConst.js";
-import { addTorrent as aria2AddTorrent } from "../handler/download/aria2Handler.js";
 import * as qbitHandler from "../handler/download/qbitorrentHandler.js";
 
 const { POST } = apiMethodConst;
@@ -15,16 +14,6 @@ const allowCIDR = [
 
 export default {
     basePath: "/download",
-    "/aria2/addTorrent": {
-        disabled: true,
-        method: POST,
-        needSecret,
-        allowCIDR,
-        preCheck: (req) => checkBodyKeysNotBlank(req, ['torrent']),
-        callback: (req) => {
-            return aria2AddTorrent(req.body.torrent)
-        }
-    },
     "/qbit/addTorrent": {
         method: POST,
         needSecret,

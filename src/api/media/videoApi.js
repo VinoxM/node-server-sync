@@ -1,4 +1,4 @@
-import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotNull } from "../../common/apiPreCheck.js"
+import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank, checkBodyKeysNotNull } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { addVideo, delVideo } from "../../handler/media/mediaHandler.js"
 
@@ -14,14 +14,18 @@ const allowCIDR = [
 
 export default {
     basePath: "/media",
-    "/video/add": {
+    "/video/addOne": {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysExists(req, ['uniqueId']) && checkBodyKeysNotNull(req, ['title', 'author', 'category', 'uploadTime']),
+        preCheck: req => {
+            checkBodyKeysExists(req, ['uniqueId'])
+            checkBodyKeysNotNull(req, ['title', 'author', 'category', 'uploadTime', 'tags'])
+            checkBodyKeysNotBlank(req, ['uri'])
+        },
         callback: req => addVideo(req.body)
     },
-    "/video/del": {
+    "/video/delOne": {
         method: POST,
         needSecret,
         allowCIDR,

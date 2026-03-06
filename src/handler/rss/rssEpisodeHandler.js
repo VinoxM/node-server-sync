@@ -1,23 +1,13 @@
 import { EPISODE_STATUS, EPISODE_FAILED_REASON } from "../../constraints/rssTaskStatusConst.js";
-import { MinioClient } from "../../instance/minio.js";
+import { getMinioClient } from "../../instance/minio.js";
 import rssEpisodeRep from "../../repository/rss/rssEpisodeRep.js";
 import rssRep from "../../repository/rss/rssRep.js";
 import { getExecutor } from "../sshHandler.js";
 import { getEpisodeMatches } from "./rssResultHandler.js";
-import { generateUUID } from "../../common/stringUtil.js";
 import path, { join } from 'path';
-import { SSH_CMD_RETRY_EPISODE_RESOLVE } from "../../constraints/sshScriptsConst.js";
+import { SSH_CMD_MINIO_COPY_SCRIPT } from "../../constraints/sshScriptsConst.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
-
-let minioClient = null
-
-function getMinioClient() {
-    if (minioClient === null) {
-        minioClient = new MinioClient()
-    }
-    return minioClient
-}
 
 export function isFileExtAnime(ext) {
     const reg = __env.get('rss.animeExtRegex')
@@ -193,7 +183,7 @@ async function executeRetryFailedEpisodeResolveCommand(args) {
     if (!executor) {
         throwMessage('Generate executor failed.')
     }
-    const { code } = await executor.exec(SSH_CMD_RETRY_EPISODE_RESOLVE, args);
+    const { code } = await executor.exec(SSH_CMD_MINIO_COPY_SCRIPT, args);
     return code
 }
 
