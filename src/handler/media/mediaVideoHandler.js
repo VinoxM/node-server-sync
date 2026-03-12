@@ -10,7 +10,7 @@ import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MED
 import { getMinioClient } from "../../instance/minio.js";
 import { addAria2Task } from "./mediaAria2Handler.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterHandler.js";
-import { getUrlContentLength } from "../../common/httpUtil.js";
+import { urlContentLengthLargeThanOneMB } from "../../common/httpUtil.js";
 import { generateMinioLink, removeVideoMinio, updateVideoStatusByVideoMinioStatus, uploadFileToMinio, uploadUrlToMinio } from './mediaMinioHandler.js';
 import { pushNotification } from '../../sockets/notification.js';
 
@@ -83,12 +83,12 @@ async function resolveVideoUri(uri = '', videoId, category, author, uniqueId, ty
         await uploadFileToMinio(decodeURIComponent(resolvedUri.pathname), minioLink, lastId)
     } else if (HTTP_PROTOCOL.includes(protocol)) {
         // http protocol
-        const coverSize = getUrlContentLength(uri)
+        const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
         // Get the url file size. 
         // If it cannot be obtained or is larger than 1MB, upload it to aria2 for download. 
         // Otherwise, upload it directly to minio.
-        if (coverSize < 0 || coverSize > 1024) {
-            __log.info(`[${videoId}] Video's ${typeDesc} uri is a unknown size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
+        if (overSizeOneMB) {
+            __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
             await addAria2Task(uri, lastId, type)
             await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
             result = 1;
