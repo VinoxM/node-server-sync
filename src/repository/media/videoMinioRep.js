@@ -2,37 +2,38 @@ const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
-    selectByVideoId: (videoId) => {
-        const sql = 'SELECT video_id,type,link,status FROM video_minio WHERE video_id=?'
+    selectByVideoId: videoId => {
+        const sql = 'SELECT id,video_id,type,file_path,link,status FROM video_minio WHERE video_id=?'
         return sqliteDB.selectAll(sql, [videoId], null, dbName)
     },
-    insertOne: minio => {
-        const sql = 'INSERT INTO video_minio(video_id, type, link, status) VALUES(?,?,?,?)'
-        return sqliteDB.insert(sql, [minio.videoId, minio.type, minio.link, minio.status], null, dbName)
+    selectOneById: id => {
+        const sql = 'SELECT id,video_id,type,file_path,link,status FROM video_minio WHERE id=?'
+        return sqliteDB.selectOne(sql, [id], null, dbName)
     },
-    updateStatus: (videoId, type, status) => {
-        const sql = 'UPDATE video_minio SET status=? WHERE video_id=? AND type=?'
-        return sqliteDB.update(sql, [status, videoId, type], null, dbName)
+    insertOne: minio => {
+        const sql = 'INSERT OR IGNORE INTO video_minio(video_id, type, origin_uri, file_path, link, status) VALUES(?,?,?,?,?,?)'
+        return sqliteDB.insert(sql, [minio.videoId, minio.type, minio.uri, minio.filePath, minio.link, minio.status], null, dbName)
+    },
+    updateStatusById: (id, status) => {
+        const sql = 'UPDATE video_minio SET status=? WHERE id=?'
+        return sqliteDB.update(sql, [status, id], null, dbName)
+    },
+    updateStatusByIds: (ids, status) => {
+        if (isEmptyArray(ids)) return Promise.resolve()
+        let sql = 'UPDATE video_minio SET status=? WHERE id IN ('
+        sql += ids.map(() => "?").join(',') + ')'
+        return sqliteDB.update(sql, [status, ...ids], null, dbName)
+    },
+    updateFilePathAndStatusById: (id, filePath, status) => {
+        const sql = 'UPDATE video_minio SET file_path=?,status=? WHERE id=?'
+        return sqliteDB.update(sql, [filePath, status, id], null, dbName)
     },
     deleteByVideoId: videoId => {
         const sql = 'DELETE FROM video_minio WHERE video_id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
     },
-    insertOneFailed: minioFailed => {
-        const sql = 'INSERT INTO video_minio_failed(video_id,type,link,uri,reason,create_time) ' +
-            'VALUES(?,?,?,?,?,?)'
-        const params = [
-            minioFailed.videoId,
-            minioFailed.type,
-            minioFailed.link,
-            minioFailed.uri,
-            minioFailed.reason,
-            new Date()
-        ]
-        return sqliteDB.insert(sql, params, null, dbName)
-    },
-    deleteFailedByVideoId: videoId => {
-        const sql = 'DELETE FROM video_minio_failed WHERE video_id=?'
-        return sqliteDB.delete(sql, [videoId], null, dbName)
+    selectMaxStatusByVideoId: videoId => {
+        const sql = 'SELECT video_id, MAX(status) maxStatus, MIN(status) minStatus FROM video_minio WHERE video_id=? GROUP BY video_id'
+        return sqliteDB.selectOne(sql, [videoId], null, dbName)
     }
 }

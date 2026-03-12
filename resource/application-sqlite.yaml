@@ -183,14 +183,17 @@ sqlite:
             `id` integer PRIMARY KEY NOT NULL,
             `unique_id` varchar(100) NOT NULL,
             `title` varchar(500) NOT NULL,
-            `author_id` integer,
-            `category_id` integer,
+            `category_id` integer NOT NULL,
+            `author_id` integer NOT NULL,
+            `source_id` integer DEFAULT NULL,
+            `cover_id` integer DEFAULT NULL,
             `upload_time` datetime,
             `status` integer NOT NULL,
             `create_time` datetime NOT NULL
           );
-          CREATE INDEX `idx_video_author` ON videos(`author_id`);
+          CREATE INDEX `idx_video_unique` ON videos(`unique_id`);
           CREATE INDEX `idx_video_category` ON videos(`category_id`);
+          CREATE INDEX `idx_video_author` ON videos(`author_id`);
       - tableName: authors
         DDL: |
           CREATE TABLE authors (
@@ -223,51 +226,39 @@ sqlite:
       - tableName: blacklist
         DDL: |
           CREATE TABLE blacklist (
-            `id` integer PRIMARY KEY NOT NULL,
-            `target_type` varchar(1) NOT NULL,
-            `target_id` integer NOT NULL,
-            `reason` varchar(500) DEFAULT NULL,
-            `create_time` datetime DEFAULT (datetime('now', 'localtime'))
-          );
-          CREATE INDEX idx_blacklist_target ON blacklist(`target_type`, `target_id`);
+            `category_id` interger NOT NULL,
+            `type` interger NOT NULL,
+            `value` text NOT NULL,
+            CONSTRAINT `idx_blacklist_unique` UNIQUE (`category_id`, `type`, `value`)
+          )
       - tableName: whitelist
         DDL: |
           CREATE TABLE whitelist (
-            `id` integer PRIMARY KEY NOT NULL,
-            `target_type` varchar(1) NOT NULL,
-            `target_id` integer NOT NULL,
-            `reason` varchar(500) DEFAULT NULL,
-            `create_time` datetime DEFAULT (datetime('now', 'localtime'))
-          );
-          CREATE INDEX idx_whitelist_target ON whitelist(`target_type`, `target_id`);
-      - tableName: aria2_task
-        DDL: |
-          CREATE TABLE aria2_task (
-            `id` integer PRIMARY KEY,
-            `video_id` integer NOT NULL,
-            `gid` varchar(50) NOT NULL,
-            `status` varchar(1) NOT NULL,
-            `file_path` varchar(500) DEFAULT NULL,
-            `file_num` integer DEFAULT NULL
+            `category_id` interger NOT NULL,
+            `type` interger NOT NULL,
+            `value` text NOT NULL,
+            CONSTRAINT `idx_blacklist_unique` UNIQUE (`category_id`, `type`, `value`)
           )
-          CREATE INDEX `idx_aria2_video_id` ON video_tag_map(`video_id`);
       - tableName: video_minio
         DDL: |
           CREATE TABLE video_minio (
+            `id` integer PRIMARY KEY NOT NULL,
             `video_id` integer NOT NULL,
             `type` integer NOT NULL,
-            `link` varchar(1000) NOT NULL,
+            `origin_uri` text NOT NULL,
+            `file_path` text DEFAULT NULL,
+            `link` text NOT NULL,
             `status` integer NOT NULL,
             CONSTRAINT `idx_video_type` UNIQUE (`video_id`, `type`)
           )
-      - tableName: video_minio_failed
+      - tableName: aria2_task
         DDL: |
-          CREATE TABLE video_minio_failed (
-            `video_id` integer NOT NULL,
-            `type` integer NOT NULL,
-            `link` varchar(1000) NOT NULL,
-            `uri` varchar(2000) NOT NULL,
-            `reason` integer NOT NULL,
-            `create_time` datetime NOT NULL,
-            CONSTRAINT `idx_video_type` UNIQUE (`video_id`, `type`)
-          )
+          CREATE TABLE aria2_task (
+            `id` integer PRIMARY KEY NOT NULL,
+            `minio_id` integer NOT NULL,
+            `gid` varchar(100) NOT NULL,
+            `file_path` varchar(500) DEFAULT NULL,
+            `file_num` integer DEFAULT NULL,
+            `status` integer NOT NULL,
+            CONSTRAINT `idx_unique_gid` UNIQUE (`gid`)
+          );

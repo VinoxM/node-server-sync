@@ -6,7 +6,8 @@ import { generateUUID } from '../common/stringUtil.js'
 
 const ARIA2_METHOD = {
     ADD_URI: "aria2.addUri",
-    TELL_STATUS: 'aria2.tellStatus'
+    TELL_STATUS: 'aria2.tellStatus',
+    REMOVE: 'aria2.remove'
 }
 
 class Aria2Socket extends ContextSubcribe {
@@ -105,7 +106,7 @@ class Aria2Socket extends ContextSubcribe {
 
     #onClose() {
         __log.info('[Aria2Socket] Aria2 closed.')
-        this.close()
+        this.#reconnect()
     }
 
     close() {
@@ -154,24 +155,33 @@ class Aria2Socket extends ContextSubcribe {
     }
 
     async addUri(url, opts = {}) {
+        const { dir, out, ...otherOpts } = opts
         this.#checkReady()
         const options = {
-            dir: path.join(this.#savePath, opts?.dir || '')
+            dir: path.join(this.#savePath, dir || '')
         }
-        if (isNotBlank(opts.out)) {
-            options.out = opts.out
+        if (isNotBlank(out)) {
+            options.out = out
         }
-        return this.#call(ARIA2_METHOD.ADD_URI, [url], options)
+        return this.#call(ARIA2_METHOD.ADD_URI, [url], { ...options, ...otherOpts })
     }
 
     async getInfo(gid) {
-        return this.#call(ARIA2_METHOD.TELL_STATUS, gid, ["status", "totalLength", "completedLength", "downloadSpeed", "files"])
+        return this.#call(ARIA2_METHOD.TELL_STATUS, gid, ["gid", "status", "totalLength", "completedLength", "downloadSpeed", "files", "dir"])
+    }
+
+    async remove(gid) {
+        return this.#call(ARIA2_METHOD.REMOVE, gid)
+    }
+}
+
+export function aria2SocketInitialization() {
+    if (!Aria2Socket.instance.initialized()) {
+        Aria2Socket.instance.start()
     }
 }
 
 export function getAria2Socket() {
-    if (!Aria2Socket.instance.initialized()) {
-        Aria2Socket.instance.start()
-    }
+    aria2SocketInitialization()
     return Aria2Socket.instance
 }

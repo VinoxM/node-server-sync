@@ -6,7 +6,7 @@ export default {
         if (isEmptyArray(tagIds)) {
             return Promise.resolve()
         }
-        let sql = `INSERT INTO video_tag_map(video_id, tag_id) VALUES`
+        let sql = `INSERT OR IGNORE INTO video_tag_map(video_id, tag_id) VALUES`
         const params = []
         sql += tagIds.map(tagId => {
             params.push(videoId, tagId)
@@ -17,5 +17,13 @@ export default {
     deleteTags: (videoId) => {
         const sql = 'DELETE FROM video_tag_map WHERE video_id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
+    },
+    deleteTagsWithId: (videoId, tagIds) => {
+        if (isEmptyArray(tagIds)) {
+            return Promise.resolve()
+        }
+        let sql = 'DELETE FROM video_tag_map WHERE video_id=? AND tag_id IN ('
+        sql += tagIds.map(() => '?').join(',') + ')'
+        return sqliteDB.delete(sql, [videoId, ...tagIds], null, dbName)
     }
 }

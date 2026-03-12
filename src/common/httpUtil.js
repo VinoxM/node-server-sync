@@ -39,3 +39,17 @@ export const getRequestHost = (req) => {
 }
 
 export const getTokenHash = req => (req.headers?.['authorization'] ?? '').replace('Bearer ', '')
+
+export const getUrlContentLength = async (url) => {
+  try {
+    const response = await axios.head(url, {
+      timeout: 2000
+    });    
+    const size = response.headers['content-length'];
+    if (!size) return -1
+    return (parseInt(size, 10) / 1024).toFixed(2);
+  } catch (error) {
+    console.error('Fetch Size Failed:', error.message);
+    return -1;
+  }
+};

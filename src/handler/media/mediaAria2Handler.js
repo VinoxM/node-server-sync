@@ -1,0 +1,121 @@
+import { getAria2Socket } from "../../instance/aria2Socket.js";
+import { MEDIA_ARIA2_TASK_STATUS, MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION } from "../../constraints/mediaConst.js";
+import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
+import { pushNotification } from "../../sockets/notification.js";
+import videoMinioRep from "../../repository/media/videoMinioRep.js";
+import { getExecutor } from "../sshHandler.js";
+import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../constraints/sshScriptsConst.js";
+
+const MEDIA_ARIA2_SAVE_DIR = "./media";
+const CAN_UPDATE_ARIA2_TASK_STATUS = [MEDIA_ARIA2_TASK_STATUS.COMPLETE, MEDIA_ARIA2_TASK_STATUS.FAILED]
+
+async function addTask(url, options) {
+    const gid = await getAria2Socket().addUri(url, options)
+    return getAria2Socket().getInfo(gid);
+}
+
+async function getTaskInfo(gid) {
+    return getAria2Socket().getInfo(gid);
+}
+
+async function removeTask(gid) {
+    await getAria2Socket().remove(gid).catch(ex => __log.error(`Remove aria2 task failed.`, ex?.message, ex?.response?.data || ''));
+}
+
+/**
+ * Add video step1 from status: ANALYSING.
+ * Aria2 task status:
+ * DOWNLOADING
+ */
+export async function addAria2Task(uri, minioId, type) {
+    const taskInfo = await addTask(uri, { dir: MEDIA_ARIA2_SAVE_DIR })
+    taskInfo?.gid || throwMessage(`Add media ${MEDIA_TYPE_DESCRIPTION[type] || ''} aria2 task failed.`)
+    const aria2Task = {
+        minioId,
+        gid: taskInfo.gid,
+        status: MEDIA_ARIA2_TASK_STATUS.DOWNLOADING,
+        filePath: taskInfo.files?.[0]?.path,
+        fileNum: taskInfo.files?.length || 0
+    }
+    await aria2TaskRep.insertOne(aria2Task)
+}
+
+export async function deleteArai2Tasks(minioIds) {
+    const { data } = await aria2TaskRep.selectByMinioIds(minioIds)
+    if (!Array.isArray(data)) return
+    const toRemoveFiles = []
+    for (const { filePath, gid } of data) {
+        await removeTask(gid)
+        toRemoveFiles.push(filePath)
+    }
+    await aria2TaskRep.updateStatusByMinioIds(minioIds, MEDIA_ARIA2_TASK_STATUS.REMOVED)
+    await deleteRemoteFiles(toRemoveFiles)
+}
+
+async function deleteRemoteFiles(files) {
+    const executor = getExecutor('fedora')
+    if (!executor) return -2
+    try {
+        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ssh script failed.', e)
+        return -3
+    }
+}
+
+/**
+ * Add video step2 from status: UPLOADING
+ * Arai2 status:
+ * DOWNLOADING -> COMPLETE/FAILED
+ * Minio status:
+ * PREPARED/UPLOADING -> UPLOADING/FAILED
+ */
+export async function updateAria2TaskStatus(gid, status) {
+    const taskStatus = parseInt(status)
+    // validate aria2 status
+    CAN_UPDATE_ARIA2_TASK_STATUS.includes(taskStatus) || throwMessage('Invalid aria2 task status.')
+
+    // validate aria2 task exists
+    const info = await getTaskInfo(gid)
+    info || throwMessage('Aria2 task not found.')
+
+    // validate aria2 task info exists
+    const taskInfo = await aria2TaskRep.selectByGid(gid)
+    taskInfo || throwMessage('Invalid aria2 task.')
+
+    // update aria2 task status
+    const { minioId } = taskInfo
+    await aria2TaskRep.updateStatusByMinioId(minioId, taskStatus)
+
+    // get video minio info
+    const minioInfo = await videoMinioRep.selectOneById(minioId)
+    minioInfo || notifyUpdateArai2TaskStatusFailed('Get task\'s minio info failed.')
+
+    if (MEDIA_ARIA2_TASK_STATUS.FAILED === taskStatus) {
+        await videoMinioRep.updateStatusById(minioInfo.id, MEDIA_MINIO_STATUS.FAILED)
+        return
+    }
+
+    // handle aria2 task complete
+    // validate task files
+    const { files } = info
+    isEmptyArray(files) && notifyUpdateArai2TaskStatusFailed('Invalid aria2 task files.')
+
+    // generate minio link
+    const { path: filePath } = files[0]
+
+    // save video minio file path
+    await videoMinioRep.updateFilePathAndStatusById(filePath, minioInfo.id, MEDIA_MINIO_STATUS.UPLOADING)
+
+    return {
+        file: filePath,
+        link: minioInfo.link,
+        id: minioInfo.id
+    }
+}
+
+function notifyUpdateArai2TaskStatusFailed(message, gid) {
+    pushNotification(`Update aria2 task[${gid}] status failed: ${message}`)
+    throwMessage(message)
+}
