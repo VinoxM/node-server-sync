@@ -33,7 +33,7 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
-        callback: req => authorsRep.selectByCategoryId(req.body['categoryId']).then(({ data }) => data)
+        callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId']).then(({ data }) => data)
     },
     "/video/getVideoMinio": {
         method: POST,
