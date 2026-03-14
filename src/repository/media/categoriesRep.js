@@ -13,5 +13,9 @@ export default {
     insertOne: category => {
         const sql = 'INSERT INTO categories(name) VALUES(?)'
         return sqliteDB.insert(sql, [category], null, dbName)
+    },
+    selectAll: () => {
+        const sql = 'SELECT id,name FROM categories'
+        return sqliteDB.selectAll(sql, [], null, dbName)
     }
 }

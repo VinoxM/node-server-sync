@@ -7,6 +7,9 @@ const globalUtils = {
     isBlank: (str) => {
         return str === null || str === undefined || ("" + str).trim() === "";
     },
+    isAllBlank: (...strs) => {
+        return Array.from(strs).every(str => globalUtils.isBlank(str))
+    },
     isAnyBlank: (...strs) => {
         return Array.from(strs).some(str => globalUtils.isBlank(str))
     },

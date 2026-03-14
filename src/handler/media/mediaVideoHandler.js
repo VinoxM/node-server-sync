@@ -7,7 +7,6 @@ import videosRep from "../../repository/media/videosRep.js";
 import videoTagMapRep from "../../repository/media/videoTagMapRep.js";
 import videoMinioRep from "../../repository/media/videoMinioRep.js";
 import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
-import { getMinioClient } from "../../instance/minio.js";
 import { addAria2Task } from "./mediaAria2Handler.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterHandler.js";
 import { urlContentLengthLargeThanOneMB } from "../../common/httpUtil.js";
@@ -32,7 +31,8 @@ export async function addVideo(videoObj) {
     const exists = await categoriesRep.selectOneByName(category)
     exists || throwMessage('Category not exists.')
     const categoryId = exists.id
-    let uniqueId = videoObj.uniqueId || generateUUID()
+    const uuid = generateUUID()
+    let uniqueId = videoObj.uniqueId || uuid
     const toSave = await checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId)
     // cannot to save
     toSave || throwMessage('Video filter rules denied.')
@@ -45,9 +45,9 @@ export async function addVideo(videoObj) {
     // save video tags mapping
     await videoTagMapRep.insertTags(videoId, tagIds)
     // handle video source
-    const resolveSourceResult = await resolveVideoUri(videoObj.source, videoId, category, author, uniqueId, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
+    const resolveSourceResult = await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
     // hanlde video cover
-    const resolveCoverResult = await resolveVideoUri(videoObj.cover, videoId, category, author, uniqueId, MEDIA_VIDEO_MINIO_TYPE.COVER)
+    const resolveCoverResult = await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
     // update video status
     if (resolveSourceResult + resolveCoverResult > 0) {
         await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.UPLOADING)
@@ -57,7 +57,7 @@ export async function addVideo(videoObj) {
     return { videoId };
 }
 
-async function resolveVideoUri(uri = '', videoId, category, author, uniqueId, type) {
+async function resolveVideoUri(uri = '', videoId, category, author, uuid, type) {
     let result = 0;
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
     const resolvedUri = generateUri(uri)
@@ -67,7 +67,7 @@ async function resolveVideoUri(uri = '', videoId, category, author, uniqueId, ty
     }
     // generate minioLink
     const ext = path.extname(resolvedUri.pathname)
-    const minioLink = generateMinioLink(category, author, uniqueId, ext)
+    const minioLink = generateMinioLink(category, author, uuid, type, ext)
     // save minio
     const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED })
     if (rows === 0) {
@@ -130,7 +130,7 @@ export async function updateVideoTags(videoId, tags, oparetor) {
 export async function removeVideo(videoId) {
     const video = await videosRep.selectOne(videoId)
     video || throwMessage('Video not found.')
-    // CAN_DELETE_VIDEO_STATUS.includes(video.status) || throwMessage('Cannot remove video.')
+    CAN_DELETE_VIDEO_STATUS.includes(video.status) || throwMessage('Cannot remove video.')
     await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.REMOVED)
     await removeVideoMinio(videoId)
 }

@@ -1,6 +1,6 @@
 import videoMinioRep from "../../repository/media/videoMinioRep.js";
 import { pushNotification } from "../../sockets/notification.js";
-import { MEDIA_MINIO_STATUS, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
+import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
 import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";
@@ -9,8 +9,9 @@ import { deleteArai2Tasks } from "./mediaAria2Handler.js";
 
 const CAN_UPDATE_MEDIA_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED]
 
-export function generateMinioLink(category, author, uniqueId, ext) {
-    return `/media/${category}/${author}/${uniqueId}${ext}`
+export function generateMinioLink(category, author, uniqueId, type, ext) {
+    const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
+    return `/media/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
 }
 
 /**
@@ -60,8 +61,10 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
  */
 export async function uploadFileToMinio(filePath, minioLink, lastId) {
     const result = await uploadToMinio(filePath, minioLink, SSH_CMD_MINIO_COPY_SCRIPT)
-    const minioStatus = result === 1 ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
+    const complete = result === 1
+    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     lastId && await videoMinioRep.updateStatusById(lastId, minioStatus)
+    return complete
 }
 
 /**
@@ -71,8 +74,10 @@ export async function uploadFileToMinio(filePath, minioLink, lastId) {
  */
 export async function uploadUrlToMinio(url, minioLink, lastId) {
     const result = await uploadToMinio(url, minioLink, SSH_CMD_MINIO_DOWNLOAD_SCRIPT)
-    const minioStatus = result === 1 ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
+    const complete = result === 1
+    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     lastId && await videoMinioRep.updateStatusById(lastId, minioStatus)
+    return complete
 }
 
 async function uploadToMinio(resourcePath, minioLink, script) {
