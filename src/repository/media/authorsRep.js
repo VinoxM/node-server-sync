@@ -20,7 +20,11 @@ export default {
     },
     selectAuthorsByLatestUpload: (categoryId) => {
         const sql = `
-            SELECT ta.id, ta.name, MAX(tv.upload_time) as last_time
+            SELECT 
+                ta.id, 
+                ta.name, 
+                MAX(tv.upload_time) AS last_time,
+                COUNT(tv.id) AS count
             FROM authors ta
             LEFT JOIN videos tv ON ta.id = tv.author_id
             WHERE ta.category_id = ?
