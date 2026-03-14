@@ -18,6 +18,18 @@ const HTTP_PROTOCOL = ['http:', 'https:']
 const VIDEO_TAG_OPERATOR = ['update', 'add', 'del']
 const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE]
 
+export async function checkVideoCanAdd({ category, author, uniqueId }) {
+    const categoryExists = await categoriesRep.selectOneByName(category)
+    if (!categoryExists) return true
+    const categoryId = categoryExists.id
+    const toSave = await checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId)
+    if (!toSave) return false
+    const authorExists = await authorsRep.selectOneByName(author, categoryId)
+    if (!authorExists) return true
+    const videoExists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
+    return !videoExists
+}
+
 /**
  * Add video step1
  * Video status: 
