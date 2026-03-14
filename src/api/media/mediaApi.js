@@ -42,7 +42,7 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
-        callback: req => videoTagMapRep.selectTagsByVideoId(req.body['videoId'])
+        callback: req => videoTagMapRep.selectTagsByVideoId(req.body['videoId']).then(({ data }) => data)
     },
     "/video/getVideoMinio": {
         method: POST,
