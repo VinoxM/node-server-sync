@@ -6,6 +6,7 @@ import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js
 import { searchMinio, searchVideos } from "../../handler/media/mediaHandler.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
 import authorsRep from "../../repository/media/authorsRep.js"
+import videoTagMapRep from "../../repository/media/videoTagMapRep.js"
 
 const { POST, GET } = apiMethodConst
 
@@ -34,6 +35,14 @@ export default {
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
         callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId']).then(({ data }) => data)
+    },
+    "/video/tagList": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
+        callback: req => videoTagMapRep.selectTagsByVideoId(req.body['videoId'])
     },
     "/video/getVideoMinio": {
         method: POST,

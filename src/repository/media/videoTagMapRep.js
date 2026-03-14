@@ -25,5 +25,14 @@ export default {
         let sql = 'DELETE FROM video_tag_map WHERE video_id=? AND tag_id IN ('
         sql += tagIds.map(() => '?').join(',') + ')'
         return sqliteDB.delete(sql, [videoId, ...tagIds], null, dbName)
+    },
+    selectTagsByVideoId: (videoId) => {
+        const sql = `
+            SELECT t.name 
+            FROM tags t 
+            INNER JOIN video_tag_map vtm ON t.id = vtm.tag_id 
+            WHERE vtm.video_id = ?
+        `;
+        return sqliteDB.selectAll(sql, [videoId], null, dbName);
     }
 }
