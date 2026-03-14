@@ -37,7 +37,7 @@ export async function addVideo(videoObj) {
     // cannot to save
     toSave || throwMessage('Video filter rules denied.')
     // handle author
-    const authorId = await addAuthor(author)
+    const authorId = await addAuthor(author, categoryId)
     // handle tags
     const tagIds = await handleTags(videoObj.tags)
     const videoExists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
@@ -146,12 +146,12 @@ export async function addCategory(category) {
     return lastId
 }
 
-async function addAuthor(author) {
-    const exists = await authorsRep.selectOneByName(author)
+async function addAuthor(author, categoryId) {
+    const exists = await authorsRep.selectOneByName(author, categoryId)
     if (exists) {
         return exists.id
     }
-    const { lastId } = await authorsRep.insertOne(author)
+    const { lastId } = await authorsRep.insertOne(author, categoryId)
     return lastId
 }
 

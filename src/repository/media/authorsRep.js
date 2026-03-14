@@ -2,16 +2,20 @@ const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
-    selectOneByName: author => {
-        const sql = 'SELECT id, name FROM authors WHERE name=?'
-        return sqliteDB.selectOne(sql, [author], null, dbName)
+    selectOneByName: (author, categoryId) => {
+        const sql = 'SELECT id, name FROM authors WHERE name=? AND category_id=?'
+        return sqliteDB.selectOne(sql, [author, categoryId], null, dbName)
     },
     selectOneById: id => {
-        const sql = 'SELECT id, name FROM authors WHERE id=?'
+        const sql = 'SELECT id, category_id, name FROM authors WHERE id=?'
         return sqliteDB.selectOne(sql, [id], null, dbName)
     },
-    insertOne: author => {
-        const sql = 'INSERT INTO authors(name) VALUES(?)'
-        return sqliteDB.insert(sql, [author], null, dbName)
+    insertOne: (author, categoryId) => {
+        const sql = 'INSERT INTO authors(category_id, name) VALUES(?,?)'
+        return sqliteDB.insert(sql, [categoryId, author], null, dbName)
+    },
+    selectByCategoryId: categoryId => {
+        const sql = 'SELECT id, category_id, name FROM authors WHERE category_id=?'
+        return sqliteDB.selectAll(sql, [categoryId], null, dbName)
     }
 }

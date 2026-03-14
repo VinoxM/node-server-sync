@@ -194,13 +194,6 @@ sqlite:
           CREATE INDEX `idx_video_unique` ON videos(`unique_id`);
           CREATE INDEX `idx_video_category` ON videos(`category_id`);
           CREATE INDEX `idx_video_author` ON videos(`author_id`);
-      - tableName: authors
-        DDL: |
-          CREATE TABLE authors (
-            `id` integer PRIMARY KEY NOT NULL,
-            `name` varchar(100) NOT NULL,
-            CONSTRAINT `idx_author_name` UNIQUE (`name`)
-          )
       - tableName: categories
         DDL: |
           CREATE TABLE categories (
@@ -208,6 +201,15 @@ sqlite:
             `name` varchar(100) NOT NULL,
             CONSTRAINT `idx_category_name` UNIQUE (`name`)
           )
+      - tableName: authors
+        DDL: |
+          CREATE TABLE authors (
+            `id` integer PRIMARY KEY NOT NULL,
+            `category_id` interger NOT NULL,
+            `name` varchar(100) NOT NULL,
+            CONSTRAINT `idx_author_name` UNIQUE (`name`)
+          );
+          CREATE INDEX `idx_authors_category` ON authors(`category_id`);
       - tableName: tags
         DDL: |
           CREATE TABLE tags (
