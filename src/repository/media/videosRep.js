@@ -4,6 +4,11 @@ const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
+    selectForExists: (categoryId, authorId, uniqueId) => {
+        const sql = 'SELECT COUNT(*) count FROM videos WHERE category_id=? AND author_id=? AND unique_id=?'
+        const params = [categoryId, authorId, uniqueId]
+        return sqliteDB.selectOne(sql, params, null, dbName).then(({ count }) => count)
+    },
     insertOne: video => {
         const sql = 'INSERT INTO videos(unique_id, title, category_id, author_id, upload_time, status, create_time) VALUES(?,?,?,?,?,?,?)'
         const params = [video.uniqueId, video.title, video.categoryId, video.authorId, video.uploadTime, video.status, new Date()]

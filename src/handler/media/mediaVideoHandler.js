@@ -28,9 +28,9 @@ const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS
 export async function addVideo(videoObj) {
     const { title, author, category, uploadTime } = videoObj
     // validate category
-    const exists = await categoriesRep.selectOneByName(category)
-    exists || throwMessage('Category not exists.')
-    const categoryId = exists.id
+    const categoryExists = await categoriesRep.selectOneByName(category)
+    categoryExists || throwMessage('Category not exists.')
+    const categoryId = categoryExists.id
     const uuid = generateUUID()
     let uniqueId = videoObj.uniqueId || uuid
     const toSave = await checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId)
@@ -40,6 +40,8 @@ export async function addVideo(videoObj) {
     const authorId = await addAuthor(author)
     // handle tags
     const tagIds = await handleTags(videoObj.tags)
+    const videoExists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
+    videoExists && throwMessage('Video exists.')
     // save video
     const { lastId: videoId } = await videosRep.insertOne({ uniqueId, title, authorId, categoryId, uploadTime, status: MEDIA_VIDEO_STATUS.ANALYSING })
     // save video tags mapping
