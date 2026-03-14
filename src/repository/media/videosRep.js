@@ -38,21 +38,21 @@ export default {
             + `MAX(CASE WHEN tm.type=1 THEN tm.link ELSE NULL END) AS source, `
             + `MAX(CASE WHEN tm.type=2 THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
-            + `LEFT JOIN authors ta ON ta.id=tv.author_id `
             + `LEFT JOIN categories tc ON tc.id=tv.category_id `
+            + `LEFT JOIN authors ta ON ta.id=tv.author_id AND ta.category_id=tv.category_id `
             + `LEFT JOIN video_minio tm ON tm.video_id=tv.id `
         const sqlConcat = []
         const params = []
         if (categoryId) {
-            sqlConcat.push(' category_id=?')
+            sqlConcat.push(' tv.category_id=?')
             params.push(categoryId)
         }
         if (authorId) {
-            sqlConcat.push(' author_id=?')
+            sqlConcat.push(' tv.author_id=?')
             params.push(authorId)
         }
         if (title) {
-            sqlConcat.push(' title LIKE ?')
+            sqlConcat.push(' tv.title LIKE ?')
             params.push(`%${title}%`)
         }
         if (sqlConcat.length > 0) {
