@@ -13,14 +13,14 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'oparetor']),
+        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'operator']),
         callback: req => handleFilterRule(req.body)
     },
     "/filterRules/remove": {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'oparetor']),
+        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'operator']),
         callback: req => handleFilterRule(req.body, false)
     },
     "/filterRules/validate": {

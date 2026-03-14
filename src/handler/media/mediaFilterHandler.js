@@ -1,9 +1,9 @@
 import { MEDIA_FILTER_TYPE } from "../../constraints/mediaConst.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
-import filterRulesRep, { getCacheByCategory, OPARETOR_TABLE } from "../../repository/media/filterRulesRep.js"
+import filterRulesRep, { getCacheByCategory, OPARETOR_TABLE as OPERATOR_TABLE } from "../../repository/media/filterRulesRep.js"
 
 const CAN_OPARETOR_FILTER_TYPE = Object.values(MEDIA_FILTER_TYPE)
-const ALLOWED_OPARETOR = Object.keys(OPARETOR_TABLE)
+const ALLOWED_OPERATOR = Object.keys(OPERATOR_TABLE)
 
 export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId) {
     const cache = await getCacheByCategory(categoryId)
@@ -34,14 +34,14 @@ export async function checkVideoFilterRules(body) {
 }
 
 export async function handleFilterRule(body, isAdd = true) {
-    const { category, type, value, oparetor } = body
+    const { category, type, value, operator } = body
     validateFilterType(type)
-    validateOparetor(oparetor)
+    validateOperator(operator)
     const categoryId = await getCategoryId(category)
     if (isAdd) {
-        return filterRulesRep.insertOne(categoryId, type, value, oparetor).then(data => ({ rows: data.rows }))
+        return filterRulesRep.insertOne(categoryId, type, value, operator).then(data => ({ rows: data.rows }))
     } else {
-        return filterRulesRep.deleteOne(categoryId, type, value, oparetor).then(data => ({ rows: data.rows }))
+        return filterRulesRep.deleteOne(categoryId, type, value, operator).then(data => ({ rows: data.rows }))
     }
 }
 
@@ -55,6 +55,6 @@ function validateFilterType(type) {
     CAN_OPARETOR_FILTER_TYPE.includes(type) || throwMessage('Invalid type.')
 }
 
-function validateOparetor(oparetor) {
-    ALLOWED_OPARETOR.includes(oparetor) || throwMessage('Invalid oparetor.')
+function validateOperator(operator) {
+    ALLOWED_OPERATOR.includes(operator) || throwMessage('Invalid oparetor.')
 }
