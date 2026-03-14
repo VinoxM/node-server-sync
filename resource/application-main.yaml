@@ -57,6 +57,7 @@ api:
       - /rss/result/*
       - /rss/regex/*
       - /rss/task/*
+      - /media/*
 sse:
   disabled: 
     - barrage
