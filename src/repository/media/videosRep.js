@@ -35,7 +35,7 @@ export default {
     selectForSearch: (title, categoryId, authorId, currentPage, pageSize) => {
         let sql = `SELECT `
             + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
-            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, tv.update_time, `
+            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, tv.upload_time, `
             + `MAX(CASE WHEN tm.type = 1 THEN tm.link ELSE NULL END) AS source, `
             + `MAX(CASE WHEN tm.type = 2 THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
@@ -60,7 +60,7 @@ export default {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
         sql += ' GROUP BY tv.id';
-        sql += ' ORDER BY tv.update_time DESC, tv.id DESC';
+        sql += ' ORDER BY tv.upload_time DESC, tv.id DESC';
         if (currentPage !== undefined && pageSize !== undefined) {
             const offset = (currentPage - 1) * pageSize;
             sql += ' LIMIT ? OFFSET ?';
