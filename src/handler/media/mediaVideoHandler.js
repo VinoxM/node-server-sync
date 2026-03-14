@@ -26,7 +26,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId }) {
     if (!toSave) return false
     const authorExists = await authorsRep.selectOneByName(author, categoryId)
     if (!authorExists) return true
-    const videoExists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
+    const videoExists = await videosRep.selectForExists(categoryId, authorExists.id, uniqueId)
     return !videoExists
 }
 
