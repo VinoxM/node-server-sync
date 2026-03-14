@@ -187,13 +187,14 @@ sqlite:
             `author_id` integer NOT NULL,
             `source_id` integer DEFAULT NULL,
             `cover_id` integer DEFAULT NULL,
-            `upload_time` datetime,
+            `upload_time` datetime NOT NULL,
             `status` integer NOT NULL,
             `create_time` datetime NOT NULL
           );
           CREATE INDEX `idx_video_unique` ON videos(`unique_id`);
           CREATE INDEX `idx_video_category` ON videos(`category_id`);
           CREATE INDEX `idx_video_author` ON videos(`author_id`);
+          CREATE INDEX `idx_video_upload_time` ON videos(`upload_time`);
       - tableName: categories
         DDL: |
           CREATE TABLE categories (

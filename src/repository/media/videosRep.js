@@ -32,33 +32,61 @@ export default {
         const sql = 'DELETE FROM videos WHERE id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
     },
-    selectForSearch: (title, categoryId, authorId) => {
+    selectForSearch: (title, categoryId, authorId, currentPage, pageSize) => {
         let sql = `SELECT `
-            + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name author, tv.category_id, tc.name category, tv.upload_time, tv.status, tv.create_time, `
-            + `MAX(CASE WHEN tm.type=1 THEN tm.link ELSE NULL END) AS source, `
-            + `MAX(CASE WHEN tm.type=2 THEN tm.link ELSE NULL END) AS cover `
+            + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
+            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, tv.update_time, `
+            + `MAX(CASE WHEN tm.type = 1 THEN tm.link ELSE NULL END) AS source, `
+            + `MAX(CASE WHEN tm.type = 2 THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
-            + `LEFT JOIN categories tc ON tc.id=tv.category_id `
-            + `LEFT JOIN authors ta ON ta.id=tv.author_id AND ta.category_id=tv.category_id `
-            + `LEFT JOIN video_minio tm ON tm.video_id=tv.id `
-        const sqlConcat = []
-        const params = []
+            + `LEFT JOIN categories tc ON tc.id = tv.category_id `
+            + `LEFT JOIN authors ta ON ta.id = tv.author_id AND ta.category_id = tv.category_id `
+            + `LEFT JOIN video_minio tm ON tm.video_id = tv.id `;
+        const sqlConcat = [];
+        const params = [];
         if (categoryId) {
-            sqlConcat.push(' tv.category_id=?')
-            params.push(categoryId)
+            sqlConcat.push(' tv.category_id = ?');
+            params.push(categoryId);
         }
         if (authorId) {
-            sqlConcat.push(' tv.author_id=?')
-            params.push(authorId)
+            sqlConcat.push(' tv.author_id = ?');
+            params.push(authorId);
         }
         if (title) {
-            sqlConcat.push(' tv.title LIKE ?')
-            params.push(`%${title}%`)
+            sqlConcat.push(' tv.title LIKE ?');
+            params.push(`%${title}%`);
         }
         if (sqlConcat.length > 0) {
-            sql += 'WHERE' + sqlConcat.join(' AND')
+            sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
-        sql += ' GROUP BY tv.id'
-        return sqliteDB.selectAll(sql, params, null, dbName)
+        sql += ' GROUP BY tv.id';
+        sql += ' ORDER BY tv.update_time DESC, tv.id DESC';
+        if (currentPage !== undefined && pageSize !== undefined) {
+            const offset = (currentPage - 1) * pageSize;
+            sql += ' LIMIT ? OFFSET ?';
+            params.push(pageSize, offset);
+        }
+        return sqliteDB.selectAll(sql, params, null, dbName);
+    },
+    countForSearch: (title, categoryId, authorId) => {
+        let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `;
+        const sqlConcat = [];
+        const params = [];
+        if (categoryId) {
+            sqlConcat.push(' tv.category_id = ?');
+            params.push(categoryId);
+        }
+        if (authorId) {
+            sqlConcat.push(' tv.author_id = ?');
+            params.push(authorId);
+        }
+        if (title) {
+            sqlConcat.push(' tv.title LIKE ?');
+            params.push(`%${title}%`);
+        }
+        if (sqlConcat.length > 0) {
+            sql += ' WHERE ' + sqlConcat.join(' AND ');
+        }
+        return sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total);
     }
 }
