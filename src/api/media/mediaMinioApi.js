@@ -1,6 +1,6 @@
 import { checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
-import { updateMinioStatus } from "../../handler/media/mediaMinioHandler.js"
+import { retryMinio, updateMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js"
 
 const { POST } = apiMethodConst
