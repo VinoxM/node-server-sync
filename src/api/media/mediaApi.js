@@ -41,8 +41,11 @@ export default {
         needSecret,
         allowHosts,
         ignoreOutput: true,
-        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
-        callback: req => videoTagMapRep.selectTagsByVideoId(req.body['videoId']).then(({ data }) => data)
+        preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
+        callback: req => {
+            const { videoId, categoryId } = req.body
+            return videoTagMapRep.selectTagsWithCount(categoryId, videoId).then(({ data }) => data)
+        }
     },
     "/video/getVideoMinio": {
         method: POST,

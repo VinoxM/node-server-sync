@@ -26,13 +26,19 @@ export default {
         sql += tagIds.map(() => '?').join(',') + ')'
         return sqliteDB.delete(sql, [videoId, ...tagIds], null, dbName)
     },
-    selectTagsByVideoId: (videoId) => {
-        const sql = `
-            SELECT t.name 
-            FROM tags t 
-            INNER JOIN video_tag_map vtm ON t.id = vtm.tag_id 
-            WHERE vtm.video_id = ?
-        `;
-        return sqliteDB.selectAll(sql, [videoId], null, dbName);
+    selectTagsWithCount: (categoryId, videoId = null) => {
+        let sql = `SELECT t.id,t.name, COUNT(v.id) as usage_count `
+            + `FROM tags t `
+            + `INNER JOIN video_tag_map vtm ON t.id = vtm.tag_id `
+            + `INNER JOIN videos v ON vtm.video_id = v.id `
+            + `WHERE v.category_id = ?`;
+        const params = [categoryId];
+        if (videoId) {
+            sql += ` AND t.id IN (SELECT tag_id FROM video_tag_map WHERE video_id = ?)`;
+            params.push(videoId);
+        }
+        sql += ` GROUP BY t.id, t.name`;
+        sql += ` ORDER BY usage_count DESC, t.name ASC`;
+        return sqliteDB.selectAll(sql, params, null, dbName);
     }
 }

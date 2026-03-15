@@ -38,10 +38,10 @@ export default {
         const sql = 'DELETE FROM videos WHERE id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
     },
-    selectForSearch: (title, categoryId, authorId, currentPage, pageSize) => {
+    selectForSearch: (title, categoryId, authorId, tagNames, currentPage, pageSize) => {
         let sql = `SELECT `
             + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
-            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, tv.upload_time, `
+            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
             + `MAX(CASE WHEN tm.type = 1 THEN tm.link ELSE NULL END) AS source, `
             + `MAX(CASE WHEN tm.type = 2 THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
@@ -50,6 +50,22 @@ export default {
             + `LEFT JOIN video_minio tm ON tm.video_id = tv.id `;
         const sqlConcat = [];
         const params = [];
+        if (tagNames) {
+            const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
+            if (tagList.length > 0) {
+                const placeholders = tagList.map(() => '?').join(',');
+                sqlConcat.push(` tv.id IN (`
+                    + `SELECT vtm.video_id `
+                    + `FROM video_tag_map vtm `
+                    + `JOIN tags tt ON vtm.tag_id = tt.id `
+                    + `WHERE tt.name IN (${placeholders}) `
+                    + `GROUP BY vtm.video_id `
+                    + `HAVING COUNT(DISTINCT tt.id) = ?`
+                    + `)`);
+                tagList.forEach(name => params.push(name));
+                params.push(tagList.length);
+            }
+        }
         if (categoryId) {
             sqlConcat.push(' tv.category_id = ?');
             params.push(categoryId);
@@ -62,8 +78,8 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push(`%${title}%`);
         }
-        sqlConcat.push(' tv.status!=?')
-        params.push(MEDIA_VIDEO_STATUS.REMOVED)
+        sqlConcat.push(' tv.status != ?');
+        params.push(MEDIA_VIDEO_STATUS.REMOVED);
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
@@ -76,10 +92,26 @@ export default {
         }
         return sqliteDB.selectAll(sql, params, null, dbName);
     },
-    countForSearch: (title, categoryId, authorId) => {
+    countForSearch: (title, categoryId, authorId, tagNames) => {
         let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `;
         const sqlConcat = [];
         const params = [];
+        if (tagNames) {
+            const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
+            if (tagList.length > 0) {
+                const placeholders = tagList.map(() => '?').join(',');
+                sqlConcat.push(` tv.id IN (`
+                    + `SELECT vtm.video_id `
+                    + `FROM video_tag_map vtm `
+                    + `JOIN tags tt ON vtm.tag_id = tt.id `
+                    + `WHERE tt.name IN (${placeholders}) `
+                    + `GROUP BY vtm.video_id `
+                    + `HAVING COUNT(DISTINCT tt.id) = ?`
+                    + `)`);
+                tagList.forEach(name => params.push(name));
+                params.push(tagList.length);
+            }
+        }
         if (categoryId) {
             sqlConcat.push(' tv.category_id = ?');
             params.push(categoryId);
@@ -92,9 +124,11 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push(`%${title}%`);
         }
+        sqlConcat.push(' tv.status != ?');
+        params.push(MEDIA_VIDEO_STATUS.REMOVED);
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
-        return sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total);
+        return sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
     }
 }
