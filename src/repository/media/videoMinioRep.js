@@ -3,11 +3,11 @@ const enablePrint = { print: true }
 
 export default {
     selectByVideoId: videoId => {
-        const sql = 'SELECT id,video_id,type,file_path,link,status FROM video_minio WHERE video_id=?'
+        const sql = 'SELECT id,video_id,type,origin_uri,file_path,link,status FROM video_minio WHERE video_id=?'
         return sqliteDB.selectAll(sql, [videoId], null, dbName)
     },
     selectOneById: id => {
-        const sql = 'SELECT id,video_id,type,file_path,link,status FROM video_minio WHERE id=?'
+        const sql = 'SELECT id,video_id,type,origin_uri,file_path,link,status FROM video_minio WHERE id=?'
         return sqliteDB.selectOne(sql, [id], null, dbName)
     },
     insertOne: minio => {

@@ -5,7 +5,7 @@ import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";
 import { getMinioClient } from "../../instance/minio.js";
-import { deleteArai2Tasks } from "./mediaAria2Handler.js";
+import { addAria2Task, deleteArai2Tasks } from "./mediaAria2Handler.js";
 
 const CAN_UPDATE_MEDIA_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED]
 
@@ -52,6 +52,14 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
         __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
         await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.COMPLETE)
     }
+}
+
+export async function retryMinio(minioId) {
+    const result = await videoMinioRep.selectOneById(minioId)
+    result || throwMessage('Minio not found.')
+    const { originUri, type } = result
+    await addAria2Task(originUri, minioId, type)
+    await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
 }
 
 /**
@@ -103,7 +111,7 @@ export async function removeVideoMinio(videoId) {
         }
         toRemoveIds.push(id)
     }
-    await videoMinioRep.updateStatusByIds(toRemoveIds, MEDIA_MINIO_STATUS.REMOVED)    
+    await videoMinioRep.updateStatusByIds(toRemoveIds, MEDIA_MINIO_STATUS.REMOVED)
     await deleteArai2Tasks(toRemoveIds)
 }
 

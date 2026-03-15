@@ -1,7 +1,7 @@
 import { checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { updateMinioStatus } from "../../handler/media/mediaMinioHandler.js"
-import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
+import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js"
 
 const { POST } = apiMethodConst
 
@@ -15,5 +15,12 @@ export default {
         allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => updateMinioStatus(req.body['id'], req.body['status'])
+    },
+    "/minio/retryDownload": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id']),
+        callback: req => retryMinio(req.body['id'])
     }
 }
