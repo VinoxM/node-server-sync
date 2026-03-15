@@ -20,14 +20,14 @@ const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS
 
 export async function checkVideoCanAdd({ category, author, uniqueId }) {
     const categoryExists = await categoriesRep.selectOneByName(category)
-    if (!categoryExists) return true
+    if (!categoryExists) return 1
     const categoryId = categoryExists.id
     const toSave = await checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId)
-    if (!toSave) return false
+    if (!toSave) return 0
     const authorExists = await authorsRep.selectOneByName(author, categoryId)
-    if (!authorExists) return true
+    if (!authorExists) return 1
     const videoExists = await videosRep.selectForExists(categoryId, authorExists.id, uniqueId)
-    return !videoExists
+    return videoExists ? 0 : 1
 }
 
 /**
