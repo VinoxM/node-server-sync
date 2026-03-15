@@ -20,7 +20,7 @@ async function loadCacheByCategoryId(categoryId, oparetorType) {
     }
     const oparetorTable = OPARETOR_TABLE[oparetorType]
     const filterRes = await sqliteDB.selectAll(`SELECT type, value FROM ${oparetorTable} WHERE category_id=?`, [categoryId], null, dbName)
-    filterRes.rows > 0 && filterRes.data?.forEach((type, value) => result[FILTER_TYPE_KEY_MAPPING[String(type)]]?.add(value))
+    filterRes.rows > 0 && filterRes.data?.forEach(({ type, value }) => result[FILTER_TYPE_KEY_MAPPING[String(type)]]?.add(value))
     return result
 }
 
