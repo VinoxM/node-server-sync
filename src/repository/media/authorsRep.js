@@ -11,7 +11,7 @@ export default {
         return sqliteDB.selectOne(sql, [id], null, dbName)
     },
     insertOne: (author, categoryId) => {
-        const sql = 'INSERT INTO authors(category_id, name) VALUES(?,?)'
+        const sql = 'INSERT OR IGNORE INTO authors(category_id, name) VALUES(?,?)'
         return sqliteDB.insert(sql, [categoryId, author], null, dbName)
     },
     selectByCategoryId: categoryId => {

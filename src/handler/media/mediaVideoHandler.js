@@ -164,11 +164,11 @@ export async function addCategory(category) {
 }
 
 async function addAuthor(author, categoryId) {
-    const exists = await authorsRep.selectOneByName(author, categoryId)
-    if (exists) {
-        return exists.id
+    const { rows, lastId } = await authorsRep.insertOne(author, categoryId)
+    if (rows === 0) {
+        const exists = await authorsRep.selectOneByName(author, categoryId)
+        return exists ? exists.id : (await authorsRep.insertOne(author, categoryId)).lastId
     }
-    const { lastId } = await authorsRep.insertOne(author, categoryId)
     return lastId
 }
 

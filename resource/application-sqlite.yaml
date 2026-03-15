@@ -208,7 +208,7 @@ sqlite:
             `id` integer PRIMARY KEY NOT NULL,
             `category_id` interger NOT NULL,
             `name` varchar(100) NOT NULL,
-            CONSTRAINT `idx_author_name` UNIQUE (`name`)
+            CONSTRAINT `idx_author_name` UNIQUE (`category_id`, `name`)
           );
           CREATE INDEX `idx_authors_category` ON authors(`category_id`);
       - tableName: tags
