@@ -41,10 +41,10 @@ export async function addAria2Task(uri, minioId, type) {
 }
 
 export async function deleteArai2Tasks(minioIds) {
-    const { data } = await aria2TaskRep.selectByMinioIds(minioIds)
-    if (!Array.isArray(data)) return
+    const res = await aria2TaskRep.selectByMinioIds(minioIds)
+    if (!Array.isArray(res?.data)) return
     const toRemoveFiles = []
-    for (const { filePath, gid } of data) {
+    for (const { filePath, gid } of res.data) {
         await removeTask(gid)
         toRemoveFiles.push(filePath)
     }
