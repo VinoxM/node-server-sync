@@ -27,6 +27,7 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
+        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: req => checkVideoFilterRules(req.body)
     }
