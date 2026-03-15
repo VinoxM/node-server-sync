@@ -1,6 +1,8 @@
 import { MEDIA_FILTER_TYPE } from "../../constraints/mediaConst.js"
+import authorsRep from "../../repository/media/authorsRep.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
 import filterRulesRep, { getCacheByCategory, OPARETOR_TABLE as OPERATOR_TABLE } from "../../repository/media/filterRulesRep.js"
+import videosRep from "../../repository/media/videosRep.js"
 
 const CAN_OPARETOR_FILTER_TYPE = Object.values(MEDIA_FILTER_TYPE)
 const ALLOWED_OPERATOR = Object.keys(OPERATOR_TABLE)
@@ -18,19 +20,32 @@ export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniq
 export async function checkVideoFilterRules(body) {
     const { category, rules } = body
     const categoryInfo = await categoriesRep.selectOneByName(category)
-    if (!categoryInfo) return rules.map(() => false)
+    if (!categoryInfo) return rules.map(() => ({ downloaded: false, blocked: false, allowed: false }))
     const categoryId = categoryInfo.id
-    const result = []
+    const results = []
+    const cache = await getCacheByCategory(categoryId)
+    const { whitelist, blacklist } = cache
     for (const rule of rules) {
         const { author, uniqueId } = rule
+        const result = { downloaded: false, blocked: false, allowed: false }
         if (isAnyBlank(author, uniqueId)) {
-            result.push(false)
+            results.push(result)
             continue
         }
-        const res = await checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId)
-        result.push(res)
+        if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
+            result.allowed = true
+        } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
+            result.blocked = true
+        }
+        const authorInfo = await authorsRep.selectOneByName(author, categoryId)
+        if (authorInfo) {
+            const authorId = authorInfo.id
+            const exists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
+            exists && (result.downloaded = true)
+        }
+        results.push(result)
     }
-    return result
+    return results
 }
 
 export async function handleFilterRule(body, isAdd = true) {
@@ -49,6 +64,11 @@ async function getCategoryId(category) {
     const categoryInfo = await categoriesRep.selectOneByName(category)
     categoryInfo || throwMessage('Category not found.')
     return categoryInfo.id
+}
+
+async function getAuthorId(author, categoryId) {
+    const authorInfo = await authorsRep.selectOneByName(author, categoryId)
+    return authorInfo.id
 }
 
 function validateFilterType(type) {
