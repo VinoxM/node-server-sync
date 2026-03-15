@@ -5,8 +5,14 @@ const enablePrint = { print: true }
 
 export default {
     selectForExists: (categoryId, authorId, uniqueId) => {
-        const sql = `SELECT COUNT(*) count FROM videos WHERE category_id=? AND author_id=? AND unique_id=? AND status!=?`
-        const params = [categoryId, authorId, uniqueId, MEDIA_VIDEO_STATUS.REMOVED]
+        let sql = `SELECT COUNT(*) count FROM videos WHERE category_id=?`
+        const params = [categoryId]
+        if (authorId) {
+            sql += ` AND author_id=?`
+            params.push(authorId)
+        }
+        sql += ` AND unique_id=? AND status!=?`
+        params.push(uniqueId, MEDIA_VIDEO_STATUS.REMOVED)
         return sqliteDB.selectOne(sql, params, null, dbName).then(({ count }) => count)
     },
     insertOne: video => {

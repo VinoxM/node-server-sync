@@ -28,21 +28,15 @@ export async function checkVideoFilterRules(body) {
     for (const rule of rules) {
         const { author, uniqueId } = rule
         const result = { downloaded: false, blocked: false, allowed: false }
-        if (isAnyBlank(author, uniqueId)) {
-            results.push(result)
-            continue
-        }
         if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
             result.allowed = true
         } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
             result.blocked = true
         }
         const authorInfo = await authorsRep.selectOneByName(author, categoryId)
-        if (authorInfo) {
-            const authorId = authorInfo.id
-            const exists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
-            exists && (result.downloaded = true)
-        }
+        const authorId = authorInfo?.id
+        const exists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
+        exists && (result.downloaded = true)
         results.push(result)
     }
     return results
