@@ -108,7 +108,12 @@ async function resolveVideoUri(uri = '', videoId, category, author, uuid, type) 
             result = 1;
         } else {
             __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
-            await uploadUrlToMinio(uri, minioLink, lastId)
+            const complete = await uploadUrlToMinio(uri, minioLink, lastId)
+            if (!complete) {
+                __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
+                await addAria2Task(uri, lastId, type)
+                await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
+            }
         }
     } else {
         const message = `[${videoId}] Cannot resolve video ${typeDesc} uri: ${uri}`

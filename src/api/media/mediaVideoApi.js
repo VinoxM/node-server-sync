@@ -31,6 +31,7 @@ export default {
         callback: req => addVideo(req.body)
     },
     "/video/editOne": {
+        disabled: true,
         method: POST,
         needSecret,
         allowCIDR,
