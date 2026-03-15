@@ -36,7 +36,7 @@ export async function getCacheByCategory(categoryId) {
 export default {
     insertOne: async (categoryId, type, value, oparetor) => {
         const oparetorTable = OPARETOR_TABLE[oparetor]
-        const sql = `INSERT INTO ${oparetorTable}(category_id, type, value) VALUES(?,?,?)`
+        const sql = `INSERT OR IGNORE INTO ${oparetorTable}(category_id, type, value) VALUES(?,?,?)`
         const params = [categoryId, type, value]
         const result = await sqliteDB.insert(sql, params, null, dbName)
         if (result.rows > 0) {
