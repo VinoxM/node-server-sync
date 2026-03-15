@@ -1,12 +1,12 @@
-import { MEDIA_TYPE_DESCRIPTION } from "../../constraints/mediaConst.js"
+import { MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
     selectForExists: (categoryId, authorId, uniqueId) => {
-        const sql = 'SELECT COUNT(*) count FROM videos WHERE category_id=? AND author_id=? AND unique_id=?'
-        const params = [categoryId, authorId, uniqueId]
+        const sql = `SELECT COUNT(*) count FROM videos WHERE category_id=? AND author_id=? AND unique_id=? AND status!=?`
+        const params = [categoryId, authorId, uniqueId, MEDIA_VIDEO_STATUS.REMOVED]
         return sqliteDB.selectOne(sql, params, null, dbName).then(({ count }) => count)
     },
     insertOne: video => {
@@ -56,6 +56,8 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push(`%${title}%`);
         }
+        sqlConcat.push(' tv.status!=?')
+        params.push(MEDIA_VIDEO_STATUS.REMOVED)
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
