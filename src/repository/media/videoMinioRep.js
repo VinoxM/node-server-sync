@@ -26,9 +26,9 @@ export default {
         sql += ids.map(() => "?").join(',') + ')'
         return sqliteDB.update(sql, [status, ...ids], null, dbName)
     },
-    updateFilePathAndStatusById: (id, filePath, status) => {
-        const sql = 'UPDATE video_minio SET file_path=?,status=? WHERE id=?'
-        return sqliteDB.update(sql, [filePath, status, id], null, dbName)
+    updateFilePathById: (id, filePath) => {
+        const sql = 'UPDATE video_minio SET file_path=? WHERE id=?'
+        return sqliteDB.update(sql, [filePath, id], null, dbName)
     },
     deleteByVideoId: videoId => {
         const sql = 'DELETE FROM video_minio WHERE video_id=?'
