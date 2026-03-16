@@ -53,6 +53,7 @@ export async function deleteAria2Tasks(minioIds) {
 }
 
 async function deleteRemoteFiles(files) {
+    __log.info(`Ready to delete files: `, files)
     const executor = getExecutor('fedora')
     if (!executor) return -2
     try {
