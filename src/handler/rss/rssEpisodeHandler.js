@@ -47,21 +47,22 @@ export async function generateMinioSharedLink(episodeId) {
     if (!episode) {
         throwMessage('Episode not found.')
     }
-    let link = String(episode.link)
-    if (link.startsWith('/')) {
-        link = link.slice(1)
-    }
-    const index = link.indexOf('/')
-    if (index === -1) {
-        throwMessage('Invalid episode minio link.')
-    }
-    const bucket = link.substring(0, index)
-    const objectName = link.substring(index + 1)
-    const client = getMinioClient()
-    if (!client?.ready()) {
-        throwMessage('Minio client not ready.')
-    }
-    return client.generateShareLink(bucket, objectName)
+    return episode.link
+    // let link = String(episode.link)
+    // if (link.startsWith('/')) {
+    //     link = link.slice(1)
+    // }
+    // const index = link.indexOf('/')
+    // if (index === -1) {
+    //     throwMessage('Invalid episode minio link.')
+    // }
+    // const bucket = link.substring(0, index)
+    // const objectName = link.substring(index + 1)
+    // const client = getMinioClient()
+    // if (!client?.ready()) {
+    //     throwMessage('Minio client not ready.')
+    // }
+    // return client.generateShareLink(bucket, objectName)
 }
 
 export async function deleteOneEpisode(episodeId) {
