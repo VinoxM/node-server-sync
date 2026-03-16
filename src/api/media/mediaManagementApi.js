@@ -3,6 +3,8 @@ import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { addCategory, createVideo, checkVideoCanAdd, removeVideo } from "../../handler/media/mediaVideoHandler.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
 import { retryMinio } from "../../handler/media/mediaMinioHandler.js"
+import { searchMinio } from "../../handler/media/mediaHandler.js"
+import { handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
 
 const { POST } = apiMethodConst
 
