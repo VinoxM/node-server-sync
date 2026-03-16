@@ -23,6 +23,10 @@ export default {
         const sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE gid=?`
         return sqliteDB.selectOne(sql, [gid], null, dbName)
     },
+    selectByMinioId: minioId => {
+        let sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
+        return sqliteDB.selectAll(sql, [minioId], null, dbName)
+    },
     selectByMinioIds: minioIds => {
         if (isEmptyArray(minioIds)) return Promise.resolve()
         let sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (`
@@ -30,7 +34,13 @@ export default {
         return sqliteDB.selectAll(sql, minioIds, null, dbName)
     },
     deleteByGid: gid => {
-        const sql = `DELETE FROM arai2_task WHERE gid=?`
+        const sql = `DELETE FROM aria2_task WHERE gid=?`
         return sqliteDB.delete(sql, [gid], null, dbName)
+    },
+    deleteByMinioIds: minioIds => {
+        if (isEmptyArray(minioIds)) return Promise.resolve()
+        const sql = `DELETE FROM aria2_task WHERE minio_id= IN(`
+        sql += minioIds.map(() => "?").join(',') + ')'
+        return sqliteDB.delete(sql, minioIds, null, dbName)
     }
 }

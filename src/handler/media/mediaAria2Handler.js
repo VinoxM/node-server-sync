@@ -14,7 +14,7 @@ async function addTask(url, options) {
     return getAria2Socket().getInfo(gid);
 }
 
-async function getTaskInfo(gid) {
+export async function getTaskInfo(gid) {
     return getAria2Socket().getInfo(gid);
 }
 
@@ -40,7 +40,7 @@ export async function addAria2Task(uri, minioId, type) {
     await aria2TaskRep.insertOne(aria2Task)
 }
 
-export async function deleteArai2Tasks(minioIds) {
+export async function deleteAria2Tasks(minioIds) {
     const res = await aria2TaskRep.selectByMinioIds(minioIds)
     if (!Array.isArray(res?.data)) return
     const toRemoveFiles = []
@@ -48,7 +48,7 @@ export async function deleteArai2Tasks(minioIds) {
         await removeTask(gid)
         toRemoveFiles.push(filePath)
     }
-    await aria2TaskRep.updateStatusByMinioIds(minioIds, MEDIA_ARIA2_TASK_STATUS.REMOVED)
+    await aria2TaskRep.deleteByMinioIds(minioIds)
     await deleteRemoteFiles(toRemoveFiles)
 }
 

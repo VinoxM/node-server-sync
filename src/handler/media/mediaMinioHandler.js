@@ -5,9 +5,12 @@ import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";
 import { getMinioClient } from "../../instance/minio.js";
-import { addAria2Task, deleteArai2Tasks } from "./mediaAria2Handler.js";
+import { addAria2Task, deleteAria2Tasks, getTaskInfo } from "./mediaAria2Handler.js";
+import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
 
 const CAN_UPDATE_MEDIA_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED]
+
+const CAN_RETRY_MINIO_ARIA2_TASK_STATUS = ['error', 'complete']
 
 export function generateMinioLink(category, author, uniqueId, type, ext) {
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
@@ -43,7 +46,7 @@ function notifyUpdateMediaMinioStatusFailed(message, id) {
 export async function updateVideoStatusByVideoMinioStatus(videoId) {
     const result = await videoMinioRep.selectMaxStatusByVideoId(videoId)
     if (!result) {
-        __log.warn(`[${videoId}] Video minio not founed, setup video status to prepared.`)
+        __log.warn(`[${videoId}] Video minio not found, setup video status to prepared.`)
         await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.PREPARED)
         return
     }
@@ -57,7 +60,17 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
 export async function retryMinio(minioId) {
     const result = await videoMinioRep.selectOneById(minioId)
     result || throwMessage('Minio not found.')
-    const { originUri, type } = result
+    const { originUri, type, status } = result
+    status === MEDIA_MINIO_STATUS.COMPLETE && throwMessage('Minio can not retry.')
+    const aria2Task = await aria2TaskRep.selectByMinioId(minioId)
+    if (aria2Task) {
+        const { gid } = aria2Task
+        const taskInfo = await getTaskInfo(gid)
+        if (![CAN_RETRY_MINIO_ARIA2_TASK_STATUS].includes(taskInfo?.status)) {
+            throwMessage('Minio aria2 task status can not support retry.')
+        }
+        await deleteAria2Tasks([minioId])
+    }
     await addAria2Task(originUri, minioId, type)
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
 }
@@ -112,7 +125,7 @@ export async function removeVideoMinio(videoId) {
         toRemoveIds.push(id)
     }
     await videoMinioRep.updateStatusByIds(toRemoveIds, MEDIA_MINIO_STATUS.REMOVED)
-    await deleteArai2Tasks(toRemoveIds)
+    await deleteAria2Tasks(toRemoveIds)
 }
 
 async function deleteMinioObject(minioLink, minioId) {
