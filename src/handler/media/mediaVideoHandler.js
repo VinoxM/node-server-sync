@@ -37,7 +37,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId }) {
  * Minio status:
  * PREPARED -> PREPARED/COMPLETE/FAILED
  */
-export async function addVideo(videoObj) {
+export async function createVideo(videoObj) {
     const { title, author, category, uploadTime } = videoObj
     // validate category
     const categoryExists = await categoriesRep.selectOneByName(category)
