@@ -1,4 +1,4 @@
-import { MEDIA_MINIO_STATUS } from "../../constraints/mediaConst"
+import { MEDIA_MINIO_STATUS } from "../../constraints/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
