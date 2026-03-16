@@ -39,7 +39,7 @@ export default {
     },
     deleteByMinioIds: minioIds => {
         if (isEmptyArray(minioIds)) return Promise.resolve()
-        let sql = `DELETE FROM aria2_task WHERE minio_id= IN(`
+        let sql = `DELETE FROM aria2_task WHERE minio_id IN(`
         sql += minioIds.map(() => "?").join(',') + ')'
         return sqliteDB.delete(sql, minioIds, null, dbName)
     }
