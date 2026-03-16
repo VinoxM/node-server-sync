@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import * as YAML from "yaml";
 import { mergeObject, getItem, getItemOrElse } from "../common/objectUtil.js";
-import { ContextSubcribe } from "./subscribe.js";
+import { ContextSubscribe } from "./subscribe.js";
 import { LRUCache } from "../instance/extendMap.js";
 
 const defaultApplicationType = "yaml";
@@ -84,7 +84,7 @@ export class ApplicationContext {
     }
 
     addListen(subscribe) {
-        if (subscribe && subscribe instanceof ContextSubcribe && subscribe.setupSubscribeId(this.#subscribeId)) {
+        if (subscribe && subscribe instanceof ContextSubscribe && subscribe.setupSubscribeId(this.#subscribeId)) {
             this.#subscribed.set(this.#subscribeId, subscribe)
             this.#subscribeId++
             __log.debug(`[${this.logPlaceholder()}] Subscribed: ${subscribe.getLabel()}.`)
@@ -92,7 +92,7 @@ export class ApplicationContext {
     }
 
     removeListen(subscribe) {
-        if (subscribe && subscribe instanceof ContextSubcribe) {
+        if (subscribe && subscribe instanceof ContextSubscribe) {
             const subscribeId = subscribe.getSubscribeId()
             if (this.#subscribed.delete(subscribeId)) {
                 __log.debug(`[${this.logPlaceholder()}] Unsubscribed: ${subscribe.getLabel()}.`)
@@ -104,7 +104,7 @@ export class ApplicationContext {
         this.#propertyCache.clear()
         const subscribes = this.#subscribed.values()
         for (const sub of subscribes) {
-            sub && sub instanceof ContextSubcribe && sub.onRefresh()
+            sub && sub instanceof ContextSubscribe && sub.onRefresh()
         }
     }
 

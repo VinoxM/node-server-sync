@@ -1,7 +1,7 @@
 import { getRequestRealIp } from '../../common/httpUtil.js'
-import { ContextSubcribe } from '../../context/subscribe.js'
+import { ContextSubscribe } from '../../context/subscribe.js'
 
-export class SSEClient extends ContextSubcribe {
+export class SSEClient extends ContextSubscribe {
     #realIp
     #uname
     #request

@@ -1,7 +1,7 @@
 import { torrentsHandler, saveTrackers, torrentHandler } from "./rssTrackerHandler.js";
 import rssResultRep from "../../repository/rss/rssResultRep.js";
 import { Executor } from "../../common/executor.js";
-import { ContextSubcribe } from '../../context/subscribe.js';
+import { ContextSubscribe } from '../../context/subscribe.js';
 
 const { selectMaxId: selectRssResultMaxId, insertMany: insertManyResult, insertOne, updateOne } = rssResultRep
 
@@ -9,7 +9,7 @@ let episodeMatches = []
 let episodeMatchesSubscription = null
 const getEpisodeMatches = () => {
     if (episodeMatchesSubscription === null) {
-        episodeMatchesSubscription = new ContextSubcribe('episodeMatches', () => {
+        episodeMatchesSubscription = new ContextSubscribe('episodeMatches', () => {
             episodeMatches = __env.get('rss.episodeMatches', [])
         })
         episodeMatchesSubscription.onRefresh()

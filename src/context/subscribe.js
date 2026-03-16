@@ -1,4 +1,4 @@
-export class ContextSubcribe {
+export class ContextSubscribe {
 
     #subscribeId = null
     #label

@@ -1,7 +1,7 @@
 import WebSocket from 'ws'
 import axios from 'axios'
 import path from 'path'
-import { ContextSubcribe } from '../context/subscribe.js'
+import { ContextSubscribe } from '../context/subscribe.js'
 import { generateUUID } from '../common/stringUtil.js'
 
 const ARIA2_METHOD = {
@@ -10,7 +10,7 @@ const ARIA2_METHOD = {
     REMOVE: 'aria2.remove'
 }
 
-class Aria2Socket extends ContextSubcribe {
+class Aria2Socket extends ContextSubscribe {
 
     static instance = new Aria2Socket()
 

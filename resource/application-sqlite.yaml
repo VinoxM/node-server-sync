@@ -206,7 +206,7 @@ sqlite:
         DDL: |
           CREATE TABLE authors (
             `id` integer PRIMARY KEY NOT NULL,
-            `category_id` interger NOT NULL,
+            `category_id` integer NOT NULL,
             `name` varchar(100) NOT NULL,
             CONSTRAINT `idx_author_name` UNIQUE (`category_id`, `name`)
           );
@@ -229,16 +229,16 @@ sqlite:
       - tableName: blacklist
         DDL: |
           CREATE TABLE blacklist (
-            `category_id` interger NOT NULL,
-            `type` interger NOT NULL,
+            `category_id` integer NOT NULL,
+            `type` integer NOT NULL,
             `value` text NOT NULL,
             CONSTRAINT `idx_blacklist_unique` UNIQUE (`category_id`, `type`, `value`)
           )
       - tableName: whitelist
         DDL: |
           CREATE TABLE whitelist (
-            `category_id` interger NOT NULL,
-            `type` interger NOT NULL,
+            `category_id` integer NOT NULL,
+            `type` integer NOT NULL,
             `value` text NOT NULL,
             CONSTRAINT `idx_blacklist_unique` UNIQUE (`category_id`, `type`, `value`)
           )

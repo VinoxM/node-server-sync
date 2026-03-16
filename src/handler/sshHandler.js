@@ -1,9 +1,9 @@
-import { ContextSubcribe } from "../context/subscribe.js"
+import { ContextSubscribe } from "../context/subscribe.js"
 import { SSHExecutor } from "../instance/sshExecutor.js"
 
 const sshExecutorPool = new Map()
 
-const sshSubscribe = new ContextSubcribe('SSH', async () => {
+const sshSubscribe = new ContextSubscribe('SSH', async () => {
     const disconnects = [];
     sshExecutorPool.forEach(executor => {
         if (executor) disconnects.push(executor.disconnect());

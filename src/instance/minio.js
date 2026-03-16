@@ -1,7 +1,7 @@
-import { ContextSubcribe } from "../context/subscribe.js";
+import { ContextSubscribe } from "../context/subscribe.js";
 import * as Minio from 'minio';
 
-class MinioClient extends ContextSubcribe {
+class MinioClient extends ContextSubscribe {
 
     static instance = new MinioClient()
 
