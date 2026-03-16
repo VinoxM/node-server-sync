@@ -49,7 +49,7 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
         __log.warn(`[${videoId}] Video minio not found, setup video status to prepared.`)
         await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.PREPARED)
         return
-    } else if (complete === 0) {
+    } else if (complete) {
         __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
         await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.COMPLETE)
     }
