@@ -1,3 +1,5 @@
+import { MEDIA_MINIO_STATUS } from "../../constraints/mediaConst"
+
 const dbName = 'media'
 const enablePrint = { print: true }
 
@@ -32,8 +34,10 @@ export default {
         const sql = 'DELETE FROM video_minio WHERE video_id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
     },
-    selectMaxStatusByVideoId: videoId => {
-        const sql = 'SELECT video_id, MAX(status) maxStatus, MIN(status) minStatus FROM video_minio WHERE video_id=? GROUP BY video_id'
+    selectMinioCompleteByVideoId: videoId => {
+        const sql = `SELECT COUNT(*) as total, (COUNT(*) > 0 AND SUM(status NOT IN (${MEDIA_MINIO_STATUS.COMPLETE}, ${MEDIA_MINIO_STATUS.FAILED})) = 0) AS complete `
+            + `FROM video_minio `
+            + `WHERE video_id = ?`
         return sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoIdForDisplay: videoId => {

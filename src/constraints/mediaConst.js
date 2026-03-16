@@ -7,19 +7,20 @@ export const MEDIA_VIDEO_STATUS = {
 }
 
 export const MEDIA_MINIO_STATUS = {
-    FAILED: -1,
+    REMOVED: -1,
     PREPARED: 0,
     DOWNLOADING: 1,
     UPLOADING: 2,
     COMPLETE: 3,
-    REMOVED: 4
+    FAILED: 4
 }
 
 export const MEDIA_ARIA2_TASK_STATUS = {
-    DOWNLOADING: 0,
-    COMPLETE: 1,
-    FAILED: 2,
-    REMOVED: 3
+    REMOVED: -1,
+    PREPARED: 0,
+    DOWNLOADING: 1,
+    COMPLETE: 2,
+    FAILED: 3,
 }
 
 export const MEDIA_FILTER_TYPE = {
