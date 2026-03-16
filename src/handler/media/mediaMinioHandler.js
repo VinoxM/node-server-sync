@@ -62,12 +62,13 @@ export async function retryMinio(minioId) {
     result || throwMessage('Minio not found.')
     const { originUri, type, status } = result
     status === MEDIA_MINIO_STATUS.COMPLETE && throwMessage('Minio can not retry.')
-    const aria2Task = await aria2TaskRep.selectByMinioId(minioId)
-    if (aria2Task) {
-        const { gid } = aria2Task
-        const taskInfo = await getTaskInfo(gid)
-        if (![CAN_RETRY_MINIO_ARIA2_TASK_STATUS].includes(taskInfo?.status)) {
-            throwMessage('Minio aria2 task status can not support retry.')
+    const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
+    if (isNotEmptyArray(aria2Tasks)) {
+        for (const { gid } of aria2Tasks) {
+            const taskInfo = await getTaskInfo(gid).catch(() => __log.error(`Get aria2 task[${gid}] status failed.`))
+            if (taskInfo && !CAN_RETRY_MINIO_ARIA2_TASK_STATUS.includes(taskInfo?.status)) {
+                throwMessage('Minio aria2 task status can not support retry.')
+            }
         }
         await deleteAria2Tasks([minioId])
     }
