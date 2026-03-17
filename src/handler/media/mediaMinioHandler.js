@@ -1,3 +1,4 @@
+import path from 'path';
 import videoMinioRep from "../../repository/media/videoMinioRep.js";
 import { pushNotification } from "../../sockets/notification.js";
 import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
@@ -7,14 +8,98 @@ import { getExecutor } from "../sshHandler.js";
 import { getMinioClient } from "../../instance/minio.js";
 import { addAria2Task, deleteAria2Tasks, getTaskInfo } from "./mediaAria2Handler.js";
 import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
+import categoriesRep from '../../repository/media/categoriesRep.js';
+import authorsRep from '../../repository/media/authorsRep.js';
+import { generateUUID } from '../../common/stringUtil.js';
+import { urlContentLengthLargeThanOneMB } from '../../common/httpUtil.js';
 
-const CAN_UPDATE_MEDIA_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED]
+const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
-const CAN_RETRY_MINIO_ARIA2_TASK_STATUS = ['error', 'complete']
+export async function searchMinio(videoId) {
+    return videoMinioRep.selectByVideoIdForDisplay(videoId).then(({ data }) => data)
+}
 
-export function generateMinioLink(category, author, uniqueId, type, ext) {
+export async function createMinioManually(minioObj) {
+    const { videoId, type, uri } = minioObj
+    // validate type
+    SUPPORTED_MEDIA_MINIO_TYPE.includes(type) || throwMessage('Invalid type.')
+    // validate minio exists
+    const minioExists = await videoMinioRep.selectOneByVideoIdAndType(videoId, type)
+    minioExists && throwMessage('Minio exists.')
+    // validate video exists
+    const videoInfo = await videosRep.selectOne(videoId)
+    videoInfo || throwMessage('Video not exists.')
+    // validate video status
+    const { categoryId, authorId, status } = videoInfo
+    MEDIA_VIDEO_STATUS.ANALYZING === status && throwMessage('Video is analyzing, cannot create minio.')
+    // validate category exists
+    const categoryInfo = await categoriesRep.selectOneById(categoryId)
+    categoryInfo || throwMessage('Category not exists.')
+    // validate author exists
+    const category = categoryInfo.name
+    const authorInfo = await authorsRep.selectOneById(authorId)
+    authorInfo || throwMessage('Author not exists.')
+    // resolve uri and create minio
+    const author = authorInfo.name
+    const uuid = generateUUID()
+    const result = await resolveVideoUri(uri, videoId, category, author, uuid, type)
+    // validate resolve result
+    result || throwMessage('Create minio failed.')
+    // update video minio status
+    await updateVideoStatusByVideoMinioStatus(videoId)
+}
+
+const FILE_PROTOCOL = ['file:']
+const HTTP_PROTOCOL = ['http:', 'https:']
+export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type) {
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
-    return `/media/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
+    const resolvedUri = generateUri(uri)
+    if (resolvedUri === null) {
+        __log.warn(`[${videoId}] Skipped resolve video ${typeDesc}, cause uri invalid. ${uri}`)
+        return;
+    }
+    // generate minioLink
+    const ext = path.extname(resolvedUri.pathname)
+    const minioLink = generateMinioLink(category, author, uuid, type, ext)
+    // save minio
+    const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED })
+    if (rows === 0) {
+        __log.error(`Resolve video minio failed, cause unique(${videoId}, ${type}) exists.`)
+        throwMessage(`Resolve video ${typeDesc} minio failed.`)
+    }
+    // update video minio id
+    await videosRep.updateMinioIdById(videoId, lastId, type)
+    const protocol = resolvedUri.protocol
+    if (FILE_PROTOCOL.includes(protocol)) {
+        // file protocol
+        __log.info(`[${videoId}] Video's ${typeDesc} uri is a file, prepare move to minio: ${uri} -> ${minioLink}.`)
+        await uploadFileToMinio(decodeURIComponent(resolvedUri.pathname), minioLink, lastId)
+    } else if (HTTP_PROTOCOL.includes(protocol)) {
+        // http protocol
+        const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
+        // Get the url file size. 
+        // If it cannot be obtained or is larger than 1MB, upload it to aria2 for download. 
+        // Otherwise, upload it directly to minio.
+        if (overSizeOneMB) {
+            __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
+            await addAria2Task(uri, lastId, type)
+            await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
+        } else {
+            __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
+            const complete = await uploadUrlToMinio(uri, minioLink, lastId)
+            if (!complete) {
+                __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
+                await addAria2Task(uri, lastId, type)
+                await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
+            }
+        }
+    } else {
+        const message = `[${videoId}] Cannot resolve video ${typeDesc} uri: ${uri}`
+        __log.warn(message)
+        pushNotification(message)
+        await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.FAILED)
+    }
+    return true
 }
 
 /**
@@ -22,19 +107,19 @@ export function generateMinioLink(category, author, uniqueId, type, ext) {
  * Minio status:
  * UPLOADING -> COMPLETE/FAILED
  */
+const CAN_UPDATE_MEDIA_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED]
 export async function updateMinioStatus(id, status) {
     const minioStatus = parseInt(status)
     // validate minio status
     CAN_UPDATE_MEDIA_MINIO_STATUS.includes(minioStatus) || notifyUpdateMediaMinioStatusFailed('Invalid media minio status.', id)
-
+    // validate minio exists
     const videoMinio = await videoMinioRep.selectOneById(id)
     videoMinio || notifyUpdateMediaMinioStatusFailed('Media minio not exists.', id)
     const videoId = videoMinio.videoId
-
     // save minio
     const { rows } = await videoMinioRep.updateStatusById(id, minioStatus)
     rows > 0 || notifyUpdateMediaMinioStatusFailed('Save media minio status failed.', id)
-
+    // update video status
     await updateVideoStatusByVideoMinioStatus(videoId)
 }
 
@@ -45,16 +130,70 @@ function notifyUpdateMediaMinioStatusFailed(message, id) {
 
 export async function updateVideoStatusByVideoMinioStatus(videoId) {
     const { total, complete } = await videoMinioRep.selectMinioCompleteByVideoId(videoId)
+    let videoStatus = 0;
     if (total === 0) {
         __log.warn(`[${videoId}] Video minio not found, setup video status to prepared.`)
-        await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.PREPARED)
-        return
+        videoStatus = MEDIA_VIDEO_STATUS.PREPARED
     } else if (complete) {
         __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
-        await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.COMPLETE)
+        videoStatus = MEDIA_VIDEO_STATUS.COMPLETE
+    } else {
+        __log.info(`[${videoId}] Video minio any resolving, setup video status to uploading.`)
+        videoStatus = MEDIA_VIDEO_STATUS.UPLOADING
+    }
+    await videosRep.updateVideoStatus(videoId, videoStatus)
+    return videoStatus
+}
+
+/**
+ * Add video step1 from status: ANALYZING.
+ * Minio status:
+ * COMPLETE/FAILED
+ */
+async function uploadFileToMinio(filePath, minioLink, lastId) {
+    await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.UPLOADING)
+    const result = await executeSshScript(filePath, minioLink, SSH_CMD_MINIO_COPY_SCRIPT)
+    const complete = result === 1
+    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
+    await videoMinioRep.updateStatusById(lastId, minioStatus)
+    return complete
+}
+
+/**
+ * Add video step1 from status: ANALYZING.
+ * Minio status:
+ * COMPLETE/FAILED
+ */
+async function uploadUrlToMinio(url, minioLink, lastId) {
+    const result = await executeSshScript(url, minioLink, SSH_CMD_MINIO_DOWNLOAD_SCRIPT)
+    const complete = result === 1
+    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
+    await videoMinioRep.updateStatusById(lastId, minioStatus)
+    return complete
+}
+
+async function executeSshScript(resourcePath, minioLink, script) {
+    const executor = getExecutor('fedora')
+    if (!executor) return -2
+    try {
+        const { code } = await executor.exec(script, [resourcePath, minioLink]);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ssh script failed.', e)
+        return -3
     }
 }
 
+const CAN_UPDATE_MINIO_ORIGIN_URI_STATUS = [MEDIA_MINIO_STATUS.FAILED]
+export async function updateMinioOriginUri(minioId, originUri) {
+    const minioInfo = await videoMinioRep.selectOneById(minioId)
+    minioInfo || throwMessage('Video minio not found.')
+    const { status } = minioInfo
+    CAN_UPDATE_MINIO_ORIGIN_URI_STATUS.includes(status) || throwMessage('Cannot update minio origin uri.')
+    await videoMinioRep.updateOriginUriById(minioId, originUri)
+}
+
+const CAN_RETRY_MINIO_ARIA2_TASK_STATUS = ['error', 'complete']
 export async function retryMinio(minioId) {
     const result = await videoMinioRep.selectOneById(minioId)
     result || throwMessage('Minio not found.')
@@ -74,74 +213,39 @@ export async function retryMinio(minioId) {
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
 }
 
-/**
- * Add video step1 from status: ANALYSING.
- * Minio status:
- * COMPLETE/FAILED
- */
-export async function uploadFileToMinio(filePath, minioLink, lastId) {
-    const result = await uploadToMinio(filePath, minioLink, SSH_CMD_MINIO_COPY_SCRIPT)
-    const complete = result === 1
-    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
-    lastId && await videoMinioRep.updateStatusById(lastId, minioStatus)
-    return complete
-}
-
-/**
- * Add video step1 from status: ANALYSING.
- * Minio status:
- * COMPLETE/FAILED
- */
-export async function uploadUrlToMinio(url, minioLink, lastId) {
-    const result = await uploadToMinio(url, minioLink, SSH_CMD_MINIO_DOWNLOAD_SCRIPT)
-    const complete = result === 1
-    const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
-    lastId && await videoMinioRep.updateStatusById(lastId, minioStatus)
-    return complete
-}
-
-async function uploadToMinio(resourcePath, minioLink, script) {
-    const executor = getExecutor('fedora')
-    if (!executor) return -2
-    try {
-        const { code } = await executor.exec(script, [resourcePath, minioLink]);
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
-    }
-}
-
-export async function removeVideoMinio(videoId) {
-    const result = await videoMinioRep.selectByVideoId(videoId)
-    if (!result) return
-    const { data } = result
-    const toRemoveIds = []
-    for (const { id, link, status } of data) {
-        if (status === MEDIA_MINIO_STATUS.COMPLETE && isNotBlank(link)) {
-            await deleteMinioObject(link, id)
+/** Minio management: DELETE */
+const CAN_DELETE_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED, MEDIA_MINIO_STATUS.REMOVED]
+export async function deleteVideoMinio(minioId) {
+    const minioInfo = await videoMinioRep.selectOneById(minioId)
+    if (!minioInfo) return;
+    const { id, link, status } = minioInfo
+    CAN_DELETE_MINIO_STATUS.includes(status) || throwMessage('Cannot delete minio.')
+    const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
+    if (rows > 0) {
+        __log.info(`[${id}] Ready to remove minio.`)
+        if (isNotBlank(link)) {
+            await deleteMinioAndObject(link, id)
         }
-        toRemoveIds.push(id)
     }
-    await videoMinioRep.updateStatusByIds(toRemoveIds, MEDIA_MINIO_STATUS.REMOVED)
-    await deleteAria2Tasks(toRemoveIds)
+    await videoMinioRep.deleteByMinioId(id)
 }
 
-async function deleteMinioObject(minioLink, minioId) {
+async function deleteMinioAndObject(minioLink, minioId) {
+    __log.info(`[${minioId}] Ready to delete minio object: ${minioLink}`)
     let link = String(minioLink)
     if (link.startsWith('/')) {
         link = link.slice(1)
     }
     const index = link.indexOf('/')
     if (index === -1) {
-        logAndPushNotification(`[${minioId}] Invalid episode minio link: ${minioLink}`)
+        logAndPushNotification(`[${minioId}] Invalid minio link: ${minioLink}`)
         return
     }
     const bucket = link.substring(0, index)
     const objectName = link.substring(index + 1)
     const client = getMinioClient()
     if (!client?.ready()) {
-        logAndPushNotification(`[${minioId}] Delete minio object failed. Cuase client not ready.`)
+        logAndPushNotification(`[${minioId}] Delete minio object failed. Cause client not ready.`)
         return
     }
     await client.deleteObject(bucket, objectName)
@@ -150,4 +254,18 @@ async function deleteMinioObject(minioLink, minioId) {
 function logAndPushNotification(message) {
     __log.error(message)
     pushNotification(message)
+}
+
+/** Support functions */
+function generateUri(uri) {
+    try {
+        return new URL(uri)
+    } catch (ignored) {
+        return null
+    }
+}
+
+function generateMinioLink(category, author, uniqueId, type, ext) {
+    const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
+    return `/media/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
 }

@@ -1,10 +1,10 @@
 import { MEDIA_FILTER_TYPE } from "../../constraints/mediaConst.js"
 import authorsRep from "../../repository/media/authorsRep.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
-import filterRulesRep, { getCacheByCategory, OPARETOR_TABLE as OPERATOR_TABLE } from "../../repository/media/filterRulesRep.js"
+import filterRulesRep, { getCacheByCategory, OPERATOR_TABLE } from "../../repository/media/filterRulesRep.js"
 import videosRep from "../../repository/media/videosRep.js"
 
-const CAN_OPARETOR_FILTER_TYPE = Object.values(MEDIA_FILTER_TYPE)
+const CAN_OPERATOR_FILTER_TYPE = Object.values(MEDIA_FILTER_TYPE)
 const ALLOWED_OPERATOR = Object.keys(OPERATOR_TABLE)
 
 export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId) {
@@ -54,21 +54,20 @@ export async function handleFilterRule(body, isAdd = true) {
     }
 }
 
+export async function getFilterRulesByCategory(categoryId) {
+    return getCacheByCategory(categoryId)
+}
+
 async function getCategoryId(category) {
     const categoryInfo = await categoriesRep.selectOneByName(category)
     categoryInfo || throwMessage('Category not found.')
     return categoryInfo.id
 }
 
-async function getAuthorId(author, categoryId) {
-    const authorInfo = await authorsRep.selectOneByName(author, categoryId)
-    return authorInfo.id
-}
-
 function validateFilterType(type) {
-    CAN_OPARETOR_FILTER_TYPE.includes(type) || throwMessage('Invalid type.')
+    CAN_OPERATOR_FILTER_TYPE.includes(type) || throwMessage('Invalid type.')
 }
 
 function validateOperator(operator) {
-    ALLOWED_OPERATOR.includes(operator) || throwMessage('Invalid oparetor.')
+    ALLOWED_OPERATOR.includes(operator) || throwMessage('Invalid operator.')
 }

@@ -8,28 +8,27 @@ export default {
         const params = [minioId, gid, status, filePath, fileNum]
         return sqliteDB.insert(sql, params, null, dbName)
     },
-    updateStatusByMinioId: (minioId, status) => {
-        const sql = `UPDATE aria2_task SET status=? WHERE minio_id=?`
-        const params = [status, minioId]
+    updateStatusById: (status, id) => {
+        const sql = `UPDATE aria2_task SET status=? WHERE id=?`
+        const params = [status, id]
         return sqliteDB.update(sql, params, null, dbName)
     },
-    updateStatusByMinioIds: (minioIds, status) => {
-        let sql = `UPDATE aria2_task SET status=? WHERE minio_id IN (`
-        sql += minioIds.map(() => "?").join(',') + ')'
-        const params = [status, ...minioIds]
+    updateFilePathById: (filePath, id) => {
+        const sql = `UPDATE aria2_task SET file_path=? WHERE id=?`
+        const params = [filePath, id]
         return sqliteDB.update(sql, params, null, dbName)
     },
     selectByGid: gid => {
-        const sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE gid=?`
+        const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE gid=?`
         return sqliteDB.selectOne(sql, [gid], null, dbName)
     },
     selectByMinioId: minioId => {
-        let sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
+        let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
         return sqliteDB.selectAll(sql, [minioId], null, dbName)
     },
     selectByMinioIds: minioIds => {
         if (isEmptyArray(minioIds)) return Promise.resolve()
-        let sql = `SELECT minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (`
+        let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (`
         sql += minioIds.map(() => "?").join(',') + ')'
         return sqliteDB.selectAll(sql, minioIds, null, dbName)
     },

@@ -1,5 +1,5 @@
 export const MEDIA_VIDEO_STATUS = {
-    ANALYSING: 0,
+    ANALYZING: 0,
     PREPARED: 1,
     UPLOADING: 2,
     COMPLETE: 3,

@@ -1,4 +1,3 @@
-import path from 'path';
 import { generateUUID } from "../../common/stringUtil.js";
 import authorsRep from "../../repository/media/authorsRep.js";
 import categoriesRep from "../../repository/media/categoriesRep.js";
@@ -6,17 +5,23 @@ import tagsRep from "../../repository/media/tagsRep.js";
 import videosRep from "../../repository/media/videosRep.js";
 import videoTagMapRep from "../../repository/media/videoTagMapRep.js";
 import videoMinioRep from "../../repository/media/videoMinioRep.js";
-import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
-import { addAria2Task } from "./mediaAria2Handler.js";
+import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterHandler.js";
-import { urlContentLengthLargeThanOneMB } from "../../common/httpUtil.js";
-import { generateMinioLink, removeVideoMinio, updateVideoStatusByVideoMinioStatus, uploadFileToMinio, uploadUrlToMinio } from './mediaMinioHandler.js';
-import { pushNotification } from '../../sockets/notification.js';
+import { resolveVideoUri, updateVideoStatusByVideoMinioStatus } from './mediaMinioHandler.js';
 
-const FILE_PROTOCOL = ['file:']
-const HTTP_PROTOCOL = ['http:', 'https:']
 const VIDEO_TAG_OPERATOR = ['update', 'add', 'del']
-const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE]
+
+export async function searchVideos(body) {
+    const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [] } = body
+    const dataList = await videosRep.selectForSearch(title, categoryId, authorId, tags, currentPage, pageSize).then(({ data }) => data)
+    const total = await videosRep.countForSearch(title, categoryId, authorId, tags)
+    return {
+        list: dataList,
+        totalSize: total,
+        currentPage,
+        pageSize
+    }
+}
 
 export async function checkVideoCanAdd({ category, author, uniqueId }) {
     const categoryExists = await categoriesRep.selectOneByName(category)
@@ -33,7 +38,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId }) {
 /**
  * Add video step1
  * Video status: 
- * ANALYSING -> UPLOADING/PREPARED
+ * ANALYZING -> UPLOADING/PREPARED
  * Minio status:
  * PREPARED -> PREPARED/COMPLETE/FAILED
  */
@@ -55,80 +60,30 @@ export async function createVideo(videoObj) {
     const videoExists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
     videoExists && throwMessage('Video exists.')
     // save video
-    const { lastId: videoId } = await videosRep.insertOne({ uniqueId, title, authorId, categoryId, uploadTime, status: MEDIA_VIDEO_STATUS.ANALYSING })
+    const { lastId: videoId } = await videosRep.insertOne({ uniqueId, title, authorId, categoryId, uploadTime, status: MEDIA_VIDEO_STATUS.ANALYZING })
     // save video tags mapping
     await videoTagMapRep.insertTags(videoId, tagIds)
     // handle video source
-    const resolveSourceResult = await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
-    // hanlde video cover
-    const resolveCoverResult = await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
+    await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
+    // handle video cover
+    await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
     // update video status
-    if (resolveSourceResult + resolveCoverResult > 0) {
-        await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.UPLOADING)
-    } else {
-        await updateVideoStatusByVideoMinioStatus(videoId)
-    }
-    return { videoId };
+    const videoStatus = await updateVideoStatusByVideoMinioStatus(videoId)
+    return { id: videoId, status: videoStatus };
 }
 
-async function resolveVideoUri(uri = '', videoId, category, author, uuid, type) {
-    let result = 0;
-    const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
-    const resolvedUri = generateUri(uri)
-    if (resolvedUri === null) {
-        __log.warn(`[${videoId}] Skipped resolve video ${typeDesc}, cause uri invalid. ${uri}`)
-        return result;
-    }
-    // generate minioLink
-    const ext = path.extname(resolvedUri.pathname)
-    const minioLink = generateMinioLink(category, author, uuid, type, ext)
-    // save minio
-    const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED })
-    if (rows === 0) {
-        __log.error(`Resolve video minio failed, cause unique(${videoId}, ${type}) exists.`)
-        throwMessage(`Resolve video ${typeDesc} minio failed.`)
-    }
-    // update video minio id
-    await videosRep.updateMinioIdById(videoId, lastId, type)
-    const protocol = resolvedUri.protocol
-    if (FILE_PROTOCOL.includes(protocol)) {
-        // file protocol
-        __log.info(`[${videoId}] Video's ${typeDesc} uri is a file, prepare move to minio: ${uri} -> ${minioLink}.`)
-        await uploadFileToMinio(decodeURIComponent(resolvedUri.pathname), minioLink, lastId)
-    } else if (HTTP_PROTOCOL.includes(protocol)) {
-        // http protocol
-        const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
-        // Get the url file size. 
-        // If it cannot be obtained or is larger than 1MB, upload it to aria2 for download. 
-        // Otherwise, upload it directly to minio.
-        if (overSizeOneMB) {
-            __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
-            await addAria2Task(uri, lastId, type)
-            await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
-            result = 1;
-        } else {
-            __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
-            const complete = await uploadUrlToMinio(uri, minioLink, lastId)
-            if (!complete) {
-                __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
-                await addAria2Task(uri, lastId, type)
-                await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
-            }
-        }
-    } else {
-        const message = `[${videoId}] Cannot resolve video ${typeDesc} uri: ${uri}`
-        __log.warn(message)
-        pushNotification(message)
-    }
-    return result;
+export async function updateVideoTitle(id, title) {
+    const video = await videosRep.selectOne(id)
+    video || throwMessage('Video not found')
+    await videosRep.updateVideoTitle(id, title)
 }
 
-export async function updateVideoTags(videoId, tags, oparetor) {
-    VIDEO_TAG_OPERATOR.includes(oparetor) || throwMessage('Invalid operator.')
+export async function updateVideoTags(videoId, tags, operator) {
+    VIDEO_TAG_OPERATOR.includes(operator) || throwMessage('Invalid operator.')
     const video = await videosRep.selectOne(videoId)
     video || throwMessage('Video not found')
     const tagIds = await handleTags(tags)
-    switch (oparetor) {
+    switch (operator) {
         case 'update':
             await videoTagMapRep.deleteTags(videoId)
             await videoTagMapRep.insertTags(videoId, tagIds)
@@ -146,12 +101,14 @@ export async function updateVideoTags(videoId, tags, oparetor) {
  * Can del:
  * Video status: PREPARED, COMPLETE
  */
+const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE]
 export async function removeVideo(videoId) {
     const video = await videosRep.selectOne(videoId)
     video || throwMessage('Video not found.')
     CAN_DELETE_VIDEO_STATUS.includes(video.status) || throwMessage('Cannot remove video.')
-    await videosRep.updateVideoStatus(videoId, MEDIA_VIDEO_STATUS.REMOVED)
-    await removeVideoMinio(videoId)
+    const minioExists = await videoMinioRep.selectMinioExistsByVideoId(videoId)
+    minioExists && throwMessage('Cannot remove video, cause storage exists in this video.')
+    await videosRep.deleteOne(videoId)
 }
 
 export async function addCategory(category) {
@@ -163,13 +120,31 @@ export async function addCategory(category) {
     return lastId
 }
 
-async function addAuthor(author, categoryId) {
+export async function deleteCategory(categoryId) {
+    const exists = await categoriesRep.selectOneById(categoryId)
+    if (!exists) return;
+    const videosExists = await categoriesRep.selectVideosExistsByCategoryId(categoryId)
+    videosExists && throwMessage('Cannot delete category, cause videos exists in this category.')
+    const policyExists = await categoriesRep.selectFilterRulesExistsByCategoryId(categoryId)
+    policyExists && throwMessage('Cannot delete category, cause policy exists in this category.')
+    await categoriesRep.deleteOne(categoryId)
+}
+
+export async function addAuthor(author, categoryId) {
     const { rows, lastId } = await authorsRep.insertOne(author, categoryId)
     if (rows === 0) {
         const exists = await authorsRep.selectOneByName(author, categoryId)
         return exists ? exists.id : (await authorsRep.insertOne(author, categoryId)).lastId
     }
     return lastId
+}
+
+export async function deleteAuthor(authorId) {
+    const exists = await authorsRep.selectOneById(authorId)
+    if (!exists) return;
+    const videosExists = await authorsRep.selectVideosExistsByAuthorId(authorId)
+    videosExists && throwMessage('Cannot delete author, cause videos exists in this author.')
+    await authorsRep.deleteOne(authorId)
 }
 
 async function handleTags(tags) {
@@ -190,12 +165,4 @@ async function addTag(tag) {
     }
     const { lastId } = await tagsRep.insertOne(tag)
     return lastId
-}
-
-function generateUri(uri) {
-    try {
-        return new URL(uri)
-    } catch (ignored) {
-        return null
-    }
 }

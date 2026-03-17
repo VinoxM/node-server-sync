@@ -1,11 +1,11 @@
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
-import { searchVideos } from "../../handler/media/mediaHandler.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
 import authorsRep from "../../repository/media/authorsRep.js"
 import videoTagMapRep from "../../repository/media/videoTagMapRep.js"
 import { checkVideoFilterRules } from "../../handler/media/mediaFilterHandler.js"
+import { searchVideos } from "../../handler/media/mediaVideoHandler.js"
 
 const { POST } = apiMethodConst
 

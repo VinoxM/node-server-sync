@@ -1,9 +1,8 @@
-import { checkBodyKeyNotBlank, checkBodyKeysNotBlank, checkBodyKeysNotNull } from "../../common/apiPreCheck.js"
+import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank, checkBodyKeysNotNull } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
-import { addCategory, createVideo, checkVideoCanAdd, removeVideo } from "../../handler/media/mediaVideoHandler.js"
+import { addCategory, createVideo, checkVideoCanAdd, removeVideo, deleteCategory, updateVideoTitle, updateVideoTags, addAuthor, deleteAuthor } from "../../handler/media/mediaVideoHandler.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
-import { retryMinio } from "../../handler/media/mediaMinioHandler.js"
-import { searchMinio } from "../../handler/media/mediaHandler.js"
+import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri } from "../../handler/media/mediaMinioHandler.js"
 import { handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
 
 const { POST } = apiMethodConst
@@ -27,20 +26,26 @@ export default {
         preCheck: req => checkBodyKeysNotNull(req, ['title', 'author', 'category', 'uploadTime']),
         callback: req => createVideo(req.body)
     },
-    "/videos/edit": {
-        disabled: true,
+    "/videos/updateTitle": {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
-        callback: req => removeVideo(req.body['videoId'])
+        preCheck: req => checkBodyKeysNotBlank(req, ['id', 'title']),
+        callback: req => updateVideoTitle(req.body['id'], req.body['title'])
+    },
+    "/videos/updateTags": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id', 'operator']) && checkBodyKeyNotEmptyArray(req, ['tags']),
+        callback: req => updateVideoTags(req.body['id'], req.body['tags'], req.body['operator'])
     },
     "/videos/delete": {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
-        callback: req => removeVideo(req.body['videoId'])
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
+        callback: req => removeVideo(req.body['id'])
     },
     /** Category management */
     "/category/create": {
@@ -49,6 +54,28 @@ export default {
         allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'category'),
         callback: req => addCategory(req.body['category'])
+    },
+    "/category/delete": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
+        callback: req => deleteCategory(req.body['id'])
+    },
+    /** Author management */
+    "/author/create": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeysNotBlank(req, ['categoryId', 'author']),
+        callback: req => addAuthor(req.body['author'], req.body['categoryId'])
+    },
+    "/author/delete": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
+        callback: req => deleteAuthor(req.body['id'])
     },
     /** Storage management: Minio */
     "/storage/getInfo": {
@@ -59,6 +86,27 @@ export default {
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: req => searchMinio(req.body['videoId'])
     },
+    "/storage/create": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeysNotBlank(req, ['videoId', 'type', 'uri']),
+        callback: req => createMinioManually(req.body)
+    },
+    "/storage/updateOriginUri": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id', 'uri']),
+        callback: req => updateMinioOriginUri(req.body['id'], req.body['uri'])
+    },
+    "/storage/delete": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id']),
+        callback: req => deleteVideoMinio(req.body['id'])
+    },
     "/storage/retryIngest": {
         method: POST,
         needSecret,
@@ -67,6 +115,14 @@ export default {
         callback: req => retryMinio(req.body['id']),
     },
     /** Policy management: FilterRules */
+    "/policy/getRules": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['category']),
+        callback: req => handleFilterRule(req.body['category'])
+    },
     "/policy/addRule": {
         method: POST,
         needSecret,

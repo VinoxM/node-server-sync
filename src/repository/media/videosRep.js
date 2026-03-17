@@ -30,13 +30,18 @@ export default {
         const params = [status, videoId]
         return sqliteDB.update(sql, params, null, dbName)
     },
+    updateVideoTitle: (videoId, title) => {
+        const sql = 'UPDATE videos SET title=? WHERE id=?'
+        const params = [title, videoId]
+        return sqliteDB.update(sql, params, null, dbName)
+    },
     selectOne: videoId => {
         const sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
         return sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     deleteOne: videoId => {
-        const sql = 'DELETE FROM videos WHERE id=?'
-        return sqliteDB.delete(sql, [videoId], null, dbName)
+        const sql = 'DELETE FROM videos WHERE id=? AND status = ?'
+        return sqliteDB.delete(sql, [videoId, MEDIA_VIDEO_STATUS.REMOVED], null, dbName)
     },
     selectForSearch: (title, categoryId, authorId, tagNames, currentPage, pageSize) => {
         let sql = `SELECT `
