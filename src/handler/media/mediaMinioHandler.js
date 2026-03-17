@@ -1,7 +1,7 @@
 import path from 'path';
 import videoMinioRep from "../../repository/media/videoMinioRep.js";
 import { pushNotification } from "../../sockets/notification.js";
-import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
+import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
 import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";

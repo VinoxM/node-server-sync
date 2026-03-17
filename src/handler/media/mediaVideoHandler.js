@@ -9,7 +9,7 @@ import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/me
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterHandler.js";
 import { resolveVideoUri, updateVideoStatusByVideoMinioStatus } from './mediaMinioHandler.js';
 
-const VIDEO_TAG_OPERATOR = ['update', 'add', 'del']
+const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
 export async function searchVideos(body) {
     const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [] } = body
@@ -84,14 +84,14 @@ export async function updateVideoTags(videoId, tags, operator) {
     video || throwMessage('Video not found')
     const tagIds = await handleTags(tags)
     switch (operator) {
-        case 'update':
+        case 'UPDATE':
             await videoTagMapRep.deleteTags(videoId)
             await videoTagMapRep.insertTags(videoId, tagIds)
             break;
-        case 'add':
+        case 'ADD':
             await videoTagMapRep.insertTags(videoId, tagIds)
             break;
-        case 'del':
+        case 'REMOVE':
             await videoTagMapRep.deleteTagsWithId(videoId, tagIds)
             break;
     }

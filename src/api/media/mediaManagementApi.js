@@ -67,8 +67,8 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysNotBlank(req, ['categoryId', 'author']),
-        callback: req => addAuthor(req.body['author'], req.body['categoryId'])
+        preCheck: req => checkBodyKeysNotBlank(req, ['categoryId', 'name']),
+        callback: req => addAuthor(req.body['name'], req.body['categoryId'])
     },
     "/author/delete": {
         method: POST,
