@@ -204,7 +204,7 @@ export async function retryMinio(minioId) {
     const result = await videoMinioRep.selectOneById(minioId)
     result || throwMessage('Minio not found.')
     const { originUri, type, status } = result
-    status === MEDIA_MINIO_STATUS.COMPLETE && throwMessage('Minio can not retry.')
+    status !== MEDIA_MINIO_STATUS.FAILED && throwMessage('Minio can not retry.')
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
     isNotEmptyArray(aria2Tasks) && throwMessage('Minio can not retry, cause aria2 task exists in this minio.')
     await addAria2Task(originUri, minioId, type)
