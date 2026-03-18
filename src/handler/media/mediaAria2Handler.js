@@ -40,16 +40,13 @@ export async function addAria2Task(uri, minioId, type) {
     await aria2TaskRep.insertOne(aria2Task)
 }
 
-export async function deleteAria2Tasks(minioIds) {
-    const res = await aria2TaskRep.selectByMinioIds(minioIds)
-    if (!Array.isArray(res?.data)) return
-    const toRemoveFiles = []
-    for (const { filePath, gid } of res.data) {
-        await removeTask(gid)
-        isNotBlank(filePath) && toRemoveFiles.push(filePath)
-    }
-    await aria2TaskRep.deleteByMinioIds(minioIds)
-    toRemoveFiles.length > 0 && await deleteRemoteFiles(toRemoveFiles)
+export async function removeAria2Task(taskId) {
+    const task = await aria2TaskRep.selectById(taskId);
+    if (!task) return
+    const { gid, filePath } = task
+    await aria2TaskRep.deleteById(taskId)
+    await removeTask(gid)
+    await deleteRemoteFiles([filePath])
 }
 
 async function deleteRemoteFiles(files) {

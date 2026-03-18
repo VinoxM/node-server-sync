@@ -6,7 +6,7 @@ import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";
 import { getMinioClient } from "../../instance/minio.js";
-import { addAria2Task, deleteAria2Tasks, getTaskInfo } from "./mediaAria2Handler.js";
+import { addAria2Task } from "./mediaAria2Handler.js";
 import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
 import categoriesRep from '../../repository/media/categoriesRep.js';
 import authorsRep from '../../repository/media/authorsRep.js';
@@ -16,7 +16,14 @@ import { urlContentLengthLargeThanOneMB } from '../../common/httpUtil.js';
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
 export async function searchMinio(videoId) {
-    return videoMinioRep.selectByVideoIdForDisplay(videoId).then(({ data }) => data)
+    const minioList = await videoMinioRep.selectByVideoId(videoId).then(({ data }) => data)
+    if (Array.isArray(minioList)) {
+        for (let i = 0; i < minioList.length; i++) {
+            const minio = minioList[i];
+            minio.tasks = await aria2TaskRep.selectByMinioId(minio.id).then(({ data }) => data)
+        }
+    }
+    return minioList;
 }
 
 export async function createMinioManually(minioObj) {
@@ -193,33 +200,26 @@ export async function updateMinioOriginUri(minioId, originUri) {
     await videoMinioRep.updateOriginUriById(minioId, originUri)
 }
 
-const CAN_RETRY_MINIO_ARIA2_TASK_STATUS = ['error', 'complete']
 export async function retryMinio(minioId) {
     const result = await videoMinioRep.selectOneById(minioId)
     result || throwMessage('Minio not found.')
     const { originUri, type, status } = result
     status === MEDIA_MINIO_STATUS.COMPLETE && throwMessage('Minio can not retry.')
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
-    if (isNotEmptyArray(aria2Tasks)) {
-        for (const { gid } of aria2Tasks) {
-            const taskInfo = await getTaskInfo(gid).catch(() => __log.error(`Get aria2 task[${gid}] status failed.`))
-            if (taskInfo && !CAN_RETRY_MINIO_ARIA2_TASK_STATUS.includes(taskInfo?.status)) {
-                throwMessage('Minio aria2 task status can not support retry.')
-            }
-        }
-        await deleteAria2Tasks([minioId])
-    }
+    isNotEmptyArray(aria2Tasks) && throwMessage('Minio can not retry, cause aria2 task exists in this minio.')
     await addAria2Task(originUri, minioId, type)
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
 }
 
-/** Minio management: DELETE */
-const CAN_DELETE_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.FAILED, MEDIA_MINIO_STATUS.REMOVED]
+/** 
+ * Minio management: DELETE
+ */
 export async function deleteVideoMinio(minioId) {
     const minioInfo = await videoMinioRep.selectOneById(minioId)
     if (!minioInfo) return;
-    const { id, link, status } = minioInfo
-    CAN_DELETE_MINIO_STATUS.includes(status) || throwMessage('Cannot delete minio.')
+    const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
+    isNotEmptyArray(aria2Tasks) && throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
+    const { id, link } = minioInfo
     const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
     if (rows > 0) {
         __log.info(`[${id}] Ready to remove minio.`)

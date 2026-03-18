@@ -22,24 +22,16 @@ export default {
         const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE gid=?`
         return sqliteDB.selectOne(sql, [gid], null, dbName)
     },
+    selectById: id => {
+        const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE id=?`
+        return sqliteDB.selectOne(sql, [id], null, dbName)
+    },
     selectByMinioId: minioId => {
         let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
         return sqliteDB.selectAll(sql, [minioId], null, dbName)
     },
-    selectByMinioIds: minioIds => {
-        if (isEmptyArray(minioIds)) return Promise.resolve()
-        let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (`
-        sql += minioIds.map(() => "?").join(',') + ')'
-        return sqliteDB.selectAll(sql, minioIds, null, dbName)
-    },
-    deleteByGid: gid => {
-        const sql = `DELETE FROM aria2_task WHERE gid=?`
-        return sqliteDB.delete(sql, [gid], null, dbName)
-    },
-    deleteByMinioIds: minioIds => {
-        if (isEmptyArray(minioIds)) return Promise.resolve()
-        let sql = `DELETE FROM aria2_task WHERE minio_id IN(`
-        sql += minioIds.map(() => "?").join(',') + ')'
-        return sqliteDB.delete(sql, minioIds, null, dbName)
+    deleteById: id => {
+        const sql = `DELETE FROM aria2_task WHERE id=?`
+        return sqliteDB.delete(sql, [id], null, dbName)
     }
 }

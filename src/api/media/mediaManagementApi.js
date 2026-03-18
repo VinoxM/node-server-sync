@@ -4,6 +4,7 @@ import { addCategory, createVideo, checkVideoCanAdd, removeVideo, deleteCategory
 import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
 import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri, updateVideoStatusByVideoMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 import { getFilterRulesByCategory, handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
+import { removeAria2Task } from "../../handler/media/mediaAria2Handler.js"
 
 const { POST } = apiMethodConst
 
@@ -111,15 +112,23 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysNotBlank(req, ['id']),
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteVideoMinio(req.body['id'])
     },
     "/storage/retryIngest": {
         method: POST,
         needSecret,
         allowCIDR,
-        preCheck: req => checkBodyKeysNotBlank(req, ['id']),
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => retryMinio(req.body['id']),
+    },
+    /** Task */
+    "/storage/deleteTask": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
+        callback: req => removeAria2Task(req.body['taskId']),
     },
     /** Policy management: FilterRules */
     "/policy/getRules": {
@@ -127,7 +136,7 @@ export default {
         needSecret,
         allowCIDR,
         ignoreOutput: true,
-        preCheck: req => checkBodyKeysNotBlank(req, ['category']),
+        preCheck: req => checkBodyKeyNotBlank(req, 'category'),
         callback: req => getFilterRulesByCategory(req.body['category'])
     },
     "/policy/addRule": {
