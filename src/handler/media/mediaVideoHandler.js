@@ -102,7 +102,7 @@ export async function updateVideoTags(videoId, tags, operator) {
  * Can del:
  * Video status: PREPARED, COMPLETE
  */
-const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE]
+const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE, MEDIA_VIDEO_STATUS.REMOVED]
 export async function removeVideo(videoId) {
     const video = await videosRep.selectOne(videoId)
     video || throwMessage('Video not found.')
