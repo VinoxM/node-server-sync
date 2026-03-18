@@ -12,9 +12,10 @@ import { resolveVideoUri, updateVideoStatusByVideoMinioStatus } from './mediaMin
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
 export async function searchVideos(body) {
-    const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [] } = body
-    const dataList = await videosRep.selectForSearch(title, categoryId, authorId, tags, currentPage, pageSize).then(({ data }) => data)
-    const total = await videosRep.countForSearch(title, categoryId, authorId, tags)
+    const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [], status } = body
+    const videoStatus = Object.values(MEDIA_VIDEO_STATUS).includes(status) ? String(status) : null
+    const dataList = await videosRep.selectForSearch(title, categoryId, authorId, tags, videoStatus, currentPage, pageSize).then(({ data }) => data)
+    const total = await videosRep.countForSearch(title, categoryId, authorId, tags, videoStatus)
     return {
         list: dataList,
         totalSize: total,

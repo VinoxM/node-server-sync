@@ -43,7 +43,7 @@ export default {
         const sql = 'DELETE FROM videos WHERE id=?'
         return sqliteDB.delete(sql, [videoId], null, dbName)
     },
-    selectForSearch: (title, categoryId, authorId, tagNames, currentPage, pageSize) => {
+    selectForSearch: (title, categoryId, authorId, tagNames, status, currentPage, pageSize) => {
         let sql = `SELECT `
             + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
             + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
@@ -83,8 +83,13 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push(`%${title}%`);
         }
-        sqlConcat.push(' tv.status != ?');
-        params.push(MEDIA_VIDEO_STATUS.REMOVED);
+        if (status) {
+            sqlConcat.push(' tv.status = ?');
+            params.push(status);
+        } else {
+            sqlConcat.push(' tv.status != ?');
+            params.push(MEDIA_VIDEO_STATUS.REMOVED);
+        }
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
@@ -97,7 +102,7 @@ export default {
         }
         return sqliteDB.selectAll(sql, params, null, dbName);
     },
-    countForSearch: (title, categoryId, authorId, tagNames) => {
+    countForSearch: (title, categoryId, authorId, tagNames, status) => {
         let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `;
         const sqlConcat = [];
         const params = [];
@@ -129,8 +134,13 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push(`%${title}%`);
         }
-        sqlConcat.push(' tv.status != ?');
-        params.push(MEDIA_VIDEO_STATUS.REMOVED);
+        if (status) {
+            sqlConcat.push(' tv.status = ?');
+            params.push(status);
+        } else {
+            sqlConcat.push(' tv.status != ?');
+            params.push(MEDIA_VIDEO_STATUS.REMOVED);
+        }
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
