@@ -5,7 +5,7 @@ const enablePrint = { print: true }
 
 export default {
     selectMinioExistsByVideoId: videoId => {
-        const sql = `SELECT EXISTS(SELECT 1 FROM videos WHERE video_id = ? LIMIT 1) AS [exists]`
+        const sql = `SELECT EXISTS(SELECT 1 FROM video_minio WHERE video_id = ? LIMIT 1) AS [exists]`
         return sqliteDB.selectOne(sql, [videoId], null, dbName).then(({ exists }) => exists)
     },
     selectOneByVideoIdAndType: (videoId, type) => {

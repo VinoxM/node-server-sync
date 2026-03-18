@@ -55,7 +55,17 @@ export async function handleFilterRule(body, isAdd = true) {
 }
 
 export async function getFilterRulesByCategory(categoryId) {
-    return getCacheByCategory(categoryId)
+    const cache = await getCacheByCategory(categoryId)
+    return {
+        whitelist: {
+            author: [...(cache?.whitelist?.author ?? [])],
+            uniqueId: [...(cache?.whitelist?.uniqueId ?? [])]
+        },
+        blacklist: {
+            author: [...(cache?.blacklist?.author ?? [])],
+            uniqueId: [...(cache?.blacklist?.uniqueId ?? [])]
+        }
+    }
 }
 
 async function getCategoryId(category) {

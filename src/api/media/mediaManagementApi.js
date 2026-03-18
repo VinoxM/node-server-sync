@@ -2,8 +2,8 @@ import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank,
 import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { addCategory, createVideo, checkVideoCanAdd, removeVideo, deleteCategory, updateVideoTitle, updateVideoTags, addAuthor, deleteAuthor } from "../../handler/media/mediaVideoHandler.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
-import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri } from "../../handler/media/mediaMinioHandler.js"
-import { handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
+import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri, updateVideoStatusByVideoMinioStatus } from "../../handler/media/mediaMinioHandler.js"
+import { getFilterRulesByCategory, handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
 
 const { POST } = apiMethodConst
 
@@ -46,6 +46,13 @@ export default {
         allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => removeVideo(req.body['id'])
+    },
+    "/videos/retryCalculation": {
+        method: POST,
+        needSecret,
+        allowCIDR,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
+        callback: req => updateVideoStatusByVideoMinioStatus(req.body['id'])
     },
     /** Category management */
     "/category/create": {
@@ -121,7 +128,7 @@ export default {
         allowCIDR,
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']),
-        callback: req => handleFilterRule(req.body['category'])
+        callback: req => getFilterRulesByCategory(req.body['category'])
     },
     "/policy/addRule": {
         method: POST,

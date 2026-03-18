@@ -40,8 +40,8 @@ export default {
         return sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     deleteOne: videoId => {
-        const sql = 'DELETE FROM videos WHERE id=? AND status = ?'
-        return sqliteDB.delete(sql, [videoId, MEDIA_VIDEO_STATUS.REMOVED], null, dbName)
+        const sql = 'DELETE FROM videos WHERE id=?'
+        return sqliteDB.delete(sql, [videoId], null, dbName)
     },
     selectForSearch: (title, categoryId, authorId, tagNames, currentPage, pageSize) => {
         let sql = `SELECT `

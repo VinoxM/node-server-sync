@@ -125,6 +125,8 @@ export async function deleteCategory(categoryId) {
     if (!exists) return;
     const videosExists = await categoriesRep.selectVideosExistsByCategoryId(categoryId)
     videosExists && throwMessage('Cannot delete category, cause videos exists in this category.')
+    const authorExists = await categoriesRep.selectAuthorsExistsByCategoryId(categoryId)
+    authorExists && throwMessage('Cannot delete category, cause authors exists in this category.')
     const policyExists = await categoriesRep.selectFilterRulesExistsByCategoryId(categoryId)
     policyExists && throwMessage('Cannot delete category, cause policy exists in this category.')
     await categoriesRep.deleteOne(categoryId)
