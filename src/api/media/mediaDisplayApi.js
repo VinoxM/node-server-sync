@@ -1,6 +1,6 @@
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
-import { MEDIA_ALLOW_CIDR as allowCIDR } from "../../constraints/mediaConst.js"
+import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js"
 import categoriesRep from "../../repository/media/categoriesRep.js"
 import authorsRep from "../../repository/media/authorsRep.js"
 import videoTagMapRep from "../../repository/media/videoTagMapRep.js"
@@ -16,21 +16,21 @@ export default {
     "/searchVideos": {
         method: POST,
         needSecret,
-        allowCIDR,
+        allowHosts,
         ignoreOutput: true,
         callback: req => searchVideos(req.body)
     },
     "/getCategories": {
         method: POST,
         needSecret,
-        allowCIDR,
+        allowHosts,
         ignoreOutput: true,
         callback: () => categoriesRep.selectAll().then(({ data }) => data)
     },
     "/getAuthors": {
         method: POST,
         needSecret,
-        allowCIDR,
+        allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
         callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId']).then(({ data }) => data)
@@ -38,7 +38,7 @@ export default {
     "/getTags": {
         method: POST,
         needSecret,
-        allowCIDR,
+        allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
         callback: req => {
@@ -49,7 +49,7 @@ export default {
     "/videos/checkPolicy": {
         method: POST,
         needSecret,
-        allowCIDR,
+        allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: req => checkVideoFilterRules(req.body)
