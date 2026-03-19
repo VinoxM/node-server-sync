@@ -110,6 +110,7 @@ export async function removeVideo(videoId) {
     const minioExists = await videoMinioRep.selectMinioExistsByVideoId(videoId)
     minioExists && throwMessage('Cannot remove video, cause storage exists in this video.')
     await videosRep.deleteOne(videoId)
+    await videoTagMapRep.deleteTags(videoId)
 }
 
 export async function addCategory(category) {
@@ -143,8 +144,6 @@ export async function addAuthor(author, categoryId) {
 }
 
 export async function deleteAuthor(authorId) {
-    const exists = await authorsRep.selectOneById(authorId)
-    if (!exists) return;
     const videosExists = await authorsRep.selectVideosExistsByAuthorId(authorId)
     videosExists && throwMessage('Cannot delete author, cause videos exists in this author.')
     await authorsRep.deleteOne(authorId)

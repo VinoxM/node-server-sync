@@ -35,9 +35,9 @@ else
     exit 2
 fi' --`;
 
-export const SSH_CMD_BATCH_DELETE_SIMPLE = `
+export const SSH_CMD_BATCH_DELETE_SIMPLE = `bash -c '
 set +H;
 for path in "$@"; do
     rm -f "$path" "\${path}.aria2"
 done
-`;
+' --`;

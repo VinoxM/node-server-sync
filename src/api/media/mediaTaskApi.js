@@ -1,10 +1,10 @@
 import { checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
-import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ARIA2_TASK_STATUS } from "../../constraints/mediaConst.js"
+import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ALLOW_HOSTS as allowHosts, MEDIA_ARIA2_TASK_STATUS } from "../../constraints/mediaConst.js"
 import { updateAria2TaskStatus } from "../../handler/media/mediaAria2Handler.js"
 import { updateMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 
-const { POST } = apiMethodConst
+const { POST, GET } = apiMethodConst
 
 const needSecret = () => "mAou5820.media.task"
 
@@ -30,5 +30,18 @@ export default {
         allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => updateMinioStatus(req.body['id'], req.body['status'])
+    },
+    "/getAria2Options": {
+        method: GET,
+        needSecret,
+        allowHosts,
+        callback: () => {
+            const aria2Conf = __env.get('aria2.rpc')
+            if (aria2Conf) {
+                const { host, port, secret } = aria2Conf
+                return { host, port, secret }
+            }
+            return null
+        }
     }
 }

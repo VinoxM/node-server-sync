@@ -1,10 +1,22 @@
 const dbName = 'media'
 const enablePrint = { print: true }
 
+const authorCache = new Map();
+
 export default {
-    selectOneByName: (author, categoryId) => {
+    selectOneByName: async (author, categoryId) => {
+        if (authorCache.has(categoryId) && authorCache.get(categoryId).has?.(author)) {
+            const id = authorCache.get(categoryId).get(author)
+            return { id, name: author }
+        }
         const sql = 'SELECT id, name FROM authors WHERE name=? AND category_id=?'
-        return sqliteDB.selectOne(sql, [author, categoryId], null, dbName)
+        const authorInfo = await sqliteDB.selectOne(sql, [author, categoryId], null, dbName)
+        if (authorInfo) {
+            const authors = authorCache.get(categoryId) ?? new Map()
+            authors.set(author, authorInfo.id)
+            authorCache.set(categoryId, authors)
+        }
+        return authorInfo
     },
     selectOneById: id => {
         const sql = 'SELECT id, category_id, name FROM authors WHERE id=?'
@@ -30,8 +42,19 @@ export default {
         const sql = `SELECT EXISTS(SELECT 1 FROM videos WHERE author_id = ? LIMIT 1) AS [exists]`
         return sqliteDB.selectOne(sql, [authorId], null, dbName).then(({ exists }) => exists)
     },
-    deleteOne: authorId => {
-        const sql = `DELETE FROM authors WHERE id=?`
-        return sqliteDB.delete(sql, [authorId], null, dbName)
+    deleteOne: async authorId => {
+        const result = { rows: 0 }
+        const author = await sqliteDB.selectOne('SELECT id, category_id, name FROM authors WHERE id=?', [id], null, dbName)
+        if (author) {
+            const { categoryId, name } = author
+            const sql = `DELETE FROM authors WHERE id=?`
+            const res = await sqliteDB.delete(sql, [authorId], null, dbName)
+            if (res?.rows > 0) {
+                const authors = authorCache.get(categoryId)
+                authors?.delete?.(name)
+                result.rows = res.rows
+            }
+        }
+        return result
     }
 }

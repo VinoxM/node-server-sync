@@ -21,8 +21,10 @@ class Aria2Socket extends ContextSubscribe {
     #secret = null
     #savePath = null
 
-    #urlPath = null
+    #wsUrl = null
+    #rpcUrl = null
 
+    #reconnecting = false
     #nextConnectDelay = 5
     #maxConnectDelay = 1024
     #connectTimeout = null
@@ -48,7 +50,13 @@ class Aria2Socket extends ContextSubscribe {
         if (!host || !port) return;
         this.#secret = secret
         this.#savePath = savePath
-        this.#urlPath = `${host}:${port}/jsonrpc`
+        if (parseInt(port) === 443) {
+            this.#wsUrl = `wss://${host}:${port}/jsonrpc`
+            this.#rpcUrl = `https://${host}:${port}/jsonrpc`
+        } else {
+            this.#wsUrl = `ws://${host}:${port}/jsonrpc`
+            this.#rpcUrl = `http://${host}:${port}/jsonrpc`
+        }
         this.#nextConnectDelay = 5;
         this.#connect()
     }
@@ -59,8 +67,8 @@ class Aria2Socket extends ContextSubscribe {
     #connect() {
         if (this.#ready) return;
         this.close()
-        __log.debug(`[Aria2Socket] Prepare to connect.`)
-        const client = new WebSocket(`ws://${this.#urlPath}`)
+        __log.debug(`[Aria2Socket] Prepare to connect: ${this.#wsUrl}`)
+        const client = new WebSocket(this.#wsUrl)
         client.on('open', () => this.#onOpen())
         client.on('message', data => this.#onMessage(data))
         client.on('error', e => this.#onError(e))
@@ -69,11 +77,16 @@ class Aria2Socket extends ContextSubscribe {
     }
 
     #reconnect() {
-        if (this.#ready) return
+        if (this.#ready || this.#reconnecting) return
+        this.#reconnecting = true
         this.close()
-        if (this.#nextConnectDelay > this.#maxConnectDelay) return
+        if (this.#nextConnectDelay > this.#maxConnectDelay) {
+            __log.warn(`[Aria2Socket] The maximum retry delay time: ${this.#maxConnectDelay} has been reached, retries will stop.`)
+            this.#reconnecting = false
+            return
+        }
         this.#nextConnectDelay *= 2
-        __log.info(`[Aria2Socket] Prepare retry connect at ${this.#nextConnectDelay}s.`)
+        __log.info(`[Aria2Socket] Prepare retry connect after ${this.#nextConnectDelay}s.`)
         this.#connectTimeout && clearTimeout(this.#connectTimeout)
         this.#connectTimeout = setTimeout(() => this.#connect(), this.#nextConnectDelay * 1000)
     }
@@ -81,6 +94,7 @@ class Aria2Socket extends ContextSubscribe {
     #onOpen() {
         __log.info('[Aria2Socket] Aria2 connected.')
         this.#ready = true;
+        this.#reconnecting = false;
         this.#nextConnectDelay = 5;
     }
 
@@ -100,12 +114,13 @@ class Aria2Socket extends ContextSubscribe {
 
     #onError(e) {
         __log.error('[Aria2Socket] Aria2 connect error.', e)
-        this.#ready = false
-        this.#reconnect()
+        this.close()
     }
 
     #onClose() {
         __log.info('[Aria2Socket] Aria2 closed.')
+        this.#ready = false
+        this.#reconnecting = false
         this.#reconnect()
     }
 
@@ -145,7 +160,7 @@ class Aria2Socket extends ContextSubscribe {
                 ...options
             ]
         };
-        const { data } = await axios.post(`http://${this.#urlPath}`, requestData);
+        const { data } = await axios.post(this.#rpcUrl, requestData);
         if (data.error) {
             __log.error('RPC Error:', data.error.message);
             throwMessage(data.error.message || 'Call aria2 error.')

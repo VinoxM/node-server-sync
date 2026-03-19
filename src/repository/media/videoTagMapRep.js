@@ -40,5 +40,17 @@ export default {
         sql += ` GROUP BY t.id, t.name`;
         sql += ` ORDER BY usage_count DESC, t.name ASC`;
         return sqliteDB.selectAll(sql, params, null, dbName);
-    }
+    },
+    deleteDirtyVideoTagMapping: async () => {
+        let toRemoveVideoIds = []
+        const sql = `SELECT DISTINCT video_id FROM video_tag_map vt WHERE NOT EXISTS (SELECT 1 FROM videos WHERE videos.id = vt.video_id)`
+        const { data, rows } = await sqliteDB.selectAll(sql, [], null, dbName);
+        if (rows > 0) {
+            toRemoveVideoIds = data.map(o => o.videoId)
+            const delSql = 'DELETE FROM video_tag_map WHERE video_id IN ('
+                + toRemoveVideoIds.map(() => '?').join(',') + ')'
+            await sqliteDB.delete(delSql, toRemoveVideoIds, null, dbName);
+        }
+        return toRemoveVideoIds
+    },
 }

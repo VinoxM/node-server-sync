@@ -167,6 +167,7 @@ export class RedisAuthorizationStore extends AuthorizationStore {
                 await this.#applyToRedis(item.uid, item.hash, item.token);
             }
         } finally {
+            __log.info("[AuthorizationStore] Data synchronization complete.");
             this.#syncing = false;
         }
     }

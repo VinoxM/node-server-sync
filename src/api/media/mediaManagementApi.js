@@ -5,6 +5,7 @@ import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js
 import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri, updateVideoStatusByVideoMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 import { getFilterRulesByCategory, handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
 import { removeAria2Task } from "../../handler/media/mediaAria2Handler.js"
+import videoTagMapRep from "../../repository/media/videoTagMapRep.js"
 
 const { POST } = apiMethodConst
 
@@ -153,4 +154,15 @@ export default {
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'operator']),
         callback: req => handleFilterRule(req.body, false)
     },
+    /** Video Tag Mapping management */
+    "/videosTagMapping/clean": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        callback: async () => {
+            const deletedVideoIds = await videoTagMapRep.deleteDirtyVideoTagMapping()
+            __log.info("[Video Tags Mapping] Cleaned mappings: ", deletedVideoIds)
+            return { rows: deletedVideoIds?.length ?? 0 }
+        }
+    }
 }
