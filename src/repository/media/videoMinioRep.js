@@ -28,6 +28,10 @@ export default {
         const sql = 'UPDATE video_minio SET status=? WHERE id=? AND status=?'
         return sqliteDB.update(sql, [status, id, currentStatus], null, dbName)
     },
+    setupFailedByIdWhenNotComplete: (id) => {
+        const sql = 'UPDATE video_minio SET status=? WHERE id=? AND status!=?'
+        return sqliteDB.update(sql, [MEDIA_MINIO_STATUS.FAILED, id, MEDIA_MINIO_STATUS.COMPLETE], null, dbName)
+    },
     updateOriginUriById: (originUri, id) => {
         const sql = 'UPDATE video_minio SET origin_uri=? WHERE id=?'
         return sqliteDB.update(sql, [originUri, id], null, dbName)

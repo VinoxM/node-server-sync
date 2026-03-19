@@ -35,6 +35,10 @@ export default {
         let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
         return sqliteDB.selectAll(sql, [minioId], null, dbName)
     },
+    selectExistsByMinioId: minioId => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM aria2_task WHERE minio_id = ? LIMIT 1) AS [exists]`
+        return sqliteDB.selectOne(sql, [minioId], null, dbName)
+    },
     deleteById: id => {
         const sql = `DELETE FROM aria2_task WHERE id=?`
         return sqliteDB.delete(sql, [id], null, dbName)

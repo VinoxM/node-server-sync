@@ -47,10 +47,12 @@ export async function addAria2Task(uri, minioId, type) {
 export async function removeAria2Task(taskId) {
     const task = await aria2TaskRep.selectById(taskId);
     if (!task) return
-    const { gid, filePath } = task
+    const { minioId, gid, filePath } = task
     await aria2TaskRep.deleteById(taskId)
     await removeTask(gid)
     await deleteRemoteFiles([filePath])
+    const { exists } = await aria2TaskRep.selectExistsByMinioId(minioId)
+    exists || await videoMinioRep.setupFailedByIdWhenNotComplete(minioId)
 }
 
 export async function getAria2InfoAndTaskStatus(ids) {
