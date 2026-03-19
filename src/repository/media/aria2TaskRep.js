@@ -26,6 +26,11 @@ export default {
         const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE id=?`
         return sqliteDB.selectOne(sql, [id], null, dbName)
     },
+    selectByIds: ids => {
+        const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE id IN(`
+            + ids.map(() => '?').join(',') + ')'
+        return sqliteDB.selectAll(sql, ids, null, dbName)
+    },
     selectByMinioId: minioId => {
         let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
         return sqliteDB.selectAll(sql, [minioId], null, dbName)

@@ -7,7 +7,8 @@ import { generateUUID } from '../common/stringUtil.js'
 const ARIA2_METHOD = {
     ADD_URI: "aria2.addUri",
     TELL_STATUS: 'aria2.tellStatus',
-    REMOVE: 'aria2.remove'
+    REMOVE: 'aria2.remove',
+    MULTI_CALL: 'system.multicall'
 }
 
 class Aria2Socket extends ContextSubscribe {
@@ -169,6 +170,24 @@ class Aria2Socket extends ContextSubscribe {
         }
     }
 
+    async #multiCall(method, ...options) {
+        const requestData = {
+            jsonrpc: '2.0',
+            id: `node_${generateUUID()}`,
+            method: ARIA2_METHOD.MULTI_CALL,
+            params: [
+                options.map(opt => ({ methodName: method, params: [`token:${this.#secret}`, ...opt] }))
+            ]
+        };
+        const { data } = await axios.post(this.#rpcUrl, requestData);
+        if (data.error) {
+            __log.error('RPC Error:', data.error.message);
+            throwMessage(data.error.message || 'Call aria2 error.')
+        } else {
+            return data.result
+        }
+    }
+
     async addUri(url, opts = {}) {
         const { dir, out, ...otherOpts } = opts
         this.#checkReady()
@@ -187,6 +206,10 @@ class Aria2Socket extends ContextSubscribe {
 
     async remove(gid) {
         return this.#call(ARIA2_METHOD.REMOVE, gid)
+    }
+
+    async getMultiStatus(gidArr) {
+        return this.#multiCall(ARIA2_METHOD.TELL_STATUS, ...gidArr.map(gid => ([gid, ["gid", "status", "totalLength", "completedLength"]])))
     }
 }
 

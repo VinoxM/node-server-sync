@@ -22,6 +22,10 @@ async function removeTask(gid) {
     await getAria2Socket().remove(gid).catch(ex => __log.error(`Remove aria2 task failed.`, ex?.message, ex?.response?.data || ''));
 }
 
+async function getTaskMultiStatus(gidArr) {
+    return getAria2Socket().getMultiStatus(gidArr).catch(ex => __log.error(`Get aria2 task multi status failed.`, ex?.message, ex?.response?.data || ''));
+}
+
 /**
  * Add video step1 from status: ANALYZING.
  * Aria2 task status:
@@ -47,6 +51,28 @@ export async function removeAria2Task(taskId) {
     await aria2TaskRep.deleteById(taskId)
     await removeTask(gid)
     await deleteRemoteFiles([filePath])
+}
+
+export async function getAria2InfoAndTaskStatus(ids) {
+    const result = {}
+    const { rows, data } = await aria2TaskRep.selectByIds(ids)
+    if (rows === 0) return result
+    const gidArr = data.map(o => (result[o.gid] = { status: o.status }, o.gid))
+    const res = await getTaskMultiStatus(gidArr)
+    if (Array.isArray(res) && res.length > 0) {
+        res.forEach(t => {
+            const r = t[0]
+            if (r?.gid) {
+                const { gid, status, downloadSpeed, completedLength, totalLength } = r
+                const completed = BigInt(completedLength);
+                const total = BigInt(totalLength);
+                result[gid].taskStatus = status;
+                result[gid].speed = downloadSpeed;
+                result[gid].percent = total > 0n ? Number(completed * 10000n / total) / 100 : 0;
+            }
+        })
+    }
+    return result
 }
 
 async function deleteRemoteFiles(files) {
