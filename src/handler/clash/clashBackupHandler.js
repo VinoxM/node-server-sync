@@ -16,16 +16,16 @@ export function updateLatestConfig(dataObj) {
     const mixin = __env.get('clash.deployment.mixin', {})
 
     const saveFile = __join(savePath, latestClashFileName);
-    // 备份文件
+    // Backup files
     backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum)
-    // 处理要排除的 keys
+    // Handle keys to exclude
     if (Array.isArray(excludeKeys)) {
         excludeKeys.forEach(k => Reflect.deleteProperty(dataObj, k))
     }
     const date = formattedDate()
-    // 保存文件
+    // save file
     savePersistenceYaml(dataObj, saveFile, date)
-    // 保存部署用文件
+    // Save deployment files
     saveDeployClashYaml(dataObj, deployPath, mixin, date);
 }
 
@@ -63,7 +63,7 @@ function backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum) {
 }
 
 function savePersistenceYaml(obj, saveFile, date) {
-    let objStr = generateUpdatetime(obj, date)
+    let objStr = generateUpdateTime(obj, date)
     if (isBlank(objStr)) return
     fs.writeFileSync(saveFile, objStr)
     __log.info(`[Clash Backup] File saved: ${saveFile}`);
@@ -74,13 +74,13 @@ function saveDeployClashYaml(obj, deployPath, mixin, date) {
     if (mixin && typeof mixin === 'object') {
         Object.assign(obj, mixin)
     }
-    let objStr = generateUpdatetime(obj, date)
+    let objStr = generateUpdateTime(obj, date)
     if (isBlank(objStr)) return
     fs.writeFileSync(deploymentFile, objStr)
     __log.info(`[Clash Deploy] File saved: ${deploymentFile}`);
 }
 
-function generateUpdatetime(clashYaml, date) {
+function generateUpdateTime(clashYaml, date) {
     let str = yaml.stringify(clashYaml)
     const n = `\r\n`
     const c = `# Update Datetime: ${date} #`

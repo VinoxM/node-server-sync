@@ -114,7 +114,7 @@ const resolve = (obj, { req, res, config }) => {
         code: 0,
         message: 'Success.'
     }
-    if (obj) result.data = obj
+    if (obj !== undefined) result.data = obj
     res.send(result);
     if (config?.ignoreOutput) {
         __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url}`)

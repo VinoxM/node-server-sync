@@ -128,7 +128,7 @@ function handleMixinYaml(content, concatPath) {
         }
     })
 
-    // local minix
+    // local mixin
     let rules = config.rules || []
     content.rules = [...content.rules, ...rules]
 }

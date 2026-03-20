@@ -26,6 +26,14 @@ async function getTaskMultiStatus(gidArr) {
     return getAria2Socket().getMultiStatus(gidArr).catch(ex => __log.error(`Get aria2 task multi status failed.`, ex?.message, ex?.response?.data || ''));
 }
 
+export async function pauseTask(gid) {
+    await getAria2Socket().pause(gid).catch(ex => __log.error(`Pause aria2 task failed.`, ex?.message, ex?.response?.data || ''));
+}
+
+export async function resumeTask(gid) {
+    await getAria2Socket().resume(gid).catch(ex => __log.error(`Resume aria2 task failed.`, ex?.message, ex?.response?.data || ''));
+}
+
 /**
  * Add video step1 from status: ANALYZING.
  * Aria2 task status:
@@ -42,6 +50,17 @@ export async function addAria2Task(uri, minioId, type) {
         fileNum: taskInfo.files?.length || 0
     }
     await aria2TaskRep.insertOne(aria2Task)
+}
+
+const ARIA2_OPERATOR = { PAUSE: 'pause', RESUME: 'resume' }
+const SUPPORTED_ARIA2_OPERATOR = [ARIA2_OPERATOR.PAUSE, ARIA2_OPERATOR.RESUME]
+export async function pauseOrResumeAria2Task(gid, operator) {
+    SUPPORTED_ARIA2_OPERATOR.includes(operator) || throwMessage('Invalid operator')
+    if (ARIA2_OPERATOR.PAUSE === operator) {
+        await pauseTask(gid)
+    } else if (ARIA2_OPERATOR.RESUME === operator) {
+        await resumeTask(gid)
+    }
 }
 
 export async function removeAria2Task(taskId) {

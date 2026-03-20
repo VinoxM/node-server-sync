@@ -36,6 +36,6 @@ export class ContextSubscribe {
     }
 
     destroy() {
-        __env.unsbuscribe?.(this)
+        __env.unsubscribe?.(this)
     }
 }

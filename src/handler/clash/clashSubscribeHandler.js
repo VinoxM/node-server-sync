@@ -59,12 +59,12 @@ async function subscribeSources(from) {
 function saveSubscription(data, label) {
     const subscriptionPath = __env.get('clash.path.subscription', '@/')
     const subscribeClashFile = __join(subscriptionPath, label + '.yaml')
-    const subscribeClashUpdatetimeFile = __join(subscriptionPath, label + '.datetime')
+    const subscribeClashUpdateTimeFile = __join(subscriptionPath, label + '.datetime')
     if (!fs.existsSync(subscriptionPath)) {
         fs.mkdirSync(subscriptionPath, { recursive: true })
     }
     fs.writeFileSync(subscribeClashFile, data)
-    fs.writeFileSync(subscribeClashUpdatetimeFile, new Date().getTime() + '')
+    fs.writeFileSync(subscribeClashUpdateTimeFile, new Date().getTime() + '')
     __log.info(`[Clash Subscribe] Subscription[${label}] saved: `, subscribeClashFile)
 }
 

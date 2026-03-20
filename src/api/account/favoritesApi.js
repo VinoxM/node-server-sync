@@ -30,7 +30,7 @@ export default {
             if (Number.isInteger(uid) && Number.isInteger(rssSubsId)) {
                 return rssFavoritesRep.insertUserFavorite(uid, rssSubsId).then(rows => ({ rows }))
             }
-            throwMessage('Unsupported paramater type.', -1, 400)
+            throwMessage('Unsupported parameter type.', -1, 400)
         }
     },
     '/userSubscription/del': {
@@ -45,7 +45,7 @@ export default {
             if (Number.isInteger(uid) && Number.isInteger(rssSubsId)) {
                 return rssFavoritesRep.deleteUserFavorite(uid, rssSubsId).then(rows => ({ rows }))
             }
-            throwMessage('Unsupported paramater type.', -1, 400)
+            throwMessage('Unsupported parameter type.', -1, 400)
         }
     }
 }

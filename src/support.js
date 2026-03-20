@@ -4,14 +4,15 @@ import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./logger
 import { createContext } from "./context/index.js";
 
 const globalUtils = {
+    notNull: obj => obj !== undefined && obj !== null,
     isBlank: (str) => {
         return str === null || str === undefined || ("" + str).trim() === "";
     },
-    isAllBlank: (...strs) => {
-        return Array.from(strs).every(str => globalUtils.isBlank(str))
+    isAllBlank: (...args) => {
+        return args.every(str => globalUtils.isBlank(str))
     },
-    isAnyBlank: (...strs) => {
-        return Array.from(strs).some(str => globalUtils.isBlank(str))
+    isAnyBlank: (...args) => {
+        return args.some(str => globalUtils.isBlank(str))
     },
     isBlankOr: (str, elseStr) => {
         if (str === null || str === undefined || ("" + str).trim() === "") {
@@ -36,7 +37,7 @@ const globalUtils = {
     },
     isFunction: func => func && typeof func === 'function',
     isPromise: obj => obj && obj instanceof Promise,
-    isError: ex => ex instanceof Error,
+    isError: ex => ex instanceof Error
 }
 
 function getProcessArgs() {
@@ -82,7 +83,7 @@ export async function setupGlobal(rootPath) {
     globalThis.__env = {
         get: (key, defaultValue) => applicationContext.getProperty(key, defaultValue),
         subscribe: (sub) => applicationContext.addListen(sub),
-        unsbuscribe: (sub) => applicationContext.removeListen(sub),
+        unsubscribe: (sub) => applicationContext.removeListen(sub),
     }
 
     initializeLogger(__env.get('logger.savePath'))

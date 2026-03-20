@@ -8,7 +8,9 @@ const ARIA2_METHOD = {
     ADD_URI: "aria2.addUri",
     TELL_STATUS: 'aria2.tellStatus',
     REMOVE: 'aria2.remove',
-    MULTI_CALL: 'system.multicall'
+    MULTI_CALL: 'system.multicall',
+    PAUSE: 'aria2.pause',
+    RESUME: 'aria2.unpause'
 }
 
 class Aria2Socket extends ContextSubscribe {
@@ -202,6 +204,14 @@ class Aria2Socket extends ContextSubscribe {
 
     async getInfo(gid) {
         return this.#call(ARIA2_METHOD.TELL_STATUS, gid, ["gid", "status", "totalLength", "completedLength", "downloadSpeed", "files", "dir"])
+    }
+
+    async pause(gid) {
+        return this.#call(ARIA2_METHOD.PAUSE, gid)
+    }
+
+    async resume(gid) {
+        return this.#call(ARIA2_METHOD.RESUME, gid)
     }
 
     async remove(gid) {
