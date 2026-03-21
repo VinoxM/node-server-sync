@@ -8,6 +8,7 @@ import videoMinioRep from "../../repository/media/videoMinioRep.js";
 import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../../constraints/mediaConst.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterHandler.js";
 import { resolveVideoUri, updateVideoStatusByVideoMinioStatus } from './mediaMinioHandler.js';
+import { executeAsyncTaskChain } from "../../instance/asyncExecutor.js";
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -64,13 +65,16 @@ export async function createVideo(videoObj) {
     const { lastId: videoId } = await videosRep.insertOne({ uniqueId, title, authorId, categoryId, uploadTime, status: MEDIA_VIDEO_STATUS.ANALYZING })
     // save video tags mapping
     await videoTagMapRep.insertTags(videoId, tagIds)
-    // handle video source
-    await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
-    // handle video cover
-    await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
-    // update video status
-    const videoStatus = await updateVideoStatusByVideoMinioStatus(videoId)
-    return { id: videoId, status: videoStatus };
+    // execute async task chain
+    await executeAsyncTaskChain([
+        // handle video source
+        resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE),
+        // handle video cover
+        resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER),
+        // update video status
+        updateVideoStatusByVideoMinioStatus(videoId)
+    ], 30000);
+    return { id: videoId };
 }
 
 export async function updateVideoTitle(id, title) {

@@ -12,6 +12,7 @@ import categoriesRep from '../../repository/media/categoriesRep.js';
 import authorsRep from '../../repository/media/authorsRep.js';
 import { generateUUID } from '../../common/stringUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../common/httpUtil.js';
+import { executeAsyncTaskChain } from '../../instance/asyncExecutor.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -49,11 +50,11 @@ export async function createMinioManually(minioObj) {
     // resolve uri and create minio
     const author = authorInfo.name
     const uuid = generateUUID()
-    const result = await resolveVideoUri(uri, videoId, category, author, uuid, type)
-    // validate resolve result
-    result || throwMessage('Create minio failed.')
-    // update video minio status
-    await updateVideoStatusByVideoMinioStatus(videoId)
+    await executeAsyncTaskChain([
+        resolveVideoUri(uri, videoId, category, author, uuid, type),
+        // update video minio status
+        updateVideoStatusByVideoMinioStatus(videoId)
+    ])
 }
 
 const FILE_PROTOCOL = ['file:']
