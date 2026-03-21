@@ -1,3 +1,5 @@
+import { MEDIA_ARIA2_TASK_STATUS } from "../../constraints/mediaConst.js"
+
 const dbName = 'media'
 const enablePrint = { print: true }
 
@@ -9,8 +11,12 @@ export default {
         return sqliteDB.insert(sql, params, null, dbName)
     },
     updateStatusById: (status, id) => {
-        const sql = `UPDATE aria2_task SET status=? WHERE id=?`
+        let sql = `UPDATE aria2_task SET status=? WHERE id=?`        
         const params = [status, id]
+        if (status === MEDIA_ARIA2_TASK_STATUS.DOWNLOADING) {
+            sql += ' AND status=?'
+            params.push(MEDIA_ARIA2_TASK_STATUS.PREPARED)
+        }
         return sqliteDB.update(sql, params, null, dbName)
     },
     updateFilePathById: (filePath, id) => {

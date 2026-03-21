@@ -141,7 +141,7 @@ export async function updateAria2TaskStatus(gid, status) {
     minioInfo || notifyUpdateAria2TaskStatusFailed('Get task\'s minio info failed.')
 
     if (MEDIA_ARIA2_TASK_STATUS.FAILED === taskStatus) {
-        __log.info(`Aria2 task download failed, setup minio status failed.`)
+        __log.info(`[${gid}] Aria2 task download failed, setup minio status failed.`)
         await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.FAILED)
         return
     }
@@ -156,13 +156,13 @@ export async function updateAria2TaskStatus(gid, status) {
 
     if (MEDIA_ARIA2_TASK_STATUS.DOWNLOADING === taskStatus) {
         // save video minio file path
-        __log.info(`Aria2 task started, setup minio file path.`)
+        __log.info(`[${gid}] Aria2 task started, setup minio file path.`)
         await aria2TaskRep.updateFilePathById(filePath, id)
         return
     }
 
     // save video minio uploading
-    __log.info(`Aria2 task download complete, setup minio status uploading.`)
+    __log.info(`[${gid}] Aria2 task download complete, setup minio status uploading.`)
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.UPLOADING)
 
     return {
