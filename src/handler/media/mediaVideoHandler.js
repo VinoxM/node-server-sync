@@ -24,7 +24,7 @@ export async function searchVideos(body) {
     }
 }
 
-export async function checkVideoCanAdd({ category, author, uniqueId }) {
+export async function checkVideoCanAdd({ category, author, uniqueId = null }) {
     const categoryExists = await categoriesRep.selectOneByName(category)
     if (!categoryExists) return { canAdd: false }
     const categoryId = categoryExists.id

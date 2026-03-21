@@ -18,7 +18,7 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'author', 'uniqueId']),
+        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'author']),
         callback: req => checkVideoCanAdd(req.body)
     },
     "/videos/create": {

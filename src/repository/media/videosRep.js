@@ -11,8 +11,12 @@ export default {
             sql += ` AND author_id=?`
             params.push(authorId)
         }
-        sql += ` AND unique_id=? AND status!=?`
-        params.push(uniqueId, MEDIA_VIDEO_STATUS.REMOVED)
+        if (uniqueId) {
+            sql += ` AND unique_id=?`
+            params.push(uniqueId)
+        }
+        sql += ` AND status!=?`
+        params.push(MEDIA_VIDEO_STATUS.REMOVED)
         return sqliteDB.selectOne(sql, params, null, dbName).then(({ count }) => count)
     },
     insertOne: video => {
