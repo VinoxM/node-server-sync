@@ -51,9 +51,9 @@ export async function createMinioManually(minioObj) {
     const author = authorInfo.name
     const uuid = generateUUID()
     await executeAsyncTaskChain([
-        resolveVideoUri(uri, videoId, category, author, uuid, type),
+        async () => resolveVideoUri(uri, videoId, category, author, uuid, type),
         // update video minio status
-        updateVideoStatusByVideoMinioStatus(videoId)
+        async () => updateVideoStatusByVideoMinioStatus(videoId)
     ])
 }
 

@@ -68,11 +68,11 @@ export async function createVideo(videoObj) {
     // execute async task chain
     await executeAsyncTaskChain([
         // handle video source
-        resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE),
+        async () => resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE),
         // handle video cover
-        resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER),
+        async () => resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER),
         // update video status
-        updateVideoStatusByVideoMinioStatus(videoId)
+        async () => updateVideoStatusByVideoMinioStatus(videoId)
     ], 30000);
     return { id: videoId };
 }
