@@ -33,7 +33,7 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
-        callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId']).then(({ data }) => data)
+        callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId'], req.body['authorName']).then(({ data }) => data)
     },
     "/getTags": {
         method: POST,

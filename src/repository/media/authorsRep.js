@@ -30,13 +30,18 @@ export default {
         const sql = 'SELECT id, category_id, name FROM authors WHERE category_id=?'
         return sqliteDB.selectAll(sql, [categoryId], null, dbName)
     },
-    selectAuthorsByLatestUpload: (categoryId) => {
-        const sql = `SELECT ta.id, ta.name, MAX(tv.upload_time) AS last_time,COUNT(tv.id) AS count FROM authors ta `
+    selectAuthorsByLatestUpload: (categoryId, authorName) => {
+        let sql = `SELECT ta.id, ta.name, MAX(tv.upload_time) AS last_time,COUNT(tv.id) AS count FROM authors ta `
             + `LEFT JOIN videos tv ON ta.id = tv.author_id `
             + `WHERE ta.category_id = ? `
-            + `GROUP BY ta.id `
+        const params = [categoryId]
+        if (isNotBlank(authorName)) {
+            sql += `AND ta.name LIKE ? `
+            params.push(`%${authorName}%`)
+        }
+        sql += `GROUP BY ta.id `
             + `ORDER BY last_time DESC`;
-        return sqliteDB.selectAll(sql, [categoryId], null, dbName);
+        return sqliteDB.selectAll(sql, params, null, dbName);
     },
     selectVideosExistsByAuthorId: authorId => {
         const sql = `SELECT EXISTS(SELECT 1 FROM videos WHERE author_id = ? LIMIT 1) AS [exists]`
@@ -44,7 +49,7 @@ export default {
     },
     deleteOne: async authorId => {
         const result = { rows: 0 }
-        const author = await sqliteDB.selectOne('SELECT id, category_id, name FROM authors WHERE id=?', [id], null, dbName)
+        const author = await sqliteDB.selectOne('SELECT id, category_id, name FROM authors WHERE id=?', [authorId], null, dbName)
         if (author) {
             const { categoryId, name } = author
             const sql = `DELETE FROM authors WHERE id=?`
