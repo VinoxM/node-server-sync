@@ -54,7 +54,7 @@ export async function createMinioManually(minioObj) {
         async () => resolveVideoUri(uri, videoId, category, author, uuid, type),
         // update video minio status
         async () => updateVideoStatusByVideoMinioStatus(videoId)
-    ], 30000)
+    ], 10000)
 }
 
 const FILE_PROTOCOL = ['file:']

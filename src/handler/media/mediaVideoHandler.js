@@ -73,7 +73,7 @@ export async function createVideo(videoObj) {
         async () => resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER),
         // update video status
         async () => updateVideoStatusByVideoMinioStatus(videoId)
-    ], 30000);
+    ], 10000);
     return { id: videoId };
 }
 
