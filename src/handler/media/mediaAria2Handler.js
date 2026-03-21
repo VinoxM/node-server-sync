@@ -69,7 +69,7 @@ export async function removeAria2Task(taskId) {
     const { minioId, gid, filePath } = task
     await aria2TaskRep.deleteById(taskId)
     await removeTask(gid)
-    await deleteRemoteFiles([filePath])
+    isNotBlank(filePath) && await deleteRemoteFiles([filePath])
     const { exists } = await aria2TaskRep.selectExistsByMinioId(minioId)
     exists || await videoMinioRep.setupFailedByIdWhenNotComplete(minioId)
 }
