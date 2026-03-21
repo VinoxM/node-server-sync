@@ -12,7 +12,7 @@ export class LogWorker {
     #worker
     #pending = new Map()
     #messageId = 0
-    #initalized = false
+    #initialized = false
 
     #buffer = []
 
@@ -20,7 +20,7 @@ export class LogWorker {
     }
 
     initialize(basePath) {
-        if (this.#initalized) return
+        if (this.#initialized) return
         const folder = path.resolve(basePath)
         fs.existsSync(folder) || fs.mkdirSync(folder, { recursive: true })
         if (!fs.lstatSync(folder).isDirectory()) {
@@ -35,7 +35,7 @@ export class LogWorker {
         })
         this.#setupWorker()
         this.#setupProcessExit()
-        this.#initalized = true
+        this.#initialized = true
         this.#send('initialized')
         for (const b of this.#buffer) {
             const { type, data, timestamp } = b
@@ -100,7 +100,7 @@ export class LogWorker {
 
     async #send(type, data = {}, timestamp) {
         timestamp ??= new Date().getTime()
-        if (this.#initalized) {
+        if (this.#initialized) {
             return this.#post(type, data, timestamp)
         } else {
             this.#buffer.push({ type, data, timestamp })

@@ -1,5 +1,5 @@
 logger:
-  level: info
+  level: warning
   savePath: /home/maou/.github/node-server/log
 sqlite:
   defaultDB: rss
