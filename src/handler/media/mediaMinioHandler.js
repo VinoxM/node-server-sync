@@ -50,11 +50,16 @@ export async function createMinioManually(minioObj) {
     // resolve uri and create minio
     const author = authorInfo.name
     const uuid = generateUUID()
-    await executeAsyncTaskChain([
-        async () => resolveVideoUri(uri, videoId, category, author, uuid, type),
+    const task = await resolveVideoUri(uri, videoId, category, author, uuid, type)
+    if (task === null) {
         // update video minio status
-        async () => updateVideoStatusByVideoMinioStatus(videoId)
-    ], 10000)
+        await updateVideoStatusByVideoMinioStatus(videoId);
+    } else {
+        await executeAsyncTaskChain([
+            task,
+            async () => updateVideoStatusByVideoMinioStatus(videoId)
+        ], 10000)
+    }
 }
 
 const FILE_PROTOCOL = ['file:']
@@ -64,7 +69,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
     const resolvedUri = generateUri(uri)
     if (resolvedUri === null) {
         __log.warn(`[${videoId}] Skipped resolve video ${typeDesc}, cause uri invalid. ${uri}`)
-        return;
+        return null;
     }
     // generate minioLink
     const ext = path.extname(resolvedUri.pathname)
@@ -81,7 +86,8 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
     if (FILE_PROTOCOL.includes(protocol)) {
         // file protocol
         __log.info(`[${videoId}] Video's ${typeDesc} uri is a file, prepare move to minio: ${uri} -> ${minioLink}.`)
-        await uploadFileToMinio(decodeURIComponent(resolvedUri.pathname), minioLink, lastId)
+        const decodedFilePath = decodeURIComponent(resolvedUri.pathname)
+        return async () => uploadFileToMinio(decodedFilePath, minioLink, lastId)
     } else if (HTTP_PROTOCOL.includes(protocol)) {
         // http protocol
         const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
@@ -94,11 +100,13 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
             await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
         } else {
             __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
-            const complete = await uploadUrlToMinio(uri, minioLink, lastId)
-            if (!complete) {
-                __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
-                await addAria2Task(uri, lastId, type)
-                await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
+            return async () => {
+                const complete = await uploadUrlToMinio(uri, minioLink, lastId)
+                if (!complete) {
+                    __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
+                    await addAria2Task(uri, lastId, type)
+                    await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
+                }
             }
         }
     } else {
@@ -107,7 +115,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
         pushNotification(message)
         await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.FAILED)
     }
-    return true
+    return null
 }
 
 /**

@@ -65,15 +65,22 @@ export async function createVideo(videoObj) {
     const { lastId: videoId } = await videosRep.insertOne({ uniqueId, title, authorId, categoryId, uploadTime, status: MEDIA_VIDEO_STATUS.ANALYZING })
     // save video tags mapping
     await videoTagMapRep.insertTags(videoId, tagIds)
-    // execute async task chain
-    await executeAsyncTaskChain([
-        // handle video source
-        async () => resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE),
-        // handle video cover
-        async () => resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER),
+
+    const tasks = []
+    // handle video source
+    const sourceTask = await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
+    sourceTask !== null && tasks.push(sourceTask)
+    // handle video cover
+    const coverTask = await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
+    coverTask !== null && tasks.push(coverTask)
+    if (tasks.length === 0) {
         // update video status
-        async () => updateVideoStatusByVideoMinioStatus(videoId)
-    ], 10000);
+        await updateVideoStatusByVideoMinioStatus(videoId)
+    } else {
+        // execute async task chain
+        tasks.push(async () => updateVideoStatusByVideoMinioStatus(videoId))
+        await executeAsyncTaskChain(tasks, 10000)
+    }
     return { id: videoId };
 }
 
