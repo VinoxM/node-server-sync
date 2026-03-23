@@ -15,13 +15,16 @@ export default {
         method: POST,
         allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
         needSecret,
+        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => {
             const status = req.body.status
+            const id = req.body.id
             if (!Object.values(EPISODE_STATUS).includes(status)) {
                 throwMessage('Invalid episode status.')
             }
-            return rssEpisodeRep.updateStatusById(req.body.id, status)
+            __log.info(`[RssTask] Update rss episode[${id}] status: ${status}`)
+            return rssEpisodeRep.updateStatusById(id, status)
         }
     },
     '/generateSharedLink': {

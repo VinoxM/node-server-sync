@@ -35,6 +35,7 @@ export default {
         method: POST,
         allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
         needSecret,
+        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['uuid', 'status']),
         callback: req => updateTaskStatus(req.body.uuid, req.body.status)
     },
