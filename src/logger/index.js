@@ -8,111 +8,73 @@ const generateLogNowFormat = process.env.APP_ENV === 'k3s-pod' ?
         return `[${now}] `
     }
 
-function origin(...message) {
-    const msgArr = formatMessage(message)
-    if (message && message.length > 0) {
-        console.log(...msgArr);
-    }
-    logWorker?.log('origin', msgArr.join(' '))
+const LOGGER_LEVEL = {
+    ORIGIN: {
+        value: -2,
+        print: (msgArr) => console.log(...msgArr),
+        worker: (msgArr) => logWorker?.log('origin', msgArr.join(' '))
+    },
+    LOG: {
+        value: -1,
+        print: (msgArr) => console.log('>', ...msgArr),
+        worker: (msgArr) => logWorker?.log('print', msgArr.join(' '))
+    },
+    ERROR: {
+        value: 0,
+        print: (msgArr, timestamp) => console.error(`${generateLogNowFormat(timestamp)}[ERROR]`, ...msgArr),
+        worker: (msgArr, timestamp) => logWorker?.log('error', msgArr.join(' '), timestamp)
+    },
+    WARN: {
+        value: 1,
+        print: (msgArr, timestamp) => console.warn(`${generateLogNowFormat(timestamp)}[WARN ]`, ...msgArr),
+        worker: (msgArr, timestamp) => logWorker?.log('warn', msgArr.join(' '), timestamp)
+    },
+    INFO: {
+        value: 2,
+        print: (msgArr, timestamp) => console.log(`${generateLogNowFormat(timestamp)}[INFO ]`, ...msgArr),
+        worker: (msgArr, timestamp) => logWorker?.log('info', msgArr.join(' '), timestamp)
+    },
+    DEBUG: {
+        value: 3,
+        print: (msgArr, timestamp) => console.log(`${generateLogNowFormat(timestamp)}[DEBUG]`, ...msgArr),
+        worker: (msgArr, timestamp) => logWorker?.log('debug', msgArr.join(' '), timestamp)
+    },
 }
 
-function print(...message) {
-    const msgArr = formatMessage(message)
-    if (message && message.length > 0) {
-        console.log(`>`, ...msgArr);
-    }
-    logWorker?.log('print', msgArr.join(' '))
-}
-
-function logger(...message) {
-    const msgArr = formatMessage(message)
-    const timestamp = new Date().getTime()
-    if (loggerLevel >= loggerLevelDict.info && message && message.length > 0) {
-        const now = generateLogNowFormat(timestamp)
-        console.log(`${now}[INFO ]`, ...msgArr);
-    }
-    logWorker?.log('info', msgArr.join(' '), timestamp)
-}
-
-function warning(...message) {
-    const msgArr = formatMessage(message)
-    const timestamp = new Date().getTime()
-    if (loggerLevel >= loggerLevelDict.warning && message && message.length > 0) {
-        const now = generateLogNowFormat(timestamp)
-        console.log(`${now}[WARN ]`, ...msgArr);
-    }
-    logWorker?.log('warn', msgArr.join(' '), timestamp)
-}
-
-function debug(...message) {
-    const msgArr = formatMessage(message)
-    const timestamp = new Date().getTime()
-    if (loggerLevel >= loggerLevelDict.debug && message && message.length > 0) {
-        const now = generateLogNowFormat(timestamp)
-        console.log(`${now}[DEBUG]`, ...msgArr);
-    }
-    logWorker?.log('debug', msgArr.join(' '), timestamp)
-}
-
-function error(...message) {
-    const msgArr = formatMessage(message)
-    const timestamp = new Date().getTime()
-    if (message && message.length > 0) {
-        const now = generateLogNowFormat(timestamp)
-        console.error(`${now}[ERROR]`, ...msgArr);
-    }
-    logWorker?.log('error', msgArr.join(' '), timestamp)
-}
+const shouldPrint = (level, message) => message.length > 0 && globalLoggerLevel >= level.value
 
 function formatMessage(message, lineBreaker = '\n') {
-    let lastLineBreak = false
-    const msgArr = []
-    for (const obj of message) {
-        if (obj === null || obj === undefined) {
-            msgArr.push(obj)
-            continue
+    if (!message || message.length === 0) return [];
+    return message.map((obj, index) => {
+        if (obj === null || obj === undefined || typeof obj === 'number' || typeof obj === 'boolean') {
+            return obj;
         }
         if (obj instanceof Error) {
-            if (lastLineBreak) {
-                msgArr.push(lineBreaker)
-                lastLineBreak = false
+            return (index > 0 ? lineBreaker : '') + (obj.stack || obj.message);
+        }
+        if (typeof obj === 'object') {
+            try {
+                const json = JSON.stringify(obj, null, 2);
+                return (index > 0 ? lineBreaker : '') + json;
+            } catch (err) {
+                return `[Object Unserializable: ${err.message}]`;
             }
-            msgArr.push(obj)
-            continue
         }
-        if (typeof obj === 'number') {
-            msgArr.push(obj)
-            continue
+        if (typeof obj === 'string') {
+            return obj.replace(/\n$/, '');
         }
-        if (typeof obj === 'boolean') {
-            msgArr.push(obj)
-            continue
-        }
-        let str = typeof obj === 'object' ? JSON.stringify(obj, null, 2) : obj
-        if (str === '') {
-            continue
-        }
-        if (lastLineBreak) {
-            str = lineBreaker + str
-        }
-        if (str.endsWith(lineBreaker)) {
-            lastLineBreak = true
-            str = str.substring(0, str.length - 1)
-        } else {
-            lastLineBreak = false
-        }
-        msgArr.push(str)
-    }
-    return msgArr
+        return String(obj);
+    });
 }
 
-let loggerLevel = 1
-
-const loggerLevelDict = {
-    'warning': 1,
-    'info': 2,
-    'debug': 3,
+function handleLog(level, ...message) {
+    const timestamp = Date.now()
+    const msgArr = formatMessage(message)
+    shouldPrint(level, message) && level.print(msgArr, timestamp)
+    level.worker(msgArr, timestamp)
 }
+
+let globalLoggerLevel = LOGGER_LEVEL.INFO.value
 
 let logWorker = null
 
@@ -120,12 +82,12 @@ export function setupGlobalLogFunc() {
     logWorker = new LogWorker()
     Object.assign(globalThis, {
         __log: {
-            log: origin,
-            print,
-            info: logger,
-            warn: warning,
-            debug,
-            error
+            log: (...message) => handleLog(LOGGER_LEVEL.LOG, ...message),
+            print: (...message) => handleLog(LOGGER_LEVEL.ORIGIN, ...message),
+            info: (...message) => handleLog(LOGGER_LEVEL.INFO, ...message),
+            warn: (...message) => handleLog(LOGGER_LEVEL.WARN, ...message),
+            debug: (...message) => handleLog(LOGGER_LEVEL.DEBUG, ...message),
+            error: (...message) => handleLog(LOGGER_LEVEL.ERROR, ...message)
         }
     })
 }
@@ -136,6 +98,6 @@ export function initializeLogger(logPath) {
     }
 }
 
-export function setupLoggerLevel(logLevel) {
-    loggerLevel = loggerLevelDict[logLevel || 'info'] ?? 3
+export function setupLoggerLevel(logLevel = 'INFO') {
+    globalLoggerLevel = LOGGER_LEVEL[logLevel.toLocaleUpperCase()]?.value ?? LOGGER_LEVEL.INFO.value
 }
