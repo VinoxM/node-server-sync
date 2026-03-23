@@ -27,7 +27,7 @@ function print(...message) {
 function logger(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
-    if (loggerLevel >= 1 && message && message.length > 0) {
+    if (loggerLevel >= loggerLevelDict.info && message && message.length > 0) {
         const now = generateLogNowFormat(timestamp)
         console.log(`${now}[INFO ]`, ...msgArr);
     }
@@ -37,7 +37,7 @@ function logger(...message) {
 function warning(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
-    if (loggerLevel >= 2 && message && message.length > 0) {
+    if (loggerLevel >= loggerLevelDict.warning && message && message.length > 0) {
         const now = generateLogNowFormat(timestamp)
         console.log(`${now}[WARN ]`, ...msgArr);
     }
@@ -47,7 +47,7 @@ function warning(...message) {
 function debug(...message) {
     const msgArr = formatMessage(message)
     const timestamp = new Date().getTime()
-    if (loggerLevel >= 3 && message && message.length > 0) {
+    if (loggerLevel >= loggerLevelDict.debug && message && message.length > 0) {
         const now = generateLogNowFormat(timestamp)
         console.log(`${now}[DEBUG]`, ...msgArr);
     }
@@ -109,8 +109,8 @@ function formatMessage(message, lineBreaker = '\n') {
 let loggerLevel = 1
 
 const loggerLevelDict = {
-    'info': 1,
-    'warning': 2,
+    'warning': 1,
+    'info': 2,
     'debug': 3,
 }
 
