@@ -198,7 +198,7 @@ export async function updateMinioOriginUri(minioId, originUri) {
     minioInfo || throwMessage('Video minio not found.')
     const { status } = minioInfo
     CAN_UPDATE_MINIO_ORIGIN_URI_STATUS.includes(status) || throwMessage('Cannot update minio origin uri.')
-    await videoMinioRep.updateOriginUriById(minioId, originUri)
+    await videoMinioRep.updateOriginUriById(originUri, minioId)
 }
 
 export async function retryMinio(minioId) {
