@@ -13,7 +13,7 @@ class AsyncSequence {
     #totalTasks = 0;
 
     constructor(timeoutMs = defaultTimeoutMs) {
-        this.#id += AsyncSequence.#globalCounter;
+        this.#id = ++AsyncSequence.#globalCounter;
         this.#timeoutMs = timeoutMs ?? defaultTimeoutMs;
     }
 
