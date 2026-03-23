@@ -5,7 +5,7 @@ export class SocketClient {
     #channel;
     #channelPath;
     #realIp;
-    #infomation = {};
+    #information = {};
     constructor(socket, channel, channelPath, realIp) {
         this.#socket = socket;
         this.#channel = channel;
@@ -43,7 +43,7 @@ export class SocketClient {
 
     setInfo(key, value) {
         try {
-            setItem(this.#infomation, key, value)
+            setItem(this.#information, key, value)
             __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info ${key} => `, value)
         } catch (e) {
             __log.error(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info error. ${key} =x `, value, e)
@@ -52,7 +52,7 @@ export class SocketClient {
 
     getInfo(key, defaultValue) {
         try {
-            const value = getItem(this.#infomation, key)
+            const value = getItem(this.#information, key)
             __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info ${key} => `, value)
             return value
         } catch (e) {

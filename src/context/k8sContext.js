@@ -11,7 +11,9 @@ export class K8SApplicationContext extends ApplicationContext {
     #k3sApi = null;
 
     #configMap = null;
-    #configLabels = []
+    #configLabels = [];
+
+    #watcherWorker = null;
 
     constructor(resourcePath, applicationType, configLabels = [], configMap = k3sConst.DEFAULT_CONFIG_MAP_NAME) {
         super(resourcePath, applicationType)
@@ -42,10 +44,11 @@ export class K8SApplicationContext extends ApplicationContext {
     }
 
     #watchConfiguration() {
-        const placeholder = this.logPlaceholder()
+        if (this.#watcherWorker !== null) return;
+        const placeholder = this.logPlaceholder();
+        this.#watcherWorker = new Worker(__join('@/src/watcher', 'k3sWatchWorker.js'), { workerData: { configMap: this.#configMap } });
         const this_ = this
-        const watcherWorker = new Worker(__join('@/src/watcher', 'k3sWatchWorker.js'), { workerData: { configMap: this.#configMap } });
-        watcherWorker.on('message', (message) => {
+        this.#watcherWorker.on('message', (message) => {
             if (message.event === 'CONFIG_UPDATED') {
                 __log.info(`[${placeholder}] Configuration changed.`);
                 this_.#superLoad()
