@@ -6,7 +6,7 @@ import videosRep from "../../repository/media/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../constraints/sshScriptsConst.js";
 import { getExecutor } from "../sshHandler.js";
 import { getMinioClient } from "../../instance/minio.js";
-import { addAria2Task } from "./mediaAria2Handler.js";
+import { addTask } from "./mediaTaskHandler.js";
 import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
 import categoriesRep from '../../repository/media/categoriesRep.js';
 import authorsRep from '../../repository/media/authorsRep.js';
@@ -96,7 +96,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
         // Otherwise, upload it directly to minio.
         if (overSizeOneMB) {
             __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
-            await addAria2Task(uri, lastId, type)
+            await addTask(uri, lastId, type)
             await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
         } else {
             __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
@@ -104,7 +104,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
                 const complete = await uploadUrlToMinio(uri, minioLink, lastId)
                 if (!complete) {
                     __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
-                    await addAria2Task(uri, lastId, type)
+                    await addTask(uri, lastId, type)
                     await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
                 }
             }
@@ -216,7 +216,7 @@ export async function retryMinio(minioId) {
     status !== MEDIA_MINIO_STATUS.FAILED && throwMessage('Minio can not retry.')
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
     isNotEmptyArray(aria2Tasks) && throwMessage('Minio can not retry, cause aria2 task exists in this minio.')
-    await addAria2Task(originUri, minioId, type)
+    await addTask(originUri, minioId, type)
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
 }
 

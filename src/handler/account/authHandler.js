@@ -1,5 +1,6 @@
 import { RedisAuthorizationStore } from "../../instance/authorizationStore.js"
 import { AESCrypto } from '../../instance/aesCrypto.js'
+import { getTokenHash } from "../../common/httpUtil.js"
 
 const authTokenStore = new RedisAuthorizationStore()
 
@@ -19,7 +20,7 @@ export const decryptData = str => AESCrypto.decrypt(str)
 
 export const decodeAuthorization = async req => {
     if (req.userInfo) return req.userInfo
-    const token = (req.headers?.['authorization'] ?? '').replace('Bearer ', '')
+    const token = getTokenHash(req)
     try {
         let userInfo = null
         if (isNotBlank(token) && await verifyToken(token, decode => userInfo = decode)) {

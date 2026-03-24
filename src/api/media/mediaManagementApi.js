@@ -4,7 +4,7 @@ import { addCategory, createVideo, checkVideoCanAdd, removeVideo, deleteCategory
 import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../constraints/mediaConst.js"
 import { createMinioManually, deleteVideoMinio, retryMinio, searchMinio, updateMinioOriginUri, updateVideoStatusByVideoMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 import { getFilterRulesByCategory, handleFilterRule } from "../../handler/media/mediaFilterHandler.js"
-import { getAria2InfoAndTaskStatus, removeAria2Task } from "../../handler/media/mediaAria2Handler.js"
+import { getTaskInfoAndDownloadStatus, removeTask } from "../../handler/media/mediaTaskHandler.js"
 import videoTagMapRep from "../../repository/media/videoTagMapRep.js"
 
 const { POST } = apiMethodConst
@@ -129,7 +129,7 @@ export default {
         needSecret,
         allowHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
-        callback: req => removeAria2Task(req.body['taskId']),
+        callback: req => removeTask(req.body['taskId']),
     },
     "/task/multiStatus": {        
         method: POST,
@@ -137,7 +137,7 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
-        callback: req => getAria2InfoAndTaskStatus(req.body['ids']),
+        callback: req => getTaskInfoAndDownloadStatus(req.body['ids']),
     },
     /** Policy management: FilterRules */
     "/policy/getRules": {

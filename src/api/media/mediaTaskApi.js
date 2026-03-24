@@ -1,7 +1,7 @@
 import { checkBodyKeysNotBlank } from "../../common/apiPreCheck.js"
 import apiMethodConst from "../../constraints/apiMethodConst.js"
 import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ALLOW_HOSTS as allowHosts, MEDIA_ARIA2_TASK_STATUS } from "../../constraints/mediaConst.js"
-import { pauseOrResumeAria2Task, updateAria2TaskStatus } from "../../handler/media/mediaAria2Handler.js"
+import { pauseOrResumeTask, updateTaskStatus } from "../../handler/media/mediaTaskHandler.js"
 import { updateMinioStatus } from "../../handler/media/mediaMinioHandler.js"
 
 const { POST } = apiMethodConst
@@ -15,14 +15,14 @@ export default {
         needSecret,
         allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid']),
-        callback: req => updateAria2TaskStatus(req.body['gid'], MEDIA_ARIA2_TASK_STATUS.DOWNLOADING)
+        callback: req => updateTaskStatus(req.body['gid'], MEDIA_ARIA2_TASK_STATUS.DOWNLOADING)
     },
     "/onDownloadComplete": {
         method: POST,
         needSecret,
         allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid', 'status']),
-        callback: req => updateAria2TaskStatus(req.body['gid'], req.body['status'])
+        callback: req => updateTaskStatus(req.body['gid'], req.body['status'])
     },
     "/updateStorageStatus": {
         method: POST,
@@ -37,6 +37,6 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid', 'operator']),
-        callback: req => pauseOrResumeAria2Task(req.body['gid'], req.body['operator'])
+        callback: req => pauseOrResumeTask(req.body['gid'], req.body['operator'])
     }
 }

@@ -1,4 +1,4 @@
-import { getAria2Socket } from "../../instance/aria2Socket.js";
+import aria2Handler from "../download/aria2Handler.js";
 import { MEDIA_ARIA2_TASK_STATUS, MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION } from "../../constraints/mediaConst.js";
 import aria2TaskRep from "../../repository/media/aria2TaskRep.js";
 import { pushNotification } from "../../sockets/notification.js";
@@ -9,38 +9,13 @@ import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../constraints/sshScriptsConst.j
 const MEDIA_ARIA2_SAVE_DIR = "./media";
 const CAN_UPDATE_ARIA2_TASK_STATUS = [MEDIA_ARIA2_TASK_STATUS.COMPLETE, MEDIA_ARIA2_TASK_STATUS.FAILED, MEDIA_ARIA2_TASK_STATUS.DOWNLOADING]
 
-async function addTask(url, options) {
-    const gid = await getAria2Socket().addUri(url, options)
-    return getAria2Socket().getInfo(gid);
-}
-
-export async function getTaskInfo(gid) {
-    return getAria2Socket().getInfo(gid);
-}
-
-async function removeTask(gid) {
-    await getAria2Socket().remove(gid).catch(ex => __log.error(`Remove aria2 task failed.`, ex?.message, ex?.response?.data || ''));
-}
-
-async function getTaskMultiStatus(gidArr) {
-    return getAria2Socket().getMultiStatus(gidArr).catch(ex => __log.error(`Get aria2 task multi status failed.`, ex?.message, ex?.response?.data || ''));
-}
-
-export async function pauseTask(gid) {
-    await getAria2Socket().pause(gid).catch(ex => __log.error(`Pause aria2 task failed.`, ex?.message, ex?.response?.data || ''));
-}
-
-export async function resumeTask(gid) {
-    await getAria2Socket().resume(gid).catch(ex => __log.error(`Resume aria2 task failed.`, ex?.message, ex?.response?.data || ''));
-}
-
 /**
  * Add video step1 from status: ANALYZING.
  * Aria2 task status:
  * DOWNLOADING
  */
-export async function addAria2Task(uri, minioId, type) {
-    const taskInfo = await addTask(uri, { dir: MEDIA_ARIA2_SAVE_DIR })
+export async function addTask(uri, minioId, type) {
+    const taskInfo = await aria2Handler.addTask(uri, { dir: MEDIA_ARIA2_SAVE_DIR })
     taskInfo?.gid || throwMessage(`Add media ${MEDIA_TYPE_DESCRIPTION[type] || ''} aria2 task failed.`)
     const aria2Task = {
         minioId,
@@ -54,32 +29,32 @@ export async function addAria2Task(uri, minioId, type) {
 
 const ARIA2_OPERATOR = { PAUSE: 'pause', RESUME: 'resume' }
 const SUPPORTED_ARIA2_OPERATOR = [ARIA2_OPERATOR.PAUSE, ARIA2_OPERATOR.RESUME]
-export async function pauseOrResumeAria2Task(gid, operator) {
+export async function pauseOrResumeTask(gid, operator) {
     SUPPORTED_ARIA2_OPERATOR.includes(operator) || throwMessage('Invalid operator')
     if (ARIA2_OPERATOR.PAUSE === operator) {
-        await pauseTask(gid)
+        await aria2Handler.pauseTask(gid)
     } else if (ARIA2_OPERATOR.RESUME === operator) {
-        await resumeTask(gid)
+        await aria2Handler.resumeTask(gid)
     }
 }
 
-export async function removeAria2Task(taskId) {
+export async function removeTask(taskId) {
     const task = await aria2TaskRep.selectById(taskId);
     if (!task) return
     const { minioId, gid, filePath } = task
     await aria2TaskRep.deleteById(taskId)
-    await removeTask(gid)
+    await aria2Handler.removeTask(gid)
     isNotBlank(filePath) && await deleteRemoteFiles([filePath])
     const { exists } = await aria2TaskRep.selectExistsByMinioId(minioId)
     exists || await videoMinioRep.setupFailedByIdWhenNotComplete(minioId)
 }
 
-export async function getAria2InfoAndTaskStatus(ids) {
+export async function getTaskInfoAndDownloadStatus(ids) {
     const result = {}
     const { rows, data } = await aria2TaskRep.selectByIds(ids)
     if (rows === 0) return result
     const gidArr = data.map(o => (result[o.gid] = { status: o.status }, o.gid))
-    const res = await getTaskMultiStatus(gidArr)
+    const res = await aria2Handler.getTaskMultiStatus(gidArr)
     if (Array.isArray(res) && res.length > 0) {
         res.forEach(t => {
             const r = t[0]
@@ -119,13 +94,13 @@ async function deleteRemoteFiles(files) {
  * Minio status:
  * PREPARED/UPLOADING -> UPLOADING/FAILED
  */
-export async function updateAria2TaskStatus(gid, status) {
+export async function updateTaskStatus(gid, status) {
     const taskStatus = parseInt(status)
     // validate aria2 status
     CAN_UPDATE_ARIA2_TASK_STATUS.includes(taskStatus) || throwMessage('Invalid aria2 task status.')
 
     // validate aria2 task exists
-    const taskInfo = await getTaskInfo(gid)
+    const taskInfo = await aria2Handler.getTaskInfo(gid)
     taskInfo || throwMessage('Aria2 task not found.')
 
     // validate aria2 task info exists
@@ -138,7 +113,7 @@ export async function updateAria2TaskStatus(gid, status) {
 
     // get video minio info
     const minioInfo = await videoMinioRep.selectOneById(minioId)
-    minioInfo || notifyUpdateAria2TaskStatusFailed('Get task\'s minio info failed.')
+    minioInfo || notifyUpdateTaskStatusFailed('Get task\'s minio info failed.')
 
     if (MEDIA_ARIA2_TASK_STATUS.FAILED === taskStatus) {
         __log.info(`[${gid}] Aria2 task download failed, setup minio status failed.`)
@@ -149,7 +124,7 @@ export async function updateAria2TaskStatus(gid, status) {
     // handle aria2 task complete
     // validate task files
     const { files } = taskInfo
-    isEmptyArray(files) && notifyUpdateAria2TaskStatusFailed('Invalid aria2 task files.')
+    isEmptyArray(files) && notifyUpdateTaskStatusFailed('Invalid aria2 task files.')
 
     // generate minio link
     const { path: filePath } = files[0]
@@ -172,7 +147,7 @@ export async function updateAria2TaskStatus(gid, status) {
     }
 }
 
-function notifyUpdateAria2TaskStatusFailed(message, gid) {
+function notifyUpdateTaskStatusFailed(message, gid) {
     pushNotification(`Update aria2 task[${gid}] status failed: ${message}`)
     throwMessage(message)
 }
