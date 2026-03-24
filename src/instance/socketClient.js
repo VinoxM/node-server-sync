@@ -1,4 +1,4 @@
-import { getItem, setItem } from "../common/objectUtil.js";
+import { getItemOrElse, setItem } from "../common/objectUtil.js";
 
 export class SocketClient {
     #socket;
@@ -42,23 +42,14 @@ export class SocketClient {
     }
 
     setInfo(key, value) {
-        try {
-            setItem(this.#information, key, value)
-            __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info ${key} => `, value)
-        } catch (e) {
-            __log.error(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info error. ${key} =x `, value, e)
-        }
+        setItem(this.#information, key, value)
+        __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] set info ${key} => `, value)
     }
 
     getInfo(key, defaultValue) {
-        try {
-            const value = getItem(this.#information, key)
-            __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info ${key} => `, value)
-            return value
-        } catch (e) {
-            __log.error(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info error. ${key}`, e)
-            return defaultValue ?? null
-        }
+        const value = getItemOrElse(this.#information, key, defaultValue)
+        __log.debug(`[Socket] Client[${this.#channel} : ${this.#realIp}] get info ${key} => `, value)
+        return value
     }
 
     close() {

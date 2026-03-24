@@ -1,4 +1,4 @@
-export function getItem(object, path) {
+function getItem(object, path) {
     if (object === undefined || object === null || typeof path !== 'string') {
         return undefined;
     }

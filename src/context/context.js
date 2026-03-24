@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import * as YAML from "yaml";
-import { mergeObject, getItem, getItemOrElse } from "../common/objectUtil.js";
+import { mergeObject, getItemOrElse } from "../common/objectUtil.js";
 import { ContextSubscribe } from "./subscribe.js";
 import { LRUCache } from "../instance/extendMap.js";
 
@@ -63,16 +63,12 @@ export class ApplicationContext {
     }
 
     getProperty(key, defaultValue) {
-        try {
-            if (this.#propertyCache.has(key)) {
-                return this.#propertyCache.get(key)
-            }
-            const result = getItem(this.#context, key);
-            this.#propertyCache.set(key, result)
-            return result
-        } catch (error) {
-            return defaultValue;
+        if (this.#propertyCache.has(key)) {
+            return this.#propertyCache.get(key)
         }
+        const result = getItemOrElse(this.#context, key, defaultValue);
+        this.#propertyCache.set(key, result)
+        return result
     }
 
     mergeContext(obj, label = 'Unknown') {
