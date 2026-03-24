@@ -7,6 +7,7 @@ import rssTrackerRep from '../../repository/rss/rssTrackerRep.js';
 import { checkQueryKeyNotBlank, checkQueryKeyMatchIfPresent as checkQueryKeyMatch } from '../../common/apiPreCheck.js';
 import rssEpisodeRep from '../../repository/rss/rssEpisodeRep.js';
 import rssTaskRep from '../../repository/rss/rssTaskRep.js';
+import { decodeAuthorization } from '../../handler/account/authHandler.js';
 
 const { GET } = apiMethodConst
 const { SEASON, ID, NAME } = apiQueryConst
@@ -92,7 +93,8 @@ export default {
             }
             const link = await rssLinkRep.selectByPidV2(id).then(({ data }) => data);
             const copyright = await rssCopyrightRep.selectByPidV2(id).then(({ data }) => data);
-            const isAuthed = !!req.userInfo
+            const userInfo = await decodeAuthorization(req)
+            const isAuthed = !!userInfo
             let episode = null
             let tasks = null
             if (isAuthed) {

@@ -28,7 +28,3 @@ export function isBucketDestroyed() {
 export function getToken() {
     return tokenBucket === null || tokenBucket.getToken();
 }
-
-export function getNeedTokenApi() {
-    return __env.get('api.tokenBucket.needToken', []);
-}

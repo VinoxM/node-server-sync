@@ -16,3 +16,16 @@ export const deleteTokenByUid = async uid => authTokenStore.deleteTokenByUid(uid
 export const encryptData = str => AESCrypto.encrypt(str)
 
 export const decryptData = str => AESCrypto.decrypt(str)
+
+export const decodeAuthorization = async req => {
+    if (req.userInfo) return req.userInfo
+    const token = (req.headers?.['authorization'] ?? '').replace('Bearer ', '')
+    try {
+        let userInfo = null
+        if (isNotBlank(token) && await verifyToken(token, decode => userInfo = decode)) {
+            return userInfo
+        }
+    } catch (ignored) {
+    }
+    return null
+}

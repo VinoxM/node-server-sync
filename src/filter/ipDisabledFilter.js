@@ -13,7 +13,8 @@ export default {
             if (blockIgnoreApi.some(r => new RegExp(r).test(url)) || checkIp(realIp)) {
                 resolve({ req, res, config });
             } else {
-                reject({ msg: 'Server Busy.' });
+                req.destroy();
+                reject({ msg: 'Forbidden.', code: -403, status: 403 });
             }
         }
     }

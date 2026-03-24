@@ -20,7 +20,7 @@ const dataFrom = {
 }
 
 function requestValidate(request, options) {
-    const { from, valid, key, args = [], print = defaultPrint, infoMessage, errorMessage, errorCode = -3, errorStatus = 200 } = options
+    const { from, valid, key, args = [], print = defaultPrint, infoMessage, errorMessage, errorCode = -3, errorStatus = 400 } = options
     if (from in dataFrom && valid in validator) {
         let keys = Array.isArray(key) ? key : [key]
         if (print) {

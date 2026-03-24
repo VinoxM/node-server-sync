@@ -17,6 +17,7 @@ axios:
     host: frp
     port: 7890
 api:
+  requestBodyLimit: 2 * 1024 * 1024
   defaultSecret: mAou5820
   apiDisabled:
     - /common/doNothing
@@ -59,7 +60,7 @@ api:
       - /rss/task/*
       - /media/*
 sse:
-  disabled: 
+  disabled:
     - barrage
 schedule:
   rssSubscribe:
@@ -172,4 +173,4 @@ ssh:
     host: 192.168.31.120
     port: 22
     username: maou
-    privateKey: ''
+    privateKey: ""

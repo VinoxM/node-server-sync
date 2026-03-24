@@ -1,5 +1,5 @@
 import { decryptData } from "../handler/account/authHandler.js"
-import { getItemOrElse, setItemSilently } from "./objectUtil.js"
+import { getItemOrElse, setItem } from "./objectUtil.js"
 
 export function decryptionBodyKeys(req, bodyKeys) {
     let keys = Array.isArray(bodyKeys) ? bodyKeys : [bodyKeys]
@@ -13,7 +13,7 @@ export function decryptionBodyKeys(req, bodyKeys) {
                 __log.error(`Decrypt bodyKey error: ${key}.`, e)
                 continue
             }
-            setItemSilently(req.body, key, decryptedKeyValue)
+            setItem(req.body, key, decryptedKeyValue)
         }
     }
 }

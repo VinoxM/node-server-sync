@@ -39,3 +39,25 @@ export class ContextSubscribe {
         __env.unsubscribe?.(this)
     }
 }
+
+export class GetterContextSubscribe extends ContextSubscribe {
+    #value = null;
+    #getter = null;
+    #initialized = false;
+
+    constructor(label, getter) {
+        super(label, () => {
+            this.#value = getter?.()
+        }, true)
+        this.#getter = getter;
+    }
+
+    getValue() {
+        if (!this.#initialized) {
+            this.doSubscribe();
+            this.#value = this.#getter?.();
+            this.#initialized = true;
+        }
+        return this.#value;
+    }
+}

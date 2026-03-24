@@ -1,4 +1,7 @@
-import { getToken, getNeedTokenApi, isBucketDestroyed } from "../common/apiTokenBucket.js";
+import { getToken, isBucketDestroyed } from "../common/apiTokenBucket.js";
+import { GetterContextSubscribe } from "../context/subscribe.js";
+
+const needTokenApiSubscribe = new GetterContextSubscribe('NeedTokenApi', () => __env.get('api.tokenBucket.needToken', []).map(r => new RegExp(r)))
 
 export default {
     order: -100,
@@ -6,12 +9,11 @@ export default {
         if (isBucketDestroyed()) {
             resolve({ req, res, config });
         } else {
-            const needTokenApi = getNeedTokenApi();
             const url = req.path;
-            if (!needTokenApi.some(r => new RegExp(r).test(url)) || getToken()) {
+            if (!needTokenApiSubscribe.getValue().some(r => r.test(url)) || getToken()) {
                 resolve({ req, res, config });
             } else {
-                reject({ msg: `Service access restriction.`, code: -9 });
+                reject({ msg: `Too Many Requests.`, code: -429, status: 429 });
             }
         }
     }
