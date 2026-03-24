@@ -3,8 +3,22 @@ import FormData from 'form-data';
 import { join } from 'path';
 import { generateUUID } from '../../common/stringUtil.js';
 import * as qbitStateConsts from '../../constraints/qbitStateConst.js';
+import { GetterContextSubscribe } from '../../context/subscribe.js';
 
-const QB_URL = 'http://192.168.31.120:9801';
+const qbitOption = new GetterContextSubscribe("QBit Option", () => {
+    const qbitOpt = __env.get('qbit', {})
+    const host = qbitOpt?.rpc?.host ?? '192.168.31.120'
+    const port = qbitOpt?.rpc?.port ?? '9801'
+    const downloadPath = qbitOpt?.downloadPath ?? '/mnt/media/Downloads'
+    return {
+        url: `http://${host}:${port}`,
+        downloadPath
+    }
+})
+
+const getQBitUrl = () => qbitOption?.getValue()?.url ?? 'http://192.168.31.120:9801';
+const getQBitDownloadPath = () => qbitOption?.getValue()?.downloadPath ?? '/mnt/media/Downloads';
+
 const qbitApi = {
     addTorrent: '/api/v2/torrents/add',
     torrentInfo: '/api/v2/torrents/info',
@@ -28,7 +42,7 @@ export function getUUIDByTorrentInfo(torrentInfo) {
 async function postQbitApi(urlPath, data) {
     const form = new FormData();
     Object.keys(data).forEach(k => form.append(k, data[k]))
-    const addResponse = await axios.post(`${QB_URL}${urlPath}`, form, {
+    const addResponse = await axios.post(`${getQBitUrl()}${urlPath}`, form, {
         headers: {
             ...form.getHeaders()
         }
@@ -37,7 +51,7 @@ async function postQbitApi(urlPath, data) {
 }
 
 async function getQbitApi(urlPath, params) {
-    const addResponse = await axios.get(`${QB_URL}${urlPath}`, { params });
+    const addResponse = await axios.get(`${getQBitUrl()}${urlPath}`, { params });
     return addResponse.data
 }
 
@@ -45,7 +59,7 @@ export async function addTorrent(torrent, savePath = 'Anime', category = 'Anime'
     if (typeof torrent !== 'string') {
         throwMessage('Invalid torrent.')
     }
-    const qbitDownloadPath = __env.get('qbit.downloadPath', '/mnt/media/Downloads')
+    const qbitDownloadPath = getQBitDownloadPath()
     const uuid = generateUUID()
     const addResponse = await postQbitApi(qbitApi.addTorrent, {
         urls: torrent,
