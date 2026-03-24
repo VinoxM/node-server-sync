@@ -26,10 +26,6 @@ export default {
         const sql = 'INSERT OR IGNORE INTO authors(category_id, name) VALUES(?,?)'
         return sqliteDB.insert(sql, [categoryId, author], null, dbName)
     },
-    selectByCategoryId: categoryId => {
-        const sql = 'SELECT id, category_id, name FROM authors WHERE category_id=?'
-        return sqliteDB.selectAll(sql, [categoryId], null, dbName)
-    },
     selectAuthorsByLatestUpload: (categoryId, authorName) => {
         let sql = `SELECT ta.id, ta.name, MAX(tv.upload_time) AS last_time,COUNT(tv.id) AS count FROM authors ta `
             + `LEFT JOIN videos tv ON ta.id = tv.author_id `

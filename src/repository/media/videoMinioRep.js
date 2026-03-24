@@ -47,10 +47,6 @@ export default {
         return sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoId: videoId => {
-        // const sql = 'SELECT tm.id, tt.id taskId, tm.video_id, tm.type, tm.origin_uri, tm.file_path, tm.link, tm.status, tt.gid, tt.status taskStatus, tt.file_path savePath, tt.file_num '
-        //     + 'FROM video_minio tm '
-        //     + 'LEFT JOIN aria2_task tt ON tt.minio_id=tm.id '
-        //     + 'WHERE tm.video_id=? '
         const sql = `SELECT id, video_id, type, origin_uri, link, status FROM video_minio WHERE video_id=?`
         return sqliteDB.selectAll(sql, [videoId], null, dbName)
     }
