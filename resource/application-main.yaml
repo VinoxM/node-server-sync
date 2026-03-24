@@ -4,10 +4,6 @@ logger:
 sqlite:
   defaultDB: rss
   dbPath: "@/db"
-redis:
-  enable: true
-  failureThreshold: 5
-  recoveryTimeout: 30
 server:
   port: 8800
   cors: true
@@ -18,12 +14,9 @@ axios:
     port: 7890
 api:
   requestBodyLimit: 2 * 1024 * 1024
-  defaultSecret: mAou5820
   apiDisabled:
     - /common/doNothing
-  allowHosts:
-    - api: /common/animeGroup
-      cidr: ["192.168.31.0/24"]
+  allowHosts: []
   filterDisabled: []
   needAuth:
     - /rss(/v2)?/[(?!get)|Matchers]*$
@@ -42,15 +35,9 @@ api:
       - /rss/tracker/getAll
   ipBlocker:
     enable: true
-    maxInterval:
-      - 1000
-      - 60
+    maxInterval: 1000 * 60
     maxCount: 100
-    blockTime:
-      - 1000
-      - 60
-      - 60
-      - 24
+    blockTime: 1000 * 60 * 60 * 24
     blockIgnore:
       - /common/*
       - /rss/subscribe/*
@@ -148,29 +135,4 @@ clash:
       KR: ["韩"]
   backup:
     fileLimit: 10
-auth:
-  secretKey: mAou.authorization.jwt
-  maxTokenStore: 3
-  defaultTokenExpire: 30d
-crypto:
-  aes: # 长度 16
-    key: mAou.aes.key.3ca
-    iv: mAou.aes.iv.a6b7
-totp:
-  timeStep: 30
-  digits: 6
-  algorithm: sha256
-  secret: mAou5820.TOTP.secret
-  tolerance: 2
-minio:
-  host: 192.168.31.120
-  port: 9000
-  username: admin
-  password: mAou5820
-  expiry: 7200
-ssh:
-  fedora:
-    host: 192.168.31.120
-    port: 22
-    username: maou
-    privateKey: ""
+

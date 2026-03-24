@@ -11,15 +11,12 @@ function destroyBlocker() {
 
 export function startIpBlocker() {
     const blockerConfig = __env.get('api.ipBlocker', {
-        enable: false,
-        maxInterval: [1000, 60],
-        maxCount: 100,
-        blockTime: [1000, 60, 60, 24]
+        enable: false
     })
     destroyBlocker();
     if (blockerConfig.enable) {
-        const blockTime = Array.isArray(blockerConfig.blockTime) ? blockerConfig.blockTime.reduce((a, b) => a * b) : blockerConfig.blockTime;
-        const maxInterval = Array.isArray(blockerConfig.maxInterval) ? blockerConfig.maxInterval.reduce((a, b) => a * b) : blockerConfig.maxInterval;
+        const blockTime = __env.getEvaluate('api.ipBlocker.blockTime', 1000 * 60 * 6 * 24);
+        const maxInterval = __env.getEvaluate('api.ipBlocker.maxInterval', 1000 * 60);
         ipBlocker = new IpBlocker(blockerConfig.maxCount, maxInterval, blockTime);
     }
 }

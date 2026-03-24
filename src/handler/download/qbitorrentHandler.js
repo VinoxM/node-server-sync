@@ -6,18 +6,18 @@ import * as qbitStateConsts from '../../constraints/qbitStateConst.js';
 import { GetterContextSubscribe } from '../../context/subscribe.js';
 
 const qbitOption = new GetterContextSubscribe("QBit Option", () => {
-    const qbitOpt = __env.get('qbit', {})
-    const host = qbitOpt?.rpc?.host ?? '192.168.31.120'
-    const port = qbitOpt?.rpc?.port ?? '9801'
-    const downloadPath = qbitOpt?.downloadPath ?? '/mnt/media/Downloads'
+    const qbitRpc = __env.get('qbit.rpc', {})
+    const host = qbitRpc?.host ?? '192.168.31.120'
+    const port = qbitRpc?.port ?? '9801'
+    const savePath = qbitRpc?.savePath ?? '/mnt/media/Downloads'
     return {
         url: `http://${host}:${port}`,
-        downloadPath
+        savePath
     }
 })
 
 const getQBitUrl = () => qbitOption?.getValue()?.url ?? 'http://192.168.31.120:9801';
-const getQBitDownloadPath = () => qbitOption?.getValue()?.downloadPath ?? '/mnt/media/Downloads';
+const getQBitDownloadPath = () => qbitOption?.getValue()?.savePath ?? '/mnt/media/Downloads';
 
 const qbitApi = {
     addTorrent: '/api/v2/torrents/add',

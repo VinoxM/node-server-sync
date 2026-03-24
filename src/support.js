@@ -2,6 +2,7 @@ import { join as pathJoin } from "path";
 import { initializeDB, getSqliteDB, getRedisClient } from "./database/index.js";
 import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./logger/index.js";
 import { createContext } from "./context/index.js";
+import { evaluate } from 'mathjs';
 
 const globalUtils = {
     notNull: obj => obj !== undefined && obj !== null,
@@ -82,6 +83,16 @@ export async function setupGlobal(rootPath) {
     await reloadApplicationContext()
     globalThis.__env = {
         get: (key, defaultValue) => applicationContext.getProperty(key, defaultValue),
+        getEvaluate: (key, defaultValue) => {
+            const value = applicationContext.getProperty(key, defaultValue)
+            try {
+                return evaluate(value)
+            } catch (err) {
+                __log.error(`[Environment] Get '${key}' evaluate failed: '${value}'. `
+                    + `Use default value: ${defaultValue}`, err?.message ?? err)
+                return defaultValue
+            }
+        },
         subscribe: (sub) => applicationContext.addListen(sub),
         unsubscribe: (sub) => applicationContext.removeListen(sub),
     }

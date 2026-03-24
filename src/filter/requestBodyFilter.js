@@ -22,16 +22,7 @@ const PARSE_STRATEGIES = {
 };
 
 const defaultRequestBodyLimit = 5 * 1024 * 1024;
-const requestBodyLimit = new GetterContextSubscribe('RequestBodyLimit', () => {
-    const envRequestBodyLimit = __env.get('api.requestBodyLimit', defaultRequestBodyLimit)
-    try {
-        return evaluate(envRequestBodyLimit)
-    } catch (err) {
-        __log.error(`Evaluate environment 'api.requestBodyLimit' failed: '${envRequestBodyLimit}'. `
-            + `Use default requestBodyLimit: ${defaultRequestBodyLimit}`, err?.message ?? err)
-        return defaultRequestBodyLimit
-    }
-});
+const requestBodyLimit = new GetterContextSubscribe('RequestBodyLimit', () => __env.getEvaluate('api.requestBodyLimit', defaultRequestBodyLimit));
 
 export default {
     order: -60,
