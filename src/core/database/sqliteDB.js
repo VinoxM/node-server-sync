@@ -54,7 +54,7 @@ export class SqliteDB {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
             }
             const context = Tracer.getStore()
-            db.run(sql, params || [], (err) => {
+            db.run(sql, params || [], function (err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -247,7 +247,7 @@ class TransactionSqliteDB {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
             }
             const context = Tracer.getStore()
-            db.run(sql, params || [], (err) => {
+            db.run(sql, params || [], function (err) {
                 if (err) {
                     reject(err);
                 } else {
