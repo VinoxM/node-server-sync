@@ -29,7 +29,6 @@ export default {
         let sql = 'SELECT rss_subs_id as rssSubscribeId FROM user_rss_favorites WHERE rss_subs_id IN ('
         const arr = Array.from(subsIds)
         sql += new Array(arr.length).fill('?').join(',') + ')'
-        const params = arr
-        return __sqliteDB.selectAll(sql, params, null, dbName)
+        return __sqliteDB.selectAll(sql, arr, null, dbName)
     }
 }

@@ -57,7 +57,7 @@ async function getQbitApi(urlPath, params) {
 
 export async function addTorrent(torrent, savePath = 'Anime', category = 'Anime') {
     if (typeof torrent !== 'string') {
-        throwMessage('Invalid torrent.')
+        __throwMessage('Invalid torrent.')
     }
     const qbitDownloadPath = getQBitDownloadPath()
     const uuid = generateUUID()
@@ -78,7 +78,7 @@ export async function addTorrent(torrent, savePath = 'Anime', category = 'Anime'
         })
     } else {
         __log.error('add qbitorrent task failed.', addResponse);
-        throwMessage('add qbitorrent task failed.')
+        __throwMessage('add qbitorrent task failed.')
     }
 }
 

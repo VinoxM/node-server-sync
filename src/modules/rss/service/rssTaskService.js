@@ -299,19 +299,7 @@ export async function deleteTask(taskId) {
     if (!canDeleteStatus.includes(task?.status)) {
         __throwMessage('Cannot delete task.')
     }
-    const uuid = task.uuid
-    let hash = task.hash
-    const info = await torrentInfo(uuid)
-    if (!info) {
-        __log.warn(`[RssTask] Task torrent info[${task.id}] not found.`)
-    } else if (!TORRENT_STOPPED_STATE.includes(info.state)) {
-        __log.error(`[RssTask] Cannot delete torrent task[${task.id}]. Cause torrent state[${info.state}] not stopped.`)
-        __throwMessage('Task state not stopped.')
-    } else {
-        hash ??= info.hash
-        await deleteTag(uuid)
-        await deleteTorrent(hash, true)
-    }
+    await removeCompleteTask(task)
     return rssTaskRep.deleteOneById(taskId)
 }
 
@@ -322,7 +310,7 @@ export async function pauseTask(taskId) {
     }
     const task = tasks[0]
     if (!task.hash) {
-       __throwMessage('Invalid task hash.')
+        __throwMessage('Invalid task hash.')
     }
     await stopTorrent([task.hash])
 }
@@ -344,6 +332,11 @@ export async function completeTask(taskId) {
     if (!canCompleteStatus.includes(task?.status)) {
         __throwMessage('Cannot complete task.')
     }
+    await removeCompleteTask(task)
+    return rssTaskRep.updateStatusById(taskId, TASK_STATUS.COMPLETE)
+}
+
+async function removeCompleteTask(task) {
     const uuid = task.uuid
     let hash = task.hash
     const info = await torrentInfo(uuid)
@@ -357,5 +350,4 @@ export async function completeTask(taskId) {
         await deleteTag(uuid)
         await deleteTorrent(hash, true)
     }
-    return rssTaskRep.updateStatusById(taskId, TASK_STATUS.COMPLETE)
 }

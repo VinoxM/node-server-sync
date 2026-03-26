@@ -1,6 +1,10 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
-import { MEDIA_ALLOW_CIDR as allowCIDR, MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
+import {
+    MEDIA_ALLOW_CIDR as allowCIDR,
+    MEDIA_ALLOW_HOSTS as allowHosts,
+    MEDIA_ARIA2_TASK_STATUS
+} from "../../../modules/media/constants/mediaConst.js"
 import { updateMinioStatus } from "../../../modules/media/service/mediaMinioService.js"
 import { pauseOrResumeTask, updateTaskStatus } from "../../../modules/media/service/mediaTaskService.js"
 

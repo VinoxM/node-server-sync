@@ -6,6 +6,7 @@ import rssCopyrightRep from "../../../modules/rss/repository/rssCopyrightRep.js"
 import rssEpisodeRep from "../../../modules/rss/repository/rssEpisodeRep.js";
 import rssLinkRep from "../../../modules/rss/repository/rssLinkRep.js";
 import rssRep from "../../../modules/rss/repository/rssRep.js";
+import rssTaskRep from "../../../modules/rss/repository/rssTaskRep.js";
 import rssTrackerRep from "../../../modules/rss/repository/rssTrackerRep.js";
 
 const { GET } = apiMethodConst
@@ -102,7 +103,7 @@ export default {
             }
             return rssRep.selectRssResultsByPidV2(id).then(({ data }) => {
                 const tasksArr = Array.from(tasks ?? [])
-                const results = Array.from(data).map(item => {
+                subscribe.results = Array.from(data).map(item => {
                     const torrent = needTr ? [item.torrent, (item.tracker ?? '').split(',').map(t => t in trackers ? trackers[t] : '').join('&tr=')].join('&tr=') : item.torrent;
                     const { tracker, ...result } = item;
                     result.torrent = 'magnet:?xt=urn:btih:' + torrent;
@@ -113,7 +114,6 @@ export default {
                     }
                     return result;
                 });
-                subscribe.results = results;
                 subscribe.link = link;
                 subscribe.copyright = copyright;
                 if (isAuthed) {

@@ -71,7 +71,7 @@ export class AsyncExecutor {
                             this.#running--;
                             this.#status = -2;
                             if (err === completeError) {
-                                this.#onSuccess();
+                                this.#onSuccess?.();
                             } else if (this.#onError) this.#onError(err);
                         })
                 }

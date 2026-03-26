@@ -4,7 +4,6 @@ import rssResultRep from "../../../modules/rss/repository/rssResultRep.js";
 import { addRssTask, completeTask, deleteTask, pauseTask, queryTasks, queryTaskTorrentInfo, resumeTask, updateTaskStatus } from "../../../modules/rss/service/rssTaskService.js";
 import { concatTracker } from "../../../modules/rss/service/rssTrackerService.js";
 
-
 const { POST } = apiMethodConst;
 
 const needSecret = () => "mAou5820.rssTask";

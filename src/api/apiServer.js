@@ -111,15 +111,13 @@ class ApiServer {
     #initWebSocket() {
         const channels = this.#wsChannels
         if (__isEmptyArray(channels)) return;
-        const app = http.createServer(this.#server);
-        this.#wsServer = app;
-        const wsServer = this.#wsServer;
+        this.#wsServer = http.createServer(this.#server);
         const getChannel = (pathname) => {
             let result = null;
             channels.some(con => con.path === pathname && (result = con.server, true));
             return result;
         }
-        wsServer.on('upgrade', (request, socket, head) => {
+        this.#wsServer.on('upgrade', (request, socket, head) => {
             const baseURL = request.protocol + '://' + request.headers.host + '/';
             const pathname = new URL(request.url, baseURL).pathname;
             const channel = getChannel(pathname);

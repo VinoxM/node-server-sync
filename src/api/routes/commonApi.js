@@ -4,7 +4,6 @@ import { ipBlocker } from "../../core/instance/ipBlocker.js";
 import { tokenBucket } from "../../core/instance/tokenBucket.js";
 import { reloadApplicationContext } from "../../support.js";
 
-
 const { POST, GET } = apiMethodConst;
 
 const needSecret = () => "mAou5820.common"

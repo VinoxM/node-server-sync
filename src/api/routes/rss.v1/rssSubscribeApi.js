@@ -181,7 +181,7 @@ export default {
                 fs.mkdirSync(backDir)
             }
             fs.copyFileSync(__join(dbPath, 'rss.db'), __join(backDir, 'rss_' + new Date().getTime() + '.db'))
-            return sqliteDB.getTransactionDB((db) => {
+            return __sqliteDB.getTransactionDB((db) => {
                 return new Promise((resolve, reject) => {
                     new AsyncExecutor(async () => {
                         try {

@@ -17,7 +17,7 @@ const callbackIfKeyAbsent = (callback, data) => {
     }
     for (const k in insertPropertyMap) {
         const key = insertPropertyMap[k];
-        if (isNotBlank(data[key])) {
+        if (__isNotBlank(data[key])) {
             callback(key, k)
         }
     }

@@ -48,7 +48,7 @@ export async function createVideo(videoObj) {
     const { title, author, category, uploadTime } = videoObj
     // validate category
     const categoryExists = await categoriesRep.selectOneByName(category)
-    categoryExists || ____throwMessage('Category not exists.')
+    categoryExists || __throwMessage('Category not exists.')
     const categoryId = categoryExists.id
     const uuid = generateUUID()
     let uniqueId = videoObj.uniqueId || uuid

@@ -94,7 +94,7 @@ class TOTP {
         const timeStep = options.timeStep ?? defaultTOTPOptions.timeStep;
 
         for (let t = currentTimestamp - tolerance * timeStep; t <= currentTimestamp + tolerance * timeStep; t += timeStep) {
-            if (TOTP.generate(t, options) === token) {
+            if (TOTP.#generate(t, options) === token) {
                 return true;
             }
         }

@@ -8,9 +8,8 @@ export async function registerAccount(uname, password) {
         if (rows === 1) {
             return;
         }
-    } else {
-        __throwMessage('User already exists.', -1)
     }
+    __throwMessage('User already exists.', -1)
 }
 
 export async function resetPassword(uname, password, newPassword) {

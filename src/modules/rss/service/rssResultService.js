@@ -49,7 +49,7 @@ export async function addManyResult(resultArr) {
 }
 
 export async function editOneResult(result) {
-    const trackers = torrentHandler(result);
+    const trackers = expandTorrentTracker(result);
     const trackerArr = await saveTrackers(trackers);
     handleRssResultProperties(result, { trackerArr });
     return rssResultRep.updateOne(result);

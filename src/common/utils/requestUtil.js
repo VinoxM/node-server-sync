@@ -1,5 +1,5 @@
 export function getRequestRealIp(req) {
-if (req) {
+    if (req) {
         const forwardKey = "X-Forwarded-For"
         const forwards = req?.get?.(forwardKey) || req?.headers?.[forwardKey.toLocaleLowerCase()] || '';
         if (forwards && forwards !== "") {
