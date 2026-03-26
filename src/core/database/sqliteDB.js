@@ -54,15 +54,15 @@ export class SqliteDB {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
             }
             const context = Tracer.getStore()
-            db.run(sql, params || [], (err) => Tracer.run(context, () => {
+            db.run(sql, params || [], (err) => {
                 if (err) {
                     reject(err);
                 } else {
                     const res = { rows: this.changes, lastId: this.lastID };
-                    printer(`<=== Total: ${res.rows}`)
+                    Tracer.run(context, () => printer(`<=== Total: ${res.rows}`));
                     resolve(res);
                 }
-            }))
+            })
         });
     }
 
@@ -247,15 +247,15 @@ class TransactionSqliteDB {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
             }
             const context = Tracer.getStore()
-            db.run(sql, params || [], (err) => Tracer.run(context, () => {
+            db.run(sql, params || [], (err) => {
                 if (err) {
                     reject(err);
                 } else {
                     const res = { rows: this.changes, lastId: this.lastID };
-                    printer(`<=== Total: ${res.rows}`)
+                    Tracer.run(context, () => printer(`<=== Total: ${res.rows}`));
                     resolve(res);
                 }
-            }))
+            })
         });
     }
 
