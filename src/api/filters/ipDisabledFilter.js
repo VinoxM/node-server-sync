@@ -12,7 +12,7 @@ export default {
         } else {
             const url = req.path;
             const realIp = getRequestRealIp(req);
-            if (ipBlockIgnoreRegex.getValue().some(r => r.test(url)) || checkIp(realIp)) {
+            if (ipBlockIgnoreRegex.getValue().some(r => r.test(url)) || ipBlocker.check(realIp)) {
                 resolve({ req, res, config });
             } else {
                 req.destroy();
