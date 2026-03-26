@@ -44,7 +44,7 @@ class Schedule {
         this.#schedule[scheduleKey] = {
             name: jobName,
             job: nodeSchedule.scheduleJob(scheduleCorn[scheduleKey]?.corn || defaultCorn,
-                () => Tracer.runWithPrefix(`JOB_${jobName.toLocaleUpperCase()}`, () => {
+                () => Tracer.runWithPrefix(`JOB_${String(jobName).split(' ').map(s => s.charAt(0)).filter(Boolean).join('').toLocaleUpperCase()}`, () => {
                     !ignoreOutput && __log.info(`[Schedule] Job Execute: ${jobName}`);
                     executeJob();
                 })),
