@@ -4,6 +4,7 @@ import { pushNotification } from '../../api/sockets/notification.js';
 import { pushRssSubscription } from '../../api/sockets/rssSubscription.js';
 import { concatTrackers } from '../../modules/rss/service/rssTrackerService.js';
 import { addRssTasksFromFavorites } from '../../modules/rss/service/rssTaskService.js';
+import { updateRssSubscribe } from '../../modules/rss/service/rssSubscribeService.js';
 
 const { selectRssSubscribeCountsWithoutFin, selectRssSubscribeByIdWithLimited } = rssRep;
 const { selectAll } = rssTrackerRep;

@@ -13,7 +13,7 @@ class Schedule {
         const scheduleCorn = getScheduleConfig();
         if (!scheduleCorn[scheduleKey]?.enable) return;
         const resolve = () => (!ignoreOutput && __log.info(`[Schedule] Job Finished: ${jobName}.`));
-        const reject = (ex, errCallback) => (error(`[Schedule] Job Execute error: ${jobName}. Cause: ${ex.msg || ex.message}`), __isFunction(errCallback) && errCallback());
+        const reject = (ex, errCallback) => (__log.error(`[Schedule] Job Execute error: ${jobName}. Cause: ${ex.msg || ex.message}`), __isFunction(errCallback) && errCallback());
         const executeJob = () => {
             const doJob = (errCallback) => {
                 try {
