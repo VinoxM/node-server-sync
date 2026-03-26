@@ -13,3 +13,4 @@ package-temp.json
 *.db-shm
 *.db-wal
 resource/application-dev.yaml
+jsconfig.json
