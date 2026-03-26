@@ -1,0 +1,52 @@
+import apiMethodConst from '../../../common/constants/apiMethodConst.js';
+import { checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
+import { decryptionBodyKeys } from '../../../common/utils/preHandleUtil.js';
+import { getRequestTokenHash } from '../../../common/utils/requestUtil.js';
+import { registerAccount, userLogin, userLogout } from '../../../modules/account/service/accountService.js';
+
+const { POST } = apiMethodConst
+
+const needSecret = () => 'mAou5820.authorization'
+
+export default {
+    basePath: "/auth",
+    "/register": {
+        disabled: true,
+        method: POST,
+        needSecret,
+        preCheck: req => checkBodyKeysNotBlank(req, ['uname', 'password']),
+        preHandle: req => decryptionBodyKeys(req, ['password']),
+        callback: async req => registerAccount(req.body.uname, req.body.password)
+
+    },
+    '/resetPassword': {
+        disabled: true,
+        method: POST,
+        needSecret,
+        preCheck: req => checkBodyKeysNotBlank(req, ['uname', 'password', 'newPassword']),
+        preHandle: req => decryptionBodyKeys(req, ['password', 'newPassword']),
+        callback: async req => registerAccount(req.body.uname, req.body.password, req.body.newPassword)
+    },
+    '/login': {
+        method: POST,
+        needSecret,
+        preCheck: req => checkBodyKeysNotBlank(req, ['uname', 'password']),
+        preHandle: req => decryptionBodyKeys(req, ['password']),
+        callback: async req => userLogin(req.body.uname, req.body.password)
+    },
+    '/logout': {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        callback: req => {
+            const hash = getRequestTokenHash(req)
+            return userLogout(hash)
+        }
+    },
+    '/checkAuth': {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        callback: () => "Ok"
+    }
+}

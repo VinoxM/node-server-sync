@@ -1,0 +1,35 @@
+import fs from 'fs';
+import iconv from 'iconv-lite';
+import clashConst from '../constants/clashFileNameConst.js';
+import { getSubscribeInfo } from './clashSubscribeService.js';
+
+const latestClashFileName = clashConst.LATEST_FILE_NAME
+
+export const getClashFileContent = () => {
+    return new Promise((resolve, reject) => {
+        const persistencePath = __env.get('clash.path.persistence', '@/')
+        const filePath = __join(persistencePath, latestClashFileName);
+        if (fs.existsSync(filePath)) {
+            const result = {
+                headers: {},
+                content: null
+            }
+            const subInfo = getSubscribeInfo()
+            if (!__isBlank(subInfo)) {
+                result.headers['subscription-userinfo'] = subInfo
+            }
+            fs.readFile(filePath, (err, data) => {
+                if (err) {
+                    __log.error('Read clash config file failed.', err)
+                    reject({ msg: 'Read clash config file failed.', status: 500 });
+                } else {
+                    const buf = Buffer.from(data);
+                    result.content = iconv.decode(buf, 'utf8');
+                    resolve(result);
+                }
+            })
+        } else {
+            reject({ msg: 'Clash config file not found.', status: 404 })
+        }
+    })
+}

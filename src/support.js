@@ -1,44 +1,44 @@
 import { join as pathJoin } from "path";
-import { initializeDB, getSqliteDB, getRedisClient } from "./database/index.js";
-import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./logger/index.js";
-import { createContext } from "./context/index.js";
+import { initializeDB, getSqliteDB, getRedisClient } from "./core/database/index.js";
+import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./core/logger/index.js";
+import { createContext } from "./core/context/index.js";
 import { evaluate } from 'mathjs';
 
 const globalUtils = {
-    notNull: obj => obj !== undefined && obj !== null,
-    isBlank: (str) => {
+    __notNull: obj => obj !== undefined && obj !== null,
+    __isBlank: (str) => {
         return str === null || str === undefined || ("" + str).trim() === "";
     },
-    isAllBlank: (...args) => {
-        return args.every(str => globalUtils.isBlank(str))
+    __isAllBlank: (...args) => {
+        return args.every(str => globalUtils.__isBlank(str))
     },
-    isAnyBlank: (...args) => {
-        return args.some(str => globalUtils.isBlank(str))
+    __isAnyBlank: (...args) => {
+        return args.some(str => globalUtils.__isBlank(str))
     },
-    isBlankOr: (str, elseStr) => {
+    __isBlankOr: (str, elseStr) => {
         if (str === null || str === undefined || ("" + str).trim() === "") {
             return elseStr;
         }
         return str;
     },
-    isNotBlank: (str) => {
+    __isNotBlank: (str) => {
         return str !== null && str !== undefined && ("" + str).trim() !== "";
     },
-    isNotEmptyArray: (arr) => {
+    __isNotEmptyArray: (arr) => {
         return arr !== null && arr !== undefined && Array.isArray(arr) && arr.length > 0;
     },
-    isEmptyArray: (arr) => {
+    __isEmptyArray: (arr) => {
         return arr === null || arr === undefined || !Array.isArray(arr) || arr.length === 0;
     },
-    throwError: (reason) => {
+    __throwError: (reason) => {
         throw new Error(reason);
     },
-    throwMessage: (message, code = -1, status = 200) => {
+    __throwMessage: (message, code = -1, status = 200) => {
         throw { msg: message, code, status };
     },
-    isFunction: func => func && typeof func === 'function',
-    isPromise: obj => obj && obj instanceof Promise,
-    isError: ex => ex instanceof Error
+    __isFunction: func => func && typeof func === 'function',
+    __isPromise: obj => obj && obj instanceof Promise,
+    __isError: ex => ex instanceof Error
 }
 
 function getProcessArgs() {
@@ -101,8 +101,8 @@ export async function setupGlobal(rootPath) {
 
     // load database
     await initializeDB();
-    globalThis.sqliteDB = getSqliteDB();
-    globalThis.redisClient = getRedisClient();
+    globalThis.__sqliteDB = getSqliteDB();
+    globalThis.__redisClient = getRedisClient();
 }
 
 export async function reloadApplicationContext() {

@@ -1,22 +1,20 @@
 import { setupGlobal } from './support.js';
 import { join } from 'path';
-import { startServer, setupSocketChannels } from './api/index.js';
-import { startTokenBucket } from './common/apiTokenBucket.js';
-import { startIpBlocker } from './common/apiIpBlock.js';
-import { startSchedule } from './schedule/index.js';
-import { getSocketChannels } from './sockets/index.js';
-import { initializeAuthTokenStore } from './handler/account/authHandler.js';
-import { sseInitialization } from './sse/index.js';
-import { aria2SocketInitialization } from './instance/aria2Socket.js';
+import { startServer } from './api/index.js';
+import { startSchedule } from './jobs/schedule/index.js';
+import { aria2SocketInitialize } from './core/instance/aria2Socket.js';
+import { sseInitialize } from './modules/socket/sseStorage.js';
+import { initializeAuthTokenStore } from './modules/authorization/authorizationService.js';
+import { ipBlocker } from './core/instance/ipBlocker.js';
+import { tokenBucket } from './core/instance/tokenBucket.js';
 
 (async () => {
     await setupGlobal(join(import.meta.dirname, "../"));
     initializeAuthTokenStore();
     await startServer();
-    await getSocketChannels().then(setupSocketChannels);
-    aria2SocketInitialization();
-    sseInitialization();
-    startTokenBucket();
-    startIpBlocker();
+    aria2SocketInitialize();
+    sseInitialize();
+    ipBlocker.start();
+    tokenBucket.start();
     startSchedule();
 })();
