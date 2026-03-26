@@ -136,7 +136,7 @@ class ApiServer {
         this.#initApiServer();
         this.#initWebSocket();
         const port = this.#serverConf.port;
-        const app = this.#server;
+        const app = this.#wsServer ?? this.#server;
         return new Promise(resolve => {
             app.listen(port, () => {
                 this.#ready = true
