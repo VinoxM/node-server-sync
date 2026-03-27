@@ -25,21 +25,34 @@ export async function checkVideoFilterRules(body) {
     const results = []
     const cache = await getCacheByCategory(categoryId)
     const { whitelist, blacklist } = cache
+    const uniqueIds = []
     for (const rule of rules) {
         const { author, uniqueId } = rule
-        const result = { downloaded: false, blocked: false, allowed: false }
+        const result = { downloaded: null, blocked: false, allowed: false }
         if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
             result.allowed = true
         } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
             result.blocked = true
         }
-        const authorInfo = await authorsRep.selectOneByName(author, categoryId)
-        const authorId = authorInfo?.id
-        const exists = await videosRep.selectForExists(categoryId, authorId, uniqueId)
-        exists && (result.downloaded = true)
+        if (__isNotBlank(uniqueId)) {
+            uniqueIds.push(uniqueId)
+        } else {
+            result.downloaded = false
+        }
         results.push(result)
     }
-    return results
+    const videos = []
+    if (uniqueIds.length > 0) {
+        const data = await videosRep.selectByUniqueIds(uniqueIds, categoryId).then(({ data }) => data)
+        videos.push(...data)
+    }
+    return results.map((r, i) => {
+        if (r.downloaded === null) {
+            const { author, uniqueId } = rules[i]
+            r.downloaded = videos.some(v => (__isNotBlank(author) ? v.authorName === author : true) && v.uniqueId === uniqueId)
+        }
+        return r
+    })
 }
 
 export async function handleFilterRule(body, isAdd = true) {

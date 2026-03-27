@@ -18,6 +18,27 @@ export default {
         }
         return authorInfo
     },
+    selectByNames: async (authors, categoryId) => {
+        if (__isEmptyArray(authors)) return []
+        const result = new Map()
+        const params = []
+        if (authorCache.has(categoryId)) {
+            const categoryCache = authorCache.get(categoryId)
+            authors.forEach(author => categoryCache?.has?.(author) ? result.set(author, { id: categoryCache.get(author), name: author }) : params.push(author))
+        } else {
+            params.push(...authors)
+        }
+        if (params.length > 0) {
+            const sql = 'SELECT id, name FROM authors WHERE category_id=? AND name IN(' + params.map(() => '?').join(',') + ')'
+            const { data } = await __sqliteDB.selectAll(sql, [categoryId, ...params], null, dbName)
+            if (__isNotEmptyArray(data)) {
+                const authors = authorCache.get(categoryId) ?? new Map()
+                data.forEach(d => (result.set(d.name, d), authors.set(d.name, d.id)))
+                authorCache.set(categoryId, authors)
+            }
+        }
+        return Array.from(result.values())
+    },
     selectOneById: id => {
         const sql = 'SELECT id, category_id, name FROM authors WHERE id=?'
         return __sqliteDB.selectOne(sql, [id], null, dbName)

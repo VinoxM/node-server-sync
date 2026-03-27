@@ -1,10 +1,19 @@
+import { HybridLRUCache } from "../../../core/infra/extendMap.js"
+
 const dbName = 'media'
 const enablePrint = { print: true }
 
+const nameCache = new HybridLRUCache()
+
 export default {
-    selectOneByName: category => {
+    selectOneByName: async category => {
+        if (nameCache.has(category)) {
+            return { id: nameCache.get(category), name: category }
+        }
         const sql = 'SELECT id, name FROM categories WHERE name=?'
-        return __sqliteDB.selectOne(sql, [category], null, dbName)
+        const categoryObj = await __sqliteDB.selectOne(sql, [category], null, dbName)
+        categoryObj && nameCache.set(category, categoryObj.id);
+        return categoryObj
     },
     selectOneById: id => {
         const sql = 'SELECT id, name FROM categories WHERE id=?'
@@ -14,9 +23,18 @@ export default {
         const sql = 'INSERT INTO categories(name) VALUES(?)'
         return __sqliteDB.insert(sql, [category], null, dbName)
     },
-    deleteOne: categoryId => {
-        const sql = `DELETE FROM categories WHERE id=?`
-        return __sqliteDB.delete(sql, [categoryId], null, dbName)
+    deleteOne: async categoryId => {
+        const result = { rows: 0 }
+        const category = await __sqliteDB.selectOne('SELECT id, name FROM categories WHERE id=?', [id], null, dbName)
+        if (category) {
+            const sql = `DELETE FROM categories WHERE id=?`
+            const res = await __sqliteDB.delete(sql, [categoryId], null, dbName)
+            if (res?.rows > 0) {
+                nameCache.delete(category.name)
+                result.rows = res.rows
+            }
+        }
+        return result
     },
     selectAll: () => {
         const sql = 'SELECT id,name FROM categories'

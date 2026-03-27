@@ -1,28 +1,54 @@
-import { MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js"
+import { MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js"
+import { HybridLRUCache } from "../../../core/infra/extendMap.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
 
+const existsCache = new HybridLRUCache(1000);
+const existsTtl = 1000 * 60 * 6
+function generateExistsKey(categoryId, authorId, uniqueId) {
+    return `${categoryId}::${authorId || 'null'}::${uniqueId || 'null'}`
+}
+function clearExistsCache(categoryId, authorId, uniqueId) {
+    existsCache.delete(generateExistsKey(categoryId, authorId, uniqueId))
+    existsCache.delete(generateExistsKey(categoryId, authorId, null))
+    existsCache.delete(generateExistsKey(categoryId, null, uniqueId))
+    existsCache.delete(generateExistsKey(categoryId, null, null))
+}
+
 export default {
-    selectForExists: (categoryId, authorId, uniqueId) => {
-        let sql = `SELECT COUNT(*) count FROM videos WHERE category_id=?`
-        const params = [categoryId]
+    selectForExists: async (categoryId, authorId, uniqueId) => {
+        const existsKey = generateExistsKey(categoryId, authorId, uniqueId)
+        if (existsCache.has(existsKey)) {
+            return existsCache.get(existsKey)
+        }
+        let sql = `SELECT EXISTS(SELECT 1 FROM videos WHERE category_id=?`;
+        const params = [categoryId];
         if (authorId) {
-            sql += ` AND author_id=?`
-            params.push(authorId)
+            sql += ` AND author_id=?`;
+            params.push(authorId);
         }
         if (uniqueId) {
-            sql += ` AND unique_id=?`
-            params.push(uniqueId)
+            sql += ` AND unique_id=?`;
+            params.push(uniqueId);
         }
-        sql += ` AND status!=?`
-        params.push(MEDIA_VIDEO_STATUS.REMOVED)
-        return __sqliteDB.selectOne(sql, params, null, dbName).then(({ count }) => count)
+        sql += `) as result`;
+        const exists = await __sqliteDB.selectOne(sql, params, null, dbName).then(({ result }) => !!result)
+        existsCache.set(existsKey, exists, existsTtl)
+        return exists
     },
-    insertOne: video => {
+    selectByUniqueIds: async (uniqueIds, categoryId) => {
+        const sql = 'SELECT v.id,v.author_id,a.name AS authorName,v.unique_id FROM videos v'
+            + ' LEFT JOIN authors a IN a.id=v.author_id '
+            + ' WHERE v.category_id=? AND v.unique_id IN(' + new Array(uniqueIds.length).fill('?').join(',') + ')'
+        return __sqliteDB.selectAll(sql, [categoryId, ...uniqueIds], null, dbName)
+    },
+    insertOne: async video => {
         const sql = 'INSERT INTO videos(unique_id, title, category_id, author_id, upload_time, status, create_time) VALUES(?,?,?,?,?,?,?)'
         const params = [video.uniqueId, video.title, video.categoryId, video.authorId, video.uploadTime, video.status, new Date()]
-        return __sqliteDB.insert(sql, params, null, dbName)
+        const res = await __sqliteDB.insert(sql, params, null, dbName)
+        res.rows > 0 && clearExistsCache(video.categoryId, video.authorId, video.uniqueId)
+        return res
     },
     updateMinioIdById: (videoId, minioId, type) => {
         const columnName = MEDIA_TYPE_DESCRIPTION[type] + '_id'
@@ -43,9 +69,16 @@ export default {
         const sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
         return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
-    deleteOne: videoId => {
-        const sql = 'DELETE FROM videos WHERE id=?'
-        return __sqliteDB.delete(sql, [videoId], null, dbName)
+    deleteOne: async videoId => {
+        const result = { rows: 0 }
+        const video = await __sqliteDB.selectOne('SELECT unique_id, author_id, category_id FROM videos WHERE id=?', [videoId], null, dbName)
+        if (video) {
+            const sql = 'DELETE FROM videos WHERE id=?'
+            const res = await __sqliteDB.delete(sql, [videoId], null, dbName)
+            res.rows > 0 && clearExistsCache(video.categoryId, video.authorId, video.uniqueId)
+            result.rows = res.rows
+        }
+        return result
     },
     selectForSearch: (title, categoryId, authorId, tagNames, status, currentPage, pageSize) => {
         let sql = `SELECT `
@@ -90,9 +123,6 @@ export default {
         if (status) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
-        } else {
-            sqlConcat.push(' tv.status != ?');
-            params.push(MEDIA_VIDEO_STATUS.REMOVED);
         }
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
@@ -141,9 +171,6 @@ export default {
         if (status) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
-        } else {
-            sqlConcat.push(' tv.status != ?');
-            params.push(MEDIA_VIDEO_STATUS.REMOVED);
         }
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
