@@ -39,7 +39,7 @@ export default {
     },
     selectByUniqueIds: async (uniqueIds, categoryId) => {
         const sql = 'SELECT v.id,v.author_id,a.name AS authorName,v.unique_id FROM videos v'
-            + ' LEFT JOIN authors a IN a.id=v.author_id '
+            + ' LEFT JOIN authors a ON a.id=v.author_id '
             + ' WHERE v.category_id=? AND v.unique_id IN (' + new Array(uniqueIds.length).fill('?').join(',') + ')'
         return __sqliteDB.selectAll(sql, [categoryId, ...uniqueIds], null, dbName)
     },
