@@ -34,7 +34,7 @@ class MinioClient extends ContextSubscribe {
         this.#defaultLabel = minioOption.defaultLabel ?? 'default'
         for (const minioOpt of minioOption.clients) {
             const label = minioOpt.label ?? this.#defaultLabel
-            const { matcher = '*', expiry = '2 * 60 * 60', defaultBucket = 'default', bucketMapping = [], host, port } = minioOpt
+            const { matcher = '*', expiry = '2 * 60 * 60', defaultBucket = 'default', bucketMapping = [], host, port, hostname } = minioOpt
             const options = {
                 endPoint: host,
                 port,
@@ -46,7 +46,7 @@ class MinioClient extends ContextSubscribe {
                 bucketMapping.forEach(({ bucket, category }) => this.#bucketMapping.set(bucket, { category, defaultBucket, host, port }))
                 const client = new Minio.Client(options)
                 this.#client.set(label, client)
-                this.#options.set(label, { matcher, expiry: tryEvaluateExpiry(expiry, label), host, port })
+                this.#options.set(label, { matcher, expiry: tryEvaluateExpiry(expiry, label), hostname })
                 __log.info(`[Minio] Minio client ready: ${label}.`)
             } catch (ex) {
                 __log.error(`[Minio] Minio client connect failed: ${label}.`, ex.message ?? ex)
