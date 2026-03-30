@@ -6,6 +6,7 @@ import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
 import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { SSH_CMD_MINIO_COPY_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
+import { pushNotification } from "../../../api/sockets/notification.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
 
@@ -62,21 +63,11 @@ export async function deleteOneEpisode(episodeId) {
         return rssEpisodeRep.deleteOneById(episodeId)
     }
     // delete minio object first
-    let link = String(episode.link)
-    if (link.startsWith('/')) {
-        link = link.slice(1)
-    }
-    const index = link.indexOf('/')
-    if (index === -1) {
-        __throwMessage('Invalid episode minio link.')
-    }
-    const bucket = link.substring(0, index)
-    const objectName = link.substring(index + 1)
     const client = getMinioClient()
     if (!client?.ready()) {
         __throwMessage('Minio client not ready.')
     }
-    await client.deleteObject(bucket, objectName)
+    await client.deleteObject(episode.link)
     return rssEpisodeRep.deleteOneById(episodeId)
 }
 
@@ -145,12 +136,14 @@ export async function retryFailedEpisode(failedEpisodeId) {
     }
 
     // call minio move
-    const code = await executeRetryFailedEpisodeResolveCommand([filePath, minioLink])
+    const code = await executeRetryFailedEpisodeResolveCommand(filePath, minioLink)
 
     const statusMap = {
+        [-2]: 'Generate executor failed.',
+        [-1]: 'Minio client not ready.',
         1: "SUCCESS",
-        2: "FAILED",
-        255: "MISSING_PARAMS"
+        2: "Execute script failed.",
+        255: "Script execution missing params."
     }
 
     if (code === 1) {
@@ -162,13 +155,24 @@ export async function retryFailedEpisode(failedEpisodeId) {
     }
 }
 
-async function executeRetryFailedEpisodeResolveCommand(args) {
+async function executeRetryFailedEpisodeResolveCommand(filePath, minioLink) {
+    const client = getMinioClient()
+    if (!client.ready()) {
+        logAndPushNotification(`Upload minio object failed. Cause client not ready.`)
+        return -1;
+    }
+    const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
     const executor = getSSHExecutor('fedora')
     if (!executor) {
-        __throwMessage('Generate executor failed.')
+        return -2
     }
-    const { code } = await executor.exec(SSH_CMD_MINIO_COPY_SCRIPT, args);
-    return code
+    try {
+        const { code } = await executor.exec(SSH_CMD_MINIO_COPY_SCRIPT, [filePath, suitableMinioLink]);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ssh script failed.', e.message ?? e)
+        return 2
+    }
 }
 
 export async function updateFailedEpisode(data) {
@@ -184,4 +188,9 @@ export async function deleteOneFailedEpisode(failedEpisodeId) {
         __throwMessage('Task exists, cannot delete.')
     }
     return rssEpisodeRep.deleteOneFailedById(failedEpisodeId)
+}
+
+function logAndPushNotification(message) {
+    __log.error(message)
+    pushNotification(message)
 }

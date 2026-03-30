@@ -7,6 +7,7 @@ import { sseInitialize } from './modules/socket/sseStorage.js';
 import { initializeAuthTokenStore } from './modules/authorization/authorizationService.js';
 import { ipBlocker } from './core/instance/ipBlocker.js';
 import { tokenBucket } from './core/instance/tokenBucket.js';
+import { initializeMinioClient } from './core/instance/minioClient.js';
 
 (async () => {
     await setupGlobal(join(import.meta.dirname, "../"));
@@ -17,4 +18,5 @@ import { tokenBucket } from './core/instance/tokenBucket.js';
     tokenBucket.start();
     await sseInitialize();
     await startSchedule();
+    initializeMinioClient();
 })();

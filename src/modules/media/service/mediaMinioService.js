@@ -189,10 +189,16 @@ async function uploadUrlToMinio(url, minioLink, lastId) {
 }
 
 async function executeSshScript(resourcePath, minioLink, script) {
+    const client = getMinioClient()
+    if (!client?.ready()) {
+        logAndPushNotification(`Upload minio object failed. Cause client not ready.`)
+        return -1
+    }
+    const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
     const executor = getSSHExecutor('fedora')
     if (!executor) return -2
     try {
-        const { code } = await executor.exec(script, [resourcePath, minioLink]);
+        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink]);
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e)
@@ -241,28 +247,18 @@ export async function deleteVideoMinio(minioId) {
 
 async function deleteMinioAndObject(minioLink, minioId) {
     __log.info(`[${minioId}] Ready to delete minio object: ${minioLink}`)
-    let link = String(minioLink)
-    if (link.startsWith('/')) {
-        link = link.slice(1)
-    }
-    const index = link.indexOf('/')
-    if (index === -1) {
-        logAndPushNotification(`[${minioId}] Invalid minio link: ${minioLink}`)
-        return
-    }
-    const bucket = link.substring(0, index)
-    const objectName = link.substring(index + 1)
     const client = getMinioClient()
     if (!client?.ready()) {
-        logAndPushNotification(`[${minioId}] Delete minio object failed. Cause client not ready.`)
+        logAndPushNotification(`Delete minio object failed. Cause client not ready.`)
         return
     }
-    await client.deleteObject(bucket, objectName)
+    await client.deleteObject(minioLink, err => logAndPushNotification(err.message ?? 'Unknown minio error.', minioId))
 }
 
-function logAndPushNotification(message) {
-    __log.error(message)
-    pushNotification(message)
+function logAndPushNotification(message, minioId) {
+    const msg = (__isNotBlank(minioId) ? `[${minioId}] ` : '') + `${message}`
+    __log.error(msg)
+    pushNotification(msg)
 }
 
 /** Support functions */
@@ -275,6 +271,30 @@ function generateUri(uri) {
 }
 
 function generateMinioLink(category, author, uniqueId, type, ext) {
+    const { defaultLabel, bucketMappings } = getMinioBucketMappings()
+    let minioBucket = null
+    for (const bucket in bucketMappings) {
+        const { category: categories } = bucketMappings[bucket]
+        if (categories?.includes(category)) {
+            minioBucket = bucket;
+            break;
+        }
+    }
+    minioBucket ??= bucketMappings[defaultLabel]?.defaultBucket
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
-    return `/media/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
+    return `/${minioBucket}/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
+}
+
+function getMinioBucketMappings() {
+    const client = getMinioClient()
+    client.ready() || __throwMessage('Minio not ready.')
+    const defaultLabel = client.getMinioDefaultLabel()
+    const bucketMappings = client.getMinioBucketMappings()
+    return { defaultLabel, bucketMappings }
+}
+
+export function getMinioClientMatchers() {
+    const client = getMinioClient()
+    client.ready() || __throwMessage('Minio not ready.')
+    return client.getMinioMatchers()
 }

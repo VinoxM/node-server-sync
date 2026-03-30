@@ -6,6 +6,7 @@ import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilterService.js"
 import { searchVideos } from "../../../modules/media/service/mediaVideoService.js"
+import { getMinioClientMatchers } from "../../../modules/media/service/mediaMinioService.js"
 
 const { POST } = apiMethodConst
 
@@ -53,5 +54,12 @@ export default {
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: req => checkVideoFilterRules(req.body)
+    },
+    "/getClientMatchers": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        callback: req => getMinioClientMatchers(req.body)
     }
 }
