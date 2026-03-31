@@ -4,6 +4,7 @@ logger:
 sqlite:
   defaultDB: rss
   dbPath: "@/db"
+  executionPath: "@/resource/execution"
 server:
   port: 8800
   cors: true

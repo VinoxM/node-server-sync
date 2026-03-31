@@ -51,6 +51,22 @@ export const checkHeaderKeyValue = (request, headerKey, expectValue, opts = {}) 
     ...opts
 })
 
+export const checkHeaderKeyNotBlank = (request, headerKey, opts = {}) => requestValidate(request, {
+    from: 'headers', valid: 'pattern', key: headerKey,
+    infoMessage: 'header key not blank',
+    errorMessage: 'Request header is blank',
+    errorCode: -2,
+    ...opts
+})
+
+export const checkHeaderKeyMatchIfPresent = (request, headerKey, matchers, opts = {}) => requestValidate(request, {
+    from: 'headers', valid: 'pattern', key: headerKey, args: [matchers],
+    infoMessage: 'header key match',
+    errorMessage: 'Request header verification failed',
+    errorCode: -2,
+    ...opts
+})
+
 // query
 export const checkQueryKeyNotBlank = (request, queryKey, opts = {}) => requestValidate(request, {
     from: 'query', valid: 'notBlank', key: queryKey,

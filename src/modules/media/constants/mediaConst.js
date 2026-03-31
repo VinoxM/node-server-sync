@@ -48,3 +48,12 @@ export const MEDIA_ALLOW_HOSTS = [
     'server.vinoxm.name',
     '28000--main--code-server--maou864--coder.vinoxm.cloud'
 ]
+
+export const MEDIA_BILIVE_RECORD_EVENT_TYPE = {
+    SessionStarted: 0,
+    FileOpening: 1,
+    FileClosed: 2,
+    SessionEnded: 3,
+    StreamStarted: 4,
+    StreamEnded: 5
+}

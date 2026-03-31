@@ -3,7 +3,10 @@ import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constant
 import categoriesRep from "../../../modules/media/repository/categoriesRep.js"
 import authorsRep from "../../../modules/media/repository/authorsRep.js"
 import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
-import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
+import {
+    checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray,
+    checkBodyKeysNotBlank, checkHeaderKeyMatchIfPresent, checkHeaderKeyNotBlank, checkHeaderKeyValue
+} from "../../../common/utils/preCheckUtil.js"
 import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilterService.js"
 import { searchVideos } from "../../../modules/media/service/mediaVideoService.js"
 import { getMinioClientMatchers } from "../../../modules/media/service/mediaMinioService.js"
@@ -11,6 +14,21 @@ import { getMinioClientMatchers } from "../../../modules/media/service/mediaMini
 const { POST } = apiMethodConst
 
 const needSecret = () => "mAou5820.media.display"
+const insideDisplaySecret = "mAou5820.media.display-inside"
+
+function checkInsideHeader(req) {
+    checkHeaderKeyNotBlank(req, 'inside')
+    checkHeaderKeyMatchIfPresent(req, 'inside', '[0|1]')
+    if (parseInt(req.headers['inside']) === 0) {
+        checkHeaderKeyValue(req, 'secret', needSecret())
+    } else {
+        checkHeaderKeyValue(req, 'secret', insideDisplaySecret)
+    }
+}
+
+function isInsideRequest(req) {
+    return parseInt(req.headers['inside']) === 1
+}
 
 export default {
     basePath: "/media/display",
@@ -23,17 +41,18 @@ export default {
     },
     "/getCategories": {
         method: POST,
-        needSecret,
+        ignoreSecret: true,
         allowHosts,
         ignoreOutput: true,
-        callback: () => categoriesRep.selectAll().then(({ data }) => data)
+        preCheck: req => checkInsideHeader(req),
+        callback: () => categoriesRep.selectAll(req.headers['inside']).then(({ data }) => data)
     },
     "/getAuthors": {
         method: POST,
         needSecret,
         allowHosts,
         ignoreOutput: true,
-        preCheck: req => checkBodyKeyNotBlank(req, 'categoryId'),
+        preCheck: req => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: req => authorsRep.selectAuthorsByLatestUpload(req.body['categoryId'], req.body['authorName']).then(({ data }) => data)
     },
     "/getTags": {

@@ -286,6 +286,20 @@ class TransactionSqliteDB {
         })
     }
 
+    execute(sql) {
+        const db = this.#connection;
+        return new Promise((resolve, reject) => {
+            const context = Tracer.getStore()
+            db.all(sql, [], (err) => Tracer.run(context, () => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            }))
+        });
+    }
+
     beginTransaction(callback) {
         const this_ = this;
         const db = this.#connection;
