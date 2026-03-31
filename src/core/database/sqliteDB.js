@@ -290,7 +290,7 @@ class TransactionSqliteDB {
         const db = this.#connection;
         return new Promise((resolve, reject) => {
             const context = Tracer.getStore()
-            db.exec(sql, [], (err) => Tracer.run(context, () => {
+            db.exec(sql, (err) => Tracer.run(context, () => {
                 if (err) {
                     reject(err);
                 } else {
