@@ -27,9 +27,9 @@ export default {
         categoryObj && idCache.set(id, categoryObj);
         return categoryObj
     },
-    insertOne: category => {
-        const sql = 'INSERT INTO categories(name) VALUES(?)'
-        return __sqliteDB.insert(sql, [category], null, dbName)
+    insertOne: (category, inside) => {
+        const sql = 'INSERT INTO categories(name, type) VALUES(?, ?)'
+        return __sqliteDB.insert(sql, [category, inside], null, dbName)
     },
     deleteOne: async categoryId => {
         const result = { rows: 0 }

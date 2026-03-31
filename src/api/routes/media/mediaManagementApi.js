@@ -1,5 +1,6 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import {
+    checkBodyKeyMatch,
     checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank,
     checkBodyKeysNotNull
 } from "../../../common/utils/preCheckUtil.js"
@@ -71,8 +72,8 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        preCheck: req => checkBodyKeyNotBlank(req, 'category'),
-        callback: req => addCategory(req.body['category'])
+        preCheck: req => checkBodyKeysNotBlank(req, ['category', 'inside']) && checkBodyKeyMatch(req, 'inside', ['[0|1]']),
+        callback: req => addCategory(req.body['category'], req.body['inside'])
     },
     "/category/delete": {
         method: POST,

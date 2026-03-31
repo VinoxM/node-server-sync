@@ -131,12 +131,12 @@ export async function removeVideo(videoId) {
     await videoTagMapRep.deleteTags(videoId)
 }
 
-export async function addCategory(category) {
+export async function addCategory(category, inside) {
     const exists = await categoriesRep.selectOneByName(category)
     if (exists) {
         return exists.id
     }
-    const { lastId } = await categoriesRep.insertOne(category)
+    const { lastId } = await categoriesRep.insertOne(category, inside)
     return lastId
 }
 
