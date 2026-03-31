@@ -46,8 +46,8 @@ export default {
     },
     "/bilive/webhook": {
         method: POST,
-        allowCIDR,
         ignoreSecret: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
         callback: req => saveWebhookEvent(req.body)
     }
 }
