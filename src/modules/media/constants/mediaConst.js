@@ -38,6 +38,11 @@ export const MEDIA_TYPE_DESCRIPTION = {
     [MEDIA_VIDEO_MINIO_TYPE.COVER]: "cover"
 }
 
+export const MEDIA_CATEGORY_TYPE = {
+    NORMAL: 0,
+    INSIDE: 1
+}
+
 export const MEDIA_ALLOW_CIDR = [
     '192.168.31.0/24',
     '172.17.0.0/24',

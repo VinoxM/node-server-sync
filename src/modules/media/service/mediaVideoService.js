@@ -12,11 +12,18 @@ import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
-export async function searchVideos(body) {
+export async function checkCategoryExistsByInside(categoryId, isInside) {
+    const category = await categoriesRep.selectOneById(categoryId)
+    if (!category || category.type !== isInside) {
+        __throwMessage(`Invalid category.`)
+    }
+}
+
+export async function searchVideos(body, isInside) {
     const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [], status } = body
     const videoStatus = Object.values(MEDIA_VIDEO_STATUS).includes(status) ? String(status) : null
-    const dataList = await videosRep.selectForSearch(title, categoryId, authorId, tags, videoStatus, currentPage, pageSize).then(({ data }) => data)
-    const total = await videosRep.countForSearch(title, categoryId, authorId, tags, videoStatus)
+    const dataList = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, currentPage, pageSize).then(({ data }) => data)
+    const total = await videosRep.countForSearch(isInside, title, categoryId, authorId, tags, videoStatus)
     return {
         list: dataList,
         totalSize: total,

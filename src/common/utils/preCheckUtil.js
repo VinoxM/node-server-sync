@@ -52,7 +52,7 @@ export const checkHeaderKeyValue = (request, headerKey, expectValue, opts = {}) 
 })
 
 export const checkHeaderKeyNotBlank = (request, headerKey, opts = {}) => requestValidate(request, {
-    from: 'headers', valid: 'pattern', key: headerKey,
+    from: 'headers', valid: 'notBlank', key: headerKey,
     infoMessage: 'header key not blank',
     errorMessage: 'Request header is blank',
     errorCode: -2,

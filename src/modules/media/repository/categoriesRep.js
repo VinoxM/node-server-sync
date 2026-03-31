@@ -1,23 +1,31 @@
 import { HybridLRUCache } from "../../../core/infra/extendMap.js"
+import { MEDIA_CATEGORY_TYPE } from "../constants/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
 
 const nameCache = new HybridLRUCache()
+const idCache = new HybridLRUCache()
 
 export default {
     selectOneByName: async category => {
         if (nameCache.has(category)) {
-            return { id: nameCache.get(category), name: category }
+            return nameCache.get(category)
         }
-        const sql = 'SELECT id, name FROM categories WHERE name=?'
+        const sql = 'SELECT id, name, type FROM categories WHERE name=?'
         const categoryObj = await __sqliteDB.selectOne(sql, [category], null, dbName)
-        categoryObj && nameCache.set(category, categoryObj.id);
+        categoryObj && nameCache.set(category, categoryObj);
         return categoryObj
     },
-    selectOneById: id => {
-        const sql = 'SELECT id, name FROM categories WHERE id=?'
-        return __sqliteDB.selectOne(sql, [id], null, dbName)
+    selectOneById: async id => {
+        if (idCache.has(id)) {
+            const { name, type } = idCache.get(id)
+            return { id, name, type }
+        }
+        const sql = 'SELECT id, name, type FROM categories WHERE id=?'
+        const categoryObj = await __sqliteDB.selectOne(sql, [id], null, dbName)
+        categoryObj && idCache.set(id, categoryObj);
+        return categoryObj
     },
     insertOne: category => {
         const sql = 'INSERT INTO categories(name) VALUES(?)'
@@ -31,13 +39,14 @@ export default {
             const res = await __sqliteDB.delete(sql, [categoryId], null, dbName)
             if (res?.rows > 0) {
                 nameCache.delete(category.name)
+                idCache.delete(categoryId)
                 result.rows = res.rows
             }
         }
         return result
     },
-    selectAll: () => {
-        const sql = 'SELECT id,name FROM categories'
+    selectByInside: (isInside) => {
+        const sql = 'SELECT id,name,type FROM categories WHERE type=' + (isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL)
         return __sqliteDB.selectAll(sql, [], null, dbName)
     },
     selectVideosExistsByCategoryId: categoryId => {

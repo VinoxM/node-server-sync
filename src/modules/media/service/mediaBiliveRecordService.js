@@ -9,5 +9,8 @@ export async function saveWebhookEvent(body) {
     const shortId = eventData['ShortId']
     const timestamp = new Date(eventTimestamp)
     const eventDataJson = JSON.stringify(eventData)
+    const title = eventData['Title']
+    const hostName = eventData['Name']
+    __log.info(`[Bilive Record] Received webhook event ${eventType} from ${hostName}(${roomId}) - ${title}, sessionId: ${sessionId}.`)
     await biliveRecordRep.insertOne(event, sessionId, roomId, shortId, timestamp, eventId, eventDataJson)
 }

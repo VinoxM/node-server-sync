@@ -1,0 +1,1 @@
+ALTER TABLE bilive_record ADD COLUMN `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP;

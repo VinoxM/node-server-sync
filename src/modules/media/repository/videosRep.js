@@ -1,4 +1,4 @@
-import { MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js"
+import { MEDIA_CATEGORY_TYPE, MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js"
 import { HybridLRUCache } from "../../../core/infra/extendMap.js"
 
 const dbName = 'media'
@@ -80,15 +80,18 @@ export default {
         }
         return result
     },
-    selectForSearch: (title, categoryId, authorId, tagNames, status, currentPage, pageSize) => {
+    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, currentPage, pageSize) => {
         let sql = `SELECT `
             + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
             + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
             + `MAX(CASE WHEN tm.type = 1 THEN tm.link ELSE NULL END) AS source, `
             + `MAX(CASE WHEN tm.type = 2 THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
-            + `LEFT JOIN categories tc ON tc.id = tv.category_id `
-            + `LEFT JOIN authors ta ON ta.id = tv.author_id AND ta.category_id = tv.category_id `
+            + `INNER JOIN categories tc ON tc.id = tv.category_id `
+        if (!categoryId) {
+            sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `
+        }
+        sql += `LEFT JOIN authors ta ON ta.id = tv.author_id AND ta.category_id = tv.category_id `
             + `LEFT JOIN video_minio tm ON tm.video_id = tv.id `;
         const sqlConcat = [];
         const params = [];
@@ -136,10 +139,14 @@ export default {
         }
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
-    countForSearch: (title, categoryId, authorId, tagNames, status) => {
-        let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `;
+    countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {
+        let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `
+            + `INNER JOIN categories tc ON tc.id = tv.category_id `;
         const sqlConcat = [];
         const params = [];
+        if (!categoryId) {
+            sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `;
+        }
         if (tagNames) {
             const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
             if (tagList.length > 0) {
