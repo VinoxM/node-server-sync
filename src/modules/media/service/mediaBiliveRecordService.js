@@ -66,16 +66,19 @@ export async function getEventSessions(currentPage, pageSize) {
                     files.has(filePath) || files.set(filePath, {})
                     const file = files.get(filePath)
                     file.openTime = eventTimestamp
+                    file.size ??= '-'
                 }
             }
             if (event === MEDIA_BILIVE_RECORD_EVENT_TYPE.FileClosed) {
                 const eventObj = JSON.parse(eventData ?? '{}')
                 sessionData.hostName ??= eventObj?.Name
                 const filePath = eventObj?.RelativePath
+                const fileSize = eventObj?.FileSize
                 if (__isNotBlank(filePath)) {
                     files.has(filePath) || files.set(filePath, {})
                     const file = files.get(filePath)
                     file.closeTime = eventTimestamp
+                    file.size = resolveFileSize(fileSize)
                 }
             }
         }
@@ -98,6 +101,16 @@ function resolveFileTitle(filePath) {
     const datetime = formatDateTime(split[2], split[3])
     const title = basename.replace(split.slice(0, 5).join('-') + '-', '')
     return `[${datetime}] ${title}`
+}
+
+function resolveFileSize(bytes, decimals = 2) {
+    if (bytes === null || bytes === undefined) return '-'
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 function formatDateTime(dStr, tStr) {
