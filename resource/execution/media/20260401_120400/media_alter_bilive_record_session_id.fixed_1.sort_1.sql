@@ -7,7 +7,7 @@ CREATE TABLE bilive_record_new (
     `event_timestamp` datetime NOT NULL,
     `event_id` text NOT NULL,
     `event_data` text NOT NULL,
-    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO bilive_record_new (id, event, session_id, room_id, short_id, event_timestamp, event_id, event_data, create_time)
@@ -16,3 +16,5 @@ SELECT id, event, session_id, room_id, short_id, event_timestamp, event_id, even
 DROP TABLE bilive_record;
 
 ALTER TABLE bilive_record_new RENAME TO bilive_record;
+
+UPDATE bilive_record SET create_time=event_timestamp;
