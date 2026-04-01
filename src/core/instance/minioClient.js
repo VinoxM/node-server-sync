@@ -47,7 +47,7 @@ class MinioClient extends ContextSubscribe {
             }
             try {
                 const client = new Minio.Client(options)
-                bucketMapping.forEach(({ bucket, category = [] }) => category?.forEach(c => this.#categoryBucketMapping.set(c, { label, bucket })))
+                bucketMapping.forEach(({ bucket, category = [] }) => category?.forEach(c => this.#categoryBucketMapping.set(c, bucket)))
                 this.#clientOptions.set(label, { expiry: tryEvaluateExpiry(expiry, label), defaultBucket })
                 this.#clientMatchers.set(label, { matcher, hostname })
                 this.#client.set(label, client)
