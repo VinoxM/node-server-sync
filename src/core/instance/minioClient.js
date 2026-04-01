@@ -68,7 +68,7 @@ class MinioClient extends ContextSubscribe {
     }
 
     #getSuitableMinioLabel(minioLink) {
-        for (const [label, opt] of this.#clientOptions) {
+        for (const [label, opt] of this.#clientMatchers) {
             const matcher = opt?.matcher
             if (tryMatch(matcher, minioLink, label)) {
                 return label
