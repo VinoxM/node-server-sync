@@ -6,7 +6,7 @@ function padStart(str, maxLength = 2, fillString = '0') {
     return (str + "").padStart(maxLength, fillString);
 }
 
-function dateFormat(d, formatStr, is30Hours = false) {
+export function dateFormat(d, formatStr, is30Hours = false) {
     const flag = is30Hours && d.getHours() < 6
     const date = flag ? new Date(d.setDate(d.getDate() - 1)) : d;
     const year = date.getFullYear();

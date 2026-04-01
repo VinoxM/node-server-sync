@@ -270,14 +270,27 @@ sqlite:
           CREATE TABLE bilive_record (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `event` integer NOT NULL,
-            `session_id` text DEFAULT NULL,
+            `session_id` text NOT NULL,
             `room_id` integer NOT NULL,
             `short_id` integer NOT NULL DEFAULT 0,
             `event_timestamp` datetime NOT NULL,
             `event_id` text NOT NULL,
             `event_data` text NOT NULL,
-            `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-          )
+            `create_time` datetime DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX `idx_session_id` ON bilive_record(`session_id`);
+      - tableName: bilive_record_session
+        DDL: |
+          CREATE TABLE bilive_record_session (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `session_id` text NOT NULL DEFAULT NULL,
+            `room_id` integer NOT NULL,
+            `host_name` text DEFAULT NULL,
+            `start_time` datetime NOT NULL,
+            `end_time` datetime DEFAULT NULL,
+            CONSTRAINT `idx_unique_session_id` UNIQUE (`session_id`)
+          );
+          CREATE INDEX `idx_session_room_id` ON bilive_record_session(`room_id`);
     execution:
       - tableName: migrations
         DDL: |
@@ -289,4 +302,4 @@ sqlite:
             `successful` integer NOT NULL,
             `failed_reason` text,
             `backup_file` text
-          )
+          );

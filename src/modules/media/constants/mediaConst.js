@@ -65,7 +65,5 @@ export const MEDIA_BILIVE_RECORD_EVENT_TYPE = {
     SessionStarted: 0,
     FileOpening: 1,
     FileClosed: 2,
-    SessionEnded: 3,
-    StreamStarted: 4,
-    StreamEnded: 5
+    SessionEnded: 3
 }
