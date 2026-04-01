@@ -1,4 +1,4 @@
-import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN } from "../constants/mediaConst.js"
+import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
@@ -49,5 +49,9 @@ export default {
     selectByVideoId: videoId => {
         const sql = `SELECT id, video_id, type, origin_uri, link, status FROM video_minio WHERE video_id=?`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)
+    },
+    selectBarrageByVideoId: videoId => {
+        const sql = `SELECT link FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.BARRAGE} AND status=${MEDIA_MINIO_STATUS.COMPLETE}`
+        return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     }
 }

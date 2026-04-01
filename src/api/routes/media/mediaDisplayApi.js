@@ -10,6 +10,7 @@ import {
 import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilterService.js"
 import { checkCategoryExistsByInside, searchVideos } from "../../../modules/media/service/mediaVideoService.js"
 import { getMinioClientMatchers } from "../../../modules/media/service/mediaMinioService.js"
+import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
 
 const { POST } = apiMethodConst
 
@@ -72,6 +73,17 @@ export default {
             const inside = parseInt(req.headers['inside'])
             await checkCategoryExistsByInside(categoryId, inside);
             return videoTagMapRep.selectTagsWithCount(categoryId, videoId).then(({ data }) => data)
+        }
+    },
+    "/getBarrage": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
+        callback: async req => {
+            const { videoId } = req.body
+            return videoMinioRep.selectBarrageByVideoId(videoId)
         }
     },
     "/videos/checkPolicy": {
