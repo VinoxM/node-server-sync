@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import migrationsRep from './migrationsRep.js';
+import migrationsRep, { dbName as migrationsDbName } from './migrationsRep.js';
 
 async function lookupExecutable() {
     const executableSqlScripts = {}
@@ -65,7 +65,9 @@ export async function doMigrations() {
     if (dbNames.length === 0) return
     for (const dbName of dbNames) {
         const scripts = sqlScripts[dbName]?.sort((a, b) => a.sort - b.sort);
+        await __sqliteDB.close(dbName);
         const backup = backupDatabase(dbName);
+        await __sqliteDB.reconnect(dbName);
         __log.info(`[Migrations] Ready to execute database ${dbName} sql scripts, backup database: ${backup.file}.`)
         const executionResult = [];
         let anyFailed = false;
@@ -90,10 +92,13 @@ export async function doMigrations() {
             anyFailed = true;
             __log.error(`[Migrations] Execute database ${dbName} sql scripts failed.`, err?.message ?? err)
         }, dbName)
+        const isSelfDb = dbName === migrationsDbName
         try {
+            isSelfDb && await __sqliteDB.reconnect(migrationsDbName);
             for (const { failedReason, fileName, fileContent } of executionResult) {
                 await migrationsRep.insertOne(fileName, fileContent, failedReason, backup.fileName)
             }
+            isSelfDb && await __sqliteDB.close(migrationsDbName);
         } catch (ex) {
             anyFailed = true;
             __log.error(`[Migrations] Save execution result failed.`, ex)
@@ -103,7 +108,10 @@ export async function doMigrations() {
             removeBackupDatabase(backup.file)
         } else {
             __log.info(`[Migrations] Execute database ${dbName} sql scripts failed, restore backup database.`)
+            await __sqliteDB.close(dbName);
             restoreBackupDatabase(backup.file, backup.sourceFile)
+            await __sqliteDB.reconnect(dbName);
         }
+        isSelfDb && await __sqliteDB.reconnect(migrationsDbName);
     }
 }

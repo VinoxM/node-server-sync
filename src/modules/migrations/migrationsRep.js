@@ -1,4 +1,4 @@
-const dbName = 'execution'
+export const dbName = 'execution'
 const enablePrint = { print: true }
 
 export default {

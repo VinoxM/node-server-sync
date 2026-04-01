@@ -228,6 +228,18 @@ export class SqliteDB {
         }
         throw new Error(`No such schema: ${dbName_}`)
     }
+
+    async close(dbName) {
+        if (this.#schema.hasOwnProperty(dbName)) {
+            const db = this.#schema[dbName]
+            Reflect.deleteProperty(this.#schema, dbName)
+            return new Promise((resolve, reject) => db.close(err => err ? reject(err) : resolve()))
+        }
+    }
+
+    async reconnect(dbName) {
+        return this.#connect(dbName)
+    }
 }
 
 class TransactionSqliteDB {

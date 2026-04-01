@@ -273,26 +273,16 @@ function generateUri(uri) {
 }
 
 function generateMinioLink(category, author, uniqueId, type, ext) {
-    const { defaultLabel, bucketMappings } = getMinioBucketMappings()
-    let minioBucket = null
-    for (const bucket in bucketMappings) {
-        const { category: categories } = bucketMappings[bucket]
-        if (categories?.includes(category)) {
-            minioBucket = bucket;
-            break;
-        }
-    }
-    minioBucket ??= bucketMappings[defaultLabel]?.defaultBucket
+    const minioBucket = getMinioBucketByCategory(category)
+    minioBucket || __throwMessage('Unable to find a suitable category of bucket.')
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
     return `/${minioBucket}/${category}/${author}/${typeDesc}:${uniqueId}${ext}`
 }
 
-function getMinioBucketMappings() {
+function getMinioBucketByCategory(category) {
     const client = getMinioClient()
     client.ready() || __throwMessage('Minio not ready.')
-    const defaultLabel = client.getMinioDefaultLabel()
-    const bucketMappings = client.getMinioBucketMappings()
-    return { defaultLabel, bucketMappings }
+    return client.generateSuitableMinioBucket(category)
 }
 
 export function getMinioClientMatchers() {

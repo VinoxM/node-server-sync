@@ -1,6 +1,5 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
-import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
 
 const { POST } = apiMethodConst
@@ -13,7 +12,6 @@ export default {
     "/record/webhook": {
         method: POST,
         ignoreSecret: true,
-        allowHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
         callback: req => saveWebhookEvent(req.body)
     },

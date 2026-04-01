@@ -189,8 +189,7 @@ sqlite:
             `cover_id` integer DEFAULT NULL,
             `upload_time` datetime NOT NULL,
             `status` integer NOT NULL,
-            `create_time` datetime NOT NULL,
-            `tags_cache` text
+            `create_time` datetime NOT NULL
           );
           CREATE INDEX `idx_video_unique` ON videos(`unique_id`);
           CREATE INDEX `idx_video_category` ON videos(`category_id`);
@@ -271,7 +270,7 @@ sqlite:
           CREATE TABLE bilive_record (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `event` integer NOT NULL,
-            `session_id` text NOT NULL,
+            `session_id` text DEFAULT NULL,
             `room_id` integer NOT NULL,
             `short_id` integer NOT NULL DEFAULT 0,
             `event_timestamp` datetime NOT NULL,

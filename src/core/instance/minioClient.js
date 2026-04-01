@@ -10,9 +10,11 @@ class MinioClient extends ContextSubscribe {
 
     #initialized = false;
     #client = new Map();
-    #options = new Map();
     #defaultLabel = 'default';
-    #bucketMapping = new Map();
+
+    #clientOptions = new Map();
+    #clientMatchers = new Map();
+    #categoryBucketMapping = new Map();
 
     constructor() {
         super('Minio', () => this.initialize(), true)
@@ -20,8 +22,9 @@ class MinioClient extends ContextSubscribe {
 
     #clean() {
         this.#client?.clear();
-        this.#options?.clear();
-        this.#bucketMapping?.clear();
+        this.#clientOptions?.clear();
+        this.#clientMatchers?.clear();
+        this.#categoryBucketMapping?.clear();
         this.#initialized = false;
     }
 
@@ -43,10 +46,11 @@ class MinioClient extends ContextSubscribe {
                 secretKey: minioOpt.password
             }
             try {
-                bucketMapping.forEach(({ bucket, category }) => this.#bucketMapping.set(bucket, { category, defaultBucket, host, port }))
                 const client = new Minio.Client(options)
+                bucketMapping.forEach(({ bucket, category = [] }) => category?.forEach(c => this.#categoryBucketMapping.set(c, { label, bucket })))
+                this.#clientOptions.set(label, { expiry: tryEvaluateExpiry(expiry, label), defaultBucket })
+                this.#clientMatchers.set(label, { matcher, hostname })
                 this.#client.set(label, client)
-                this.#options.set(label, { matcher, expiry: tryEvaluateExpiry(expiry, label), hostname })
                 __log.info(`[Minio] Minio client ready: ${label}.`)
             } catch (ex) {
                 __log.error(`[Minio] Minio client connect failed: ${label}.`, ex.message ?? ex)
@@ -64,7 +68,7 @@ class MinioClient extends ContextSubscribe {
     }
 
     #getSuitableMinioLabel(minioLink) {
-        for (const [label, opt] of this.#options) {
+        for (const [label, opt] of this.#clientOptions) {
             const matcher = opt?.matcher
             if (tryMatch(matcher, minioLink, label)) {
                 return label
@@ -73,16 +77,15 @@ class MinioClient extends ContextSubscribe {
         return this.#defaultLabel
     }
 
-    getMinioDefaultLabel() {
-        return this.#defaultLabel;
-    }
-
-    getMinioBucketMappings() {
-        return Object.fromEntries(this.#bucketMapping.entries())
-    }
-
     getMinioMatchers() {
-        return Object.fromEntries(this.#options.entries())
+        return Object.fromEntries(this.#clientMatchers.entries())
+    }
+
+    generateSuitableMinioBucket(category) {
+        if (this.#categoryBucketMapping.has(category)) {
+            return this.#categoryBucketMapping.get(category)
+        }
+        return this.#clientOptions.get(this.#defaultLabel)?.defaultBucket
     }
 
     generateSuitableMinioLink(minioLink) {
@@ -96,8 +99,8 @@ class MinioClient extends ContextSubscribe {
         try {
             this.#clientReady(label) || __throwMessage(`Minio not ready.`)
             const { bucket, objectName } = splitMinioLink(minioLink)
-            const expiry = this.#options.get(label)?.expiry ?? defaultExpiry
-            result = this.#client.get(label).presignedGetObject(bucket, objectName, expiry)
+            const expiry = this.#clientOptions.get(label)?.expiry ?? defaultExpiry
+            result = await this.#client.get(label).presignedGetObject(bucket, objectName, expiry)
         } catch (ex) {
             if (__isFunction(errorCallback)) {
                 errorCallback(ex, label)
@@ -114,7 +117,7 @@ class MinioClient extends ContextSubscribe {
         try {
             this.#clientReady(label) || __throwMessage(`Minio not ready.`)
             const { bucket, objectName } = splitMinioLink(minioLink)
-            result = this.#client.get(label).removeObject(bucket, objectName)
+            result = await this.#client.get(label).removeObject(bucket, objectName)
         } catch (ex) {
             if (__isFunction(errorCallback)) {
                 errorCallback(ex, label)
