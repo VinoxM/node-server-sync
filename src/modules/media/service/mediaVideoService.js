@@ -118,9 +118,13 @@ export async function updateVideoTags(videoId, tags, operator) {
 
 /**
  * Can del:
- * Video status: PREPARED, COMPLETE
+ * Video status: PREPARED, COMPLETE, REMOVED
  */
-const CAN_DELETE_VIDEO_STATUS = [MEDIA_VIDEO_STATUS.PREPARED, MEDIA_VIDEO_STATUS.COMPLETE, MEDIA_VIDEO_STATUS.REMOVED]
+const CAN_DELETE_VIDEO_STATUS = [
+    MEDIA_VIDEO_STATUS.PREPARED,
+    MEDIA_VIDEO_STATUS.COMPLETE,
+    MEDIA_VIDEO_STATUS.REMOVED
+]
 export async function removeVideo(videoId) {
     const video = await videosRep.selectOne(videoId)
     video || __throwMessage('Video not found.')
@@ -131,6 +135,9 @@ export async function removeVideo(videoId) {
     await videoTagMapRep.deleteTags(videoId)
 }
 
+/**
+ * Category
+ */
 export async function addCategory(category, inside) {
     const exists = await categoriesRep.selectOneByName(category)
     if (exists) {
@@ -152,6 +159,9 @@ export async function deleteCategory(categoryId) {
     await categoriesRep.deleteOne(categoryId)
 }
 
+/**
+ * Author
+ */
 export async function addAuthor(author, categoryId) {
     const { rows, lastId } = await authorsRep.insertOne(author, categoryId)
     if (rows === 0) {
@@ -167,6 +177,9 @@ export async function deleteAuthor(authorId) {
     await authorsRep.deleteOne(authorId)
 }
 
+/**
+ * Tags
+ */
 async function handleTags(tags) {
     const tagIds = []
     if (Array.isArray(tags)) {

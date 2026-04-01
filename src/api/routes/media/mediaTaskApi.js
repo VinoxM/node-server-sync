@@ -7,7 +7,6 @@ import {
 } from "../../../modules/media/constants/mediaConst.js"
 import { updateMinioStatus } from "../../../modules/media/service/mediaMinioService.js"
 import { pauseOrResumeTask, updateTaskStatus } from "../../../modules/media/service/mediaTaskService.js"
-import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
 
 const { POST } = apiMethodConst
 
@@ -43,11 +42,5 @@ export default {
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid', 'operator']),
         callback: req => pauseOrResumeTask(req.body['gid'], req.body['operator'])
-    },
-    "/bilive/webhook": {
-        method: POST,
-        ignoreSecret: true,
-        preCheck: req => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
-        callback: req => saveWebhookEvent(req.body)
     }
 }

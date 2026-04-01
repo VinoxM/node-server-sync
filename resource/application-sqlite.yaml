@@ -189,7 +189,8 @@ sqlite:
             `cover_id` integer DEFAULT NULL,
             `upload_time` datetime NOT NULL,
             `status` integer NOT NULL,
-            `create_time` datetime NOT NULL
+            `create_time` datetime NOT NULL,
+            `tags_cache` text
           );
           CREATE INDEX `idx_video_unique` ON videos(`unique_id`);
           CREATE INDEX `idx_video_category` ON videos(`category_id`);

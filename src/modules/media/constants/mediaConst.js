@@ -30,13 +30,20 @@ export const MEDIA_FILTER_TYPE = {
 
 export const MEDIA_VIDEO_MINIO_TYPE = {
     SOURCE: 1,
-    COVER: 2
+    COVER: 2,
+    BARRAGE: 3
 }
 
 export const MEDIA_TYPE_DESCRIPTION = {
     [MEDIA_VIDEO_MINIO_TYPE.SOURCE]: "source",
-    [MEDIA_VIDEO_MINIO_TYPE.COVER]: "cover"
+    [MEDIA_VIDEO_MINIO_TYPE.COVER]: "cover",
+    [MEDIA_VIDEO_MINIO_TYPE.BARRAGE]: "barrage"
 }
+
+export const MEDIA_MINIO_TYPE_MAIN = [
+    MEDIA_VIDEO_MINIO_TYPE.SOURCE,
+    MEDIA_VIDEO_MINIO_TYPE.COVER
+]
 
 export const MEDIA_CATEGORY_TYPE = {
     NORMAL: 0,

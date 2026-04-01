@@ -1,6 +1,6 @@
 import path from 'path';
 import videoMinioRep from "../repository/videoMinioRep.js";
-import { MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
+import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
 import videosRep from "../repository/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
@@ -81,7 +81,9 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
         __throwMessage(`Resolve video ${typeDesc} minio failed.`)
     }
     // update video minio id
-    await videosRep.updateMinioIdById(videoId, lastId, type)
+    if (MEDIA_MINIO_TYPE_MAIN.includes(parseInt(type))) {
+        await videosRep.updateMinioIdById(videoId, lastId, type)
+    }
     const protocol = resolvedUri.protocol
     if (FILE_PROTOCOL.includes(protocol)) {
         // file protocol

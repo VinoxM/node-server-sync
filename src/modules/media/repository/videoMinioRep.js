@@ -1,4 +1,4 @@
-import { MEDIA_MINIO_STATUS } from "../constants/mediaConst.js"
+import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN } from "../constants/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
@@ -43,7 +43,7 @@ export default {
     selectMinioCompleteByVideoId: videoId => {
         const sql = `SELECT COUNT(*) as total, (COUNT(*) > 0 AND SUM(status NOT IN (${MEDIA_MINIO_STATUS.COMPLETE}, ${MEDIA_MINIO_STATUS.FAILED})) = 0) AS complete `
             + `FROM video_minio `
-            + `WHERE video_id = ?`
+            + `WHERE video_id = ? AND type IN (${MEDIA_MINIO_TYPE_MAIN.join(",")})`
         return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoId: videoId => {

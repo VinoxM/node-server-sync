@@ -88,5 +88,5 @@ export default {
         allowHosts,
         ignoreOutput: true,
         callback: req => getMinioClientMatchers(req.body)
-    }
+    },
 }
