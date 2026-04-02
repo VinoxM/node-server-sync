@@ -29,8 +29,8 @@ export const MEDIA_FILTER_TYPE = {
 }
 
 export const MEDIA_VIDEO_MINIO_TYPE = {
-    SOURCE: 1,
-    COVER: 2,
+    COVER: 1,
+    SOURCE: 2,
     BARRAGE: 3
 }
 
@@ -41,7 +41,6 @@ export const MEDIA_TYPE_DESCRIPTION = {
 }
 
 export const MEDIA_MINIO_TYPE_MAIN = [
-    MEDIA_VIDEO_MINIO_TYPE.SOURCE,
     MEDIA_VIDEO_MINIO_TYPE.COVER
 ]
 

@@ -8,7 +8,7 @@ import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
 import { getFilterRulesByCategory, handleFilterRule } from "../../../modules/media/service/mediaFilterService.js"
 import {
     createMinioManually, deleteVideoMinio, retryMinio,
-    searchMinio, updateMinioOriginUri, updateVideoStatusByVideoMinioStatus
+    searchMinio, updateMinioOriginUri, updateMinioTitleAndSort, updateVideoStatusByVideoMinioStatus
 } from "../../../modules/media/service/mediaMinioService.js"
 import { getTaskInfoAndDownloadStatus, removeTask } from "../../../modules/media/service/mediaTaskService.js"
 import {
@@ -133,6 +133,13 @@ export default {
         allowHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => retryMinio(req.body['id']),
+    },
+    "/storage/updateTitleOrSort": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id'),
+        callback: req => updateMinioTitleAndSort(req.body),
     },
     /** Task */
     "/storage/deleteTask": {

@@ -185,7 +185,6 @@ sqlite:
             `title` varchar(500) NOT NULL,
             `category_id` integer NOT NULL,
             `author_id` integer NOT NULL,
-            `source_id` integer DEFAULT NULL,
             `cover_id` integer DEFAULT NULL,
             `upload_time` datetime NOT NULL,
             `status` integer NOT NULL,
@@ -251,9 +250,11 @@ sqlite:
             `origin_uri` text NOT NULL,
             `file_path` text DEFAULT NULL,
             `link` text NOT NULL,
+            `title` text DEFAULT NULL,
             `status` integer NOT NULL,
-            CONSTRAINT `idx_video_type` UNIQUE (`video_id`, `type`)
-          )
+            `sort` integer NOT NULL DEFAULT 0
+          );
+          CREATE UNIQUE INDEX idx_video_type1_unique ON video_minio(`video_id`) WHERE type = 1;
       - tableName: aria2_task
         DDL: |
           CREATE TABLE aria2_task (

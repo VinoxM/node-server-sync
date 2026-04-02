@@ -31,12 +31,12 @@ export async function createMinioManually(minioObj) {
     const { videoId, type, uri } = minioObj
     // validate type
     SUPPORTED_MEDIA_MINIO_TYPE.includes(type) || __throwMessage('Invalid type.')
-    // validate minio exists
-    const minioExists = await videoMinioRep.selectOneByVideoIdAndType(videoId, type)
-    minioExists && __throwMessage('Minio exists.')
     // validate video exists
     const videoInfo = await videosRep.selectOne(videoId)
     videoInfo || __throwMessage('Video not exists.')
+    // validate minio exists
+    const minioExists = await validateMinioExists(videoId, type)
+    minioExists && __throwMessage('Minio exists.')
     // validate video status
     const { categoryId, authorId, status } = videoInfo
     MEDIA_VIDEO_STATUS.ANALYZING === status && __throwMessage('Video is analyzing, cannot create minio.')
@@ -62,9 +62,17 @@ export async function createMinioManually(minioObj) {
     }
 }
 
+const MEDIA_MINIO_UNIQUE_TYPE = [MEDIA_VIDEO_MINIO_TYPE.COVER]
+async function validateMinioExists(videoId, type) {
+    if (MEDIA_MINIO_UNIQUE_TYPE.includes(parseInt(type))) {
+        return await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, type)
+    }
+    return false
+}
+
 const FILE_PROTOCOL = ['file:']
 const HTTP_PROTOCOL = ['http:', 'https:']
-export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type) {
+export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type, sort = 0, title) {
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
     const resolvedUri = generateUri(uri)
     if (resolvedUri === null) {
@@ -75,7 +83,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
     const ext = path.extname(resolvedUri.pathname)
     const minioLink = generateMinioLink(category, author, uuid, type, ext)
     // save minio
-    const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED })
+    const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED, title, sort })
     if (rows === 0) {
         __log.error(`Resolve video minio failed, cause unique(${videoId}, ${type}) exists.`)
         __throwMessage(`Resolve video ${typeDesc} minio failed.`)
@@ -226,6 +234,11 @@ export async function retryMinio(minioId) {
     __isNotEmptyArray(aria2Tasks) && __throwMessage('Minio can not retry, cause aria2 task exists in this minio.')
     await addTask(originUri, minioId, type)
     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
+}
+
+export async function updateMinioTitleAndSort(body) {
+    const { id, title, sort = 0 } = body
+    await videoMinioRep.updateTitleAndSortById(title, sort, id)
 }
 
 /** 

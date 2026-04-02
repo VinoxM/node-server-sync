@@ -20,16 +20,11 @@ export async function checkCategoryExistsByInside(categoryId, isInside) {
 }
 
 export async function searchVideos(body, isInside) {
-    const { title, category: categoryId, author: authorId, currentPage = 1, pageSize = 20, tags = [], status } = body
+    const { title, category: categoryId, author: authorId, pageNum = 1, pageSize = 20, tags = [], status } = body
     const videoStatus = Object.values(MEDIA_VIDEO_STATUS).includes(status) ? String(status) : null
-    const dataList = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, currentPage, pageSize).then(({ data }) => data)
+    const record = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, pageNum, pageSize).then(({ data }) => data)
     const total = await videosRep.countForSearch(isInside, title, categoryId, authorId, tags, videoStatus)
-    return {
-        list: dataList,
-        totalSize: total,
-        currentPage,
-        pageSize
-    }
+    return { record, total, pageNum, pageSize }
 }
 
 export async function checkVideoCanAdd({ category, author, uniqueId = null }) {
@@ -74,12 +69,26 @@ export async function createVideo(videoObj) {
     await videoTagMapRep.insertTags(videoId, tagIds)
 
     const tasks = []
-    // handle video source
-    const sourceTask = await resolveVideoUri(videoObj.source, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
-    sourceTask !== null && tasks.push(sourceTask)
     // handle video cover
     const coverTask = await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
     coverTask !== null && tasks.push(coverTask)
+    // handle video sources
+    const sources = []
+    if (videoObj.source && Array.isArray(videoObj.source)) {
+        sources.push(...videoObj.source)
+    } else if (__isNotBlank(videoObj.source)) {
+        sources.push(videoObj.source)
+    }
+    if (sources.length > 0) {
+        for (let i = 0; i < sources.length; i++) {
+            const source = sources[i];
+            const isSourceStr = typeof source === 'string'
+            const sourceUrl = isSourceStr ? source : source.url
+            const sourceTitle = isSourceStr ? null : source.title
+            const sourceTask = await resolveVideoUri(sourceUrl, videoId, category, author, generateUUID(), MEDIA_VIDEO_MINIO_TYPE.SOURCE, i, sourceTitle)
+            sourceTask !== null && tasks.push(sourceTask)
+        }
+    }
     if (tasks.length === 0) {
         // update video status
         await updateVideoStatusByVideoMinioStatus(videoId)

@@ -75,16 +75,21 @@ export default {
             return videoTagMapRep.selectTagsWithCount(categoryId, videoId).then(({ data }) => data)
         }
     },
+    "/getSources": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
+        callback: async req => videoMinioRep.selectSourceByVideoId(req.body['videoId']).then(({ data }) => data)
+    },
     "/getBarrage": {
         method: POST,
         needSecret,
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
-        callback: async req => {
-            const { videoId } = req.body
-            return videoMinioRep.selectBarrageByVideoId(videoId)
-        }
+        callback: async req => videoMinioRep.selectBarrageByVideoId(req.body['videoId']).then(({ data }) => data)
     },
     "/videos/checkPolicy": {
         method: POST,

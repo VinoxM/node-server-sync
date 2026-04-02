@@ -33,5 +33,7 @@ export default {
     COPYRIGHT: 'copyright',
     RSS_SUBSCRIBE_ARRAY: 'rssSubs',
     REPLACE_PARAMS: 'replaceParams',
-    REPLACE_BY: 'replaceBy'
+    REPLACE_BY: 'replaceBy',
+    PAGE_NUM: 'pageNum',
+    PAGE_SIZE: 'pageSize'
 }

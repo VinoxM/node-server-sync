@@ -1,4 +1,4 @@
-import { MEDIA_CATEGORY_TYPE, MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js"
+import { MEDIA_CATEGORY_TYPE, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js"
 import { HybridLRUCache } from "../../../core/infra/extendMap.js"
 
 const dbName = 'media'
@@ -80,12 +80,11 @@ export default {
         }
         return result
     },
-    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, currentPage, pageSize) => {
+    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize) => {
         let sql = `SELECT `
             + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
             + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
-            + `MAX(CASE WHEN tm.type = 1 THEN tm.link ELSE NULL END) AS source, `
-            + `MAX(CASE WHEN tm.type = 2 THEN tm.link ELSE NULL END) AS cover `
+            + `MAX(CASE WHEN tm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} THEN tm.link ELSE NULL END) AS cover `
             + `FROM videos tv `
             + `INNER JOIN categories tc ON tc.id = tv.category_id `
         if (!categoryId) {
@@ -132,8 +131,8 @@ export default {
         }
         sql += ' GROUP BY tv.id';
         sql += ' ORDER BY tv.upload_time DESC, tv.id DESC';
-        if (currentPage !== undefined && pageSize !== undefined) {
-            const offset = (currentPage - 1) * pageSize;
+        if (pageNum !== undefined && pageSize !== undefined) {
+            const offset = (pageNum - 1) * pageSize;
             sql += ' LIMIT ? OFFSET ?';
             params.push(pageSize, offset);
         }

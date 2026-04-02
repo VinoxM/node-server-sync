@@ -8,17 +8,17 @@ export default {
         const sql = `SELECT EXISTS(SELECT 1 FROM video_minio WHERE video_id = ? LIMIT 1) AS [exists]`
         return __sqliteDB.selectOne(sql, [videoId], null, dbName).then(({ exists }) => exists)
     },
-    selectOneByVideoIdAndType: (videoId, type) => {
-        const sql = 'SELECT id,video_id,type,origin_uri,file_path,link,status FROM video_minio WHERE video_id=? AND type=?'
-        return __sqliteDB.selectOne(sql, [videoId, type], null, dbName)
+    selectMinioExistsByVideoIdAndType: (videoId, type) => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM video_minio WHERE video_id = ? AND type = ? LIMIT 1) AS [exists]`
+        return __sqliteDB.selectOne(sql, [videoId, type], null, dbName).then(({ exists }) => exists)
     },
     selectOneById: id => {
-        const sql = 'SELECT id,video_id,type,origin_uri,file_path,link,status FROM video_minio WHERE id=?'
+        const sql = 'SELECT id,video_id,type,origin_uri,link,status FROM video_minio WHERE id=?'
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
     insertOne: minio => {
-        const sql = 'INSERT OR IGNORE INTO video_minio(video_id, type, origin_uri, file_path, link, status) VALUES(?,?,?,?,?,?)'
-        return __sqliteDB.insert(sql, [minio.videoId, minio.type, minio.uri, minio.filePath, minio.link, minio.status], null, dbName)
+        const sql = 'INSERT OR IGNORE INTO video_minio(video_id, type, origin_uri, link, title, status, sort) VALUES(?,?,?,?,?,?,?)'
+        return __sqliteDB.insert(sql, [minio.videoId, minio.type, minio.uri, minio.link, minio.title, minio.status, minio.sort ?? 0], null, dbName)
     },
     updateStatusById: (id, status) => {
         const sql = 'UPDATE video_minio SET status=? WHERE id=?'
@@ -36,6 +36,10 @@ export default {
         const sql = 'UPDATE video_minio SET origin_uri=? WHERE id=?'
         return __sqliteDB.update(sql, [originUri, id], null, dbName)
     },
+    updateTitleAndSortById: (title, sort, id) => {
+        const sql = 'UPDATE video_minio SET title=?, sort=? WHERE id=?'
+        return __sqliteDB.update(sql, [title, sort, id], null, dbName)
+    },
     deleteByMinioId: minioId => {
         const sql = `DELETE FROM video_minio WHERE id = ? AND status=${MEDIA_MINIO_STATUS.REMOVED}`
         return __sqliteDB.delete(sql, [minioId], null, dbName)
@@ -47,11 +51,15 @@ export default {
         return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoId: videoId => {
-        const sql = `SELECT id, video_id, type, origin_uri, link, status FROM video_minio WHERE video_id=?`
+        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE video_id=?`
+        return __sqliteDB.selectAll(sql, [videoId], null, dbName)
+    },
+    selectSourceByVideoId: videoId => {
+        const sql = `SELECT id, link, title, sort FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND status=${MEDIA_MINIO_STATUS.COMPLETE} ORDER BY sort`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)
     },
     selectBarrageByVideoId: videoId => {
-        const sql = `SELECT link FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.BARRAGE} AND status=${MEDIA_MINIO_STATUS.COMPLETE}`
-        return __sqliteDB.selectOne(sql, [videoId], null, dbName)
+        const sql = `SELECT id, link, title, sort FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.BARRAGE} AND status=${MEDIA_MINIO_STATUS.COMPLETE} ORDER BY sort`
+        return __sqliteDB.selectAll(sql, [videoId], null, dbName)
     }
 }
