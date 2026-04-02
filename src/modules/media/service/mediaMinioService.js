@@ -28,7 +28,7 @@ export async function searchMinio(videoId) {
 }
 
 export async function createMinioManually(minioObj) {
-    const { videoId, type, uri, sort = 0, title } = minioObj
+    const { videoId, type, uri, sort, title } = minioObj
     // validate type
     SUPPORTED_MEDIA_MINIO_TYPE.includes(type) || __throwMessage('Invalid type.')
     // validate video exists
