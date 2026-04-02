@@ -72,7 +72,7 @@ async function validateMinioExists(videoId, type) {
 
 const FILE_PROTOCOL = ['file:']
 const HTTP_PROTOCOL = ['http:', 'https:']
-export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type, sort = 0, title) {
+export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type, sort, title) {
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
     const resolvedUri = generateUri(uri)
     if (resolvedUri === null) {
@@ -82,6 +82,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
     // generate minioLink
     const ext = path.extname(resolvedUri.pathname)
     const minioLink = generateMinioLink(category, author, uuid, type, ext)
+    sort ??= await videoMinioRep.selectMaxSortOfType(videoId, type).then(s => s + 1);
     // save minio
     const { rows, lastId } = await videoMinioRep.insertOne({ videoId, type, uri, link: minioLink, status: MEDIA_MINIO_STATUS.PREPARED, title, sort })
     if (rows === 0) {

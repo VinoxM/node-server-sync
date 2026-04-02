@@ -16,6 +16,10 @@ export default {
         const sql = 'SELECT id,video_id,type,origin_uri,link,status FROM video_minio WHERE id=?'
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
+    selectMaxSortOfType: (videoId, type) => {
+        const sql = 'SELECT MAX(sort) AS sort FROM video_minio WHERE video_id=? AND type=?'
+        return __sqliteDB.selectOne(sql, [videoId, type], null, dbName).then(data => (data?.sort ?? 0))
+    },
     insertOne: minio => {
         const sql = 'INSERT OR IGNORE INTO video_minio(video_id, type, origin_uri, link, title, status, sort) VALUES(?,?,?,?,?,?,?)'
         return __sqliteDB.insert(sql, [minio.videoId, minio.type, minio.uri, minio.link, minio.title, minio.status, minio.sort ?? 0], null, dbName)
