@@ -19,7 +19,7 @@ set +H;
 source_file="$1";
 target_path="$2";
 
-/usr/local/bin/mc mv "$source_file" "$target_path"
+/usr/local/bin/mc cp "$source_file" "$target_path"
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
