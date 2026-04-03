@@ -1,5 +1,4 @@
 import { MEDIA_FILTER_TYPE } from "../constants/mediaConst.js"
-import authorsRep from "../repository/authorsRep.js"
 import categoriesRep from "../repository/categoriesRep.js"
 import filterRulesRep, { getCacheByCategory, OPERATOR_TABLE } from "../repository/filterRulesRep.js"
 import videosRep from "../repository/videosRep.js"

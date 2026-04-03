@@ -50,7 +50,7 @@ export async function createMinioManually(minioObj) {
     // resolve uri and create minio
     const author = authorInfo.name
     const uuid = generateUUID()
-    const task = await resolveVideoUri(uri, videoId, category, author, uuid, type, sort, title)
+    const task = await resolveStorageUriWithCreate(uri, videoId, category, author, uuid, type, sort, title)
     if (task === null) {
         // update video minio status
         await updateVideoStatusByVideoMinioStatus(videoId);
@@ -72,7 +72,47 @@ async function validateMinioExists(videoId, type) {
 
 const FILE_PROTOCOL = ['file:']
 const HTTP_PROTOCOL = ['http:', 'https:']
-export async function resolveVideoUri(uri = '', videoId, category, author, uuid, type, sort, title) {
+async function resolveStorageUri(uri, videoId, minioLink, minioId, type) {
+    const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
+    const resolvedUri = generateUri(uri)
+    resolvedUri === null && __throwMessage(`Uri invalid.`)
+    const protocol = resolvedUri.protocol
+    if (FILE_PROTOCOL.includes(protocol)) {
+        // file protocol
+        __log.info(`[${videoId}] Video's ${typeDesc} uri is a file, prepare move to minio: ${uri} -> ${minioLink}.`)
+        const decodedFilePath = decodeURIComponent(resolvedUri.pathname)
+        return async () => uploadFileToMinio(decodedFilePath, minioLink, minioId)
+    } else if (HTTP_PROTOCOL.includes(protocol)) {
+        // http protocol
+        const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
+        // Get the url file size. 
+        // If it cannot be obtained or is larger than 1MB, upload it to aria2 for download. 
+        // Otherwise, upload it directly to minio.
+        if (overSizeOneMB) {
+            __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
+            await addTask(uri, minioId, type)
+            await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
+        } else {
+            __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
+            return async () => {
+                const complete = await uploadUrlToMinio(uri, minioLink, minioId)
+                if (!complete) {
+                    __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
+                    await addTask(uri, minioId, type)
+                    await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
+                }
+            }
+        }
+    } else {
+        const message = `[${videoId}] Cannot resolve video ${typeDesc} uri: ${uri}`
+        __log.warn(message)
+        pushNotification(message)
+        await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.FAILED)
+    }
+    return null
+}
+
+export async function resolveStorageUriWithCreate(uri = '', videoId, category, author, uuid, type, sort, title) {
     const typeDesc = MEDIA_TYPE_DESCRIPTION[type]
     const resolvedUri = generateUri(uri)
     if (resolvedUri === null) {
@@ -93,40 +133,7 @@ export async function resolveVideoUri(uri = '', videoId, category, author, uuid,
     if (MEDIA_MINIO_TYPE_MAIN.includes(parseInt(type))) {
         await videosRep.updateMinioIdById(videoId, lastId, type)
     }
-    const protocol = resolvedUri.protocol
-    if (FILE_PROTOCOL.includes(protocol)) {
-        // file protocol
-        __log.info(`[${videoId}] Video's ${typeDesc} uri is a file, prepare move to minio: ${uri} -> ${minioLink}.`)
-        const decodedFilePath = decodeURIComponent(resolvedUri.pathname)
-        return async () => uploadFileToMinio(decodedFilePath, minioLink, lastId)
-    } else if (HTTP_PROTOCOL.includes(protocol)) {
-        // http protocol
-        const overSizeOneMB = await urlContentLengthLargeThanOneMB(uri)
-        // Get the url file size. 
-        // If it cannot be obtained or is larger than 1MB, upload it to aria2 for download. 
-        // Otherwise, upload it directly to minio.
-        if (overSizeOneMB) {
-            __log.info(`[${videoId}] Video's ${typeDesc} uri is a large size remote link, add aria2 task for download: ${uri} -> ${minioLink}.`)
-            await addTask(uri, lastId, type)
-            await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
-        } else {
-            __log.info(`[${videoId}] Video's ${typeDesc} uri is a tiny remote link, upload uri to minio: ${uri} -> ${minioLink}.`)
-            return async () => {
-                const complete = await uploadUrlToMinio(uri, minioLink, lastId)
-                if (!complete) {
-                    __log.info(`[${videoId}] Video's ${typeDesc} upload to minio failed, add aria2 task for download: ${uri} -> ${minioLink}.`)
-                    await addTask(uri, lastId, type)
-                    await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.DOWNLOADING)
-                }
-            }
-        }
-    } else {
-        const message = `[${videoId}] Cannot resolve video ${typeDesc} uri: ${uri}`
-        __log.warn(message)
-        pushNotification(message)
-        await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.FAILED)
-    }
-    return null
+    return resolveStorageUri(uri, videoId, minioLink, lastId, type)
 }
 
 /**
@@ -229,12 +236,22 @@ export async function updateMinioOriginUri(minioId, originUri) {
 export async function retryMinio(minioId) {
     const result = await videoMinioRep.selectOneById(minioId)
     result || __throwMessage('Minio not found.')
-    const { originUri, type, status } = result
+    const { id, videoId, originUri, type, status, link } = result
     status !== MEDIA_MINIO_STATUS.FAILED && __throwMessage('Minio can not retry.')
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
     __isNotEmptyArray(aria2Tasks) && __throwMessage('Minio can not retry, cause aria2 task exists in this minio.')
-    await addTask(originUri, minioId, type)
-    await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
+    // resolve origin uri
+    const task = await resolveStorageUri(originUri, videoId, link, id, type)
+    if (task === null) {
+        // update video status
+        await updateVideoStatusByVideoMinioStatus(videoId)
+    } else {
+        // execute async task chain
+        await executeAsyncTaskChain([
+            task,
+            async () => updateVideoStatusByVideoMinioStatus(videoId)
+        ], 10000)
+    }
 }
 
 export async function updateMinioTitleAndSort(body) {

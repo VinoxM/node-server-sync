@@ -7,7 +7,7 @@ import videoTagMapRep from "../repository/videoTagMapRep.js";
 import videoMinioRep from "../repository/videoMinioRep.js";
 import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterService.js";
-import { resolveVideoUri, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
+import { resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
@@ -69,26 +69,16 @@ export async function createVideo(videoObj) {
     await videoTagMapRep.insertTags(videoId, tagIds)
 
     const tasks = []
-    // handle video cover
-    const coverTask = await resolveVideoUri(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
+    // resolve video cover
+    const coverTask = await resolveStorageUriWithCreate(videoObj.cover, videoId, category, author, uuid, MEDIA_VIDEO_MINIO_TYPE.COVER)
     coverTask !== null && tasks.push(coverTask)
-    // handle video sources
-    const sources = []
-    if (videoObj.source && Array.isArray(videoObj.source)) {
-        sources.push(...videoObj.source)
-    } else if (__isNotBlank(videoObj.source)) {
-        sources.push(videoObj.source)
-    }
-    if (sources.length > 0) {
-        for (let i = 0; i < sources.length; i++) {
-            const source = sources[i];
-            const isSourceStr = typeof source === 'string'
-            const sourceUrl = isSourceStr ? source : source.url
-            const sourceTitle = isSourceStr ? null : source.title
-            const sourceTask = await resolveVideoUri(sourceUrl, videoId, category, author, generateUUID(), MEDIA_VIDEO_MINIO_TYPE.SOURCE, i, sourceTitle)
-            sourceTask !== null && tasks.push(sourceTask)
-        }
-    }
+    // resolve video sources
+    const sourceTasks = await resolveMultiStorage(videoObj.source, videoId, category, author, MEDIA_VIDEO_MINIO_TYPE.SOURCE)
+    tasks.push(...sourceTasks)
+    // resolve video barrages
+    const barrageTasks = await resolveMultiStorage(videoObj.barrage, videoId, category, author, MEDIA_VIDEO_MINIO_TYPE.BARRAGE)
+    tasks.push(...barrageTasks)
+    
     if (tasks.length === 0) {
         // update video status
         await updateVideoStatusByVideoMinioStatus(videoId)
@@ -98,6 +88,27 @@ export async function createVideo(videoObj) {
         await executeAsyncTaskChain(tasks, 10000)
     }
     return { id: videoId };
+}
+
+async function resolveMultiStorage(sourceValue, videoId, category, author, type) {
+    const tasks = []
+    const sources = []
+    if (sourceValue && Array.isArray(sourceValue)) {
+        sources.push(...sourceValue)
+    } else if (__isNotBlank(sourceValue)) {
+        sources.push(sourceValue)
+    }
+    if (sources.length > 0) {
+        for (let i = 0; i < sources.length; i++) {
+            const source = sources[i];
+            const isSourceStr = typeof source === 'string'
+            const sourceUrl = isSourceStr ? source : source.url
+            const sourceTitle = isSourceStr ? null : source.title
+            const sourceTask = await resolveStorageUriWithCreate(sourceUrl, videoId, category, author, generateUUID(), type, i, sourceTitle)
+            sourceTask !== null && tasks.push(sourceTask)
+        }
+    }
+    return tasks
 }
 
 export async function updateVideoTitle(id, title) {
