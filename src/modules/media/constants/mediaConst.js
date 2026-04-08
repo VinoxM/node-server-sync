@@ -60,9 +60,43 @@ export const MEDIA_ALLOW_HOSTS = [
     '28000--main--code-server--maou864--coder.vinoxm.cloud'
 ]
 
+export const MEDIA_BILIVE_RECORD_EVENT_ARRAY = [
+    'SessionStarted',
+    'FileOpening',
+    'FileClosed',
+    'SessionEnded',
+    'StreamStarted',
+    'StreamEnded'
+]
+
 export const MEDIA_BILIVE_RECORD_EVENT_TYPE = {
     SessionStarted: 0,
     FileOpening: 1,
     FileClosed: 2,
-    SessionEnded: 3
+    SessionEnded: 3,
+    StreamStarted: 4,
+    StreamEnded: 5
+}
+
+export const MEDIA_BILIVE_STREAM_EVENT = {
+    StreamStarted: 4,
+    StreamEnded: 5
+}
+
+export const MEDIA_BILIVE_SESSION_EVENT = {
+    SessionStarted: 0,
+    SessionEnded: 3,
+}
+
+export const MEDIA_BILIVE_FILE_EVENT = {
+    FileOpening: 1,
+    FileClosed: 2,
+}
+
+export const MEDIA_BILIVE_RECORD_FILE_STATUS = {
+    REMOVED: -1,
+    OPENING: 0,
+    CLOSED: 1,
+    UPLOADING: 2,
+    UPLOADED: 3
 }

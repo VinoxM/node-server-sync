@@ -271,27 +271,62 @@ sqlite:
           CREATE TABLE bilive_record (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `event` integer NOT NULL,
-            `session_id` text NOT NULL,
+            `session_id` text DEFAULT NULL,
             `room_id` integer NOT NULL,
-            `short_id` integer NOT NULL DEFAULT 0,
             `event_timestamp` datetime NOT NULL,
             `event_id` text NOT NULL,
             `event_data` text NOT NULL,
             `create_time` datetime DEFAULT CURRENT_TIMESTAMP
           );
           CREATE INDEX `idx_session_id` ON bilive_record(`session_id`);
+      - tableName: bilive_record_stream
+        DDL: |
+          CREATE TABLE bilive_record_stream (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `room_id` integer NOT NULL,
+            `host_name` text DEFAULT NULL,
+            `title` text DEFAULT NULL,
+            `area_name_parent` text DEFAULT NULL,
+            `area_name_child` text DEFAULT NULL,
+            `start_time` datetime DEFAULT NULL,
+            `end_time` datetime DEFAULT NULL,
+            `streaming` integer DEFAULT 1,
+            `end_reason` text DEFAULT NULL,
+            `end_by_record_id` integer DEFAULT NULL
+          );
+          CREATE INDEX `idx_room_id` ON bilive_record_stream(`room_id`);
+          CREATE INDEX `idx_host_name` ON bilive_record_stream(`host_name`);
+          CREATE INDEX `idx_title` ON bilive_record_stream(`title`);
       - tableName: bilive_record_session
         DDL: |
           CREATE TABLE bilive_record_session (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-            `session_id` text NOT NULL DEFAULT NULL,
+            `session_id` text NOT NULL,
+            `stream_id` integer NOT NULL,
             `room_id` integer NOT NULL,
-            `host_name` text DEFAULT NULL,
-            `start_time` datetime NOT NULL,
+            `start_time` datetime DEFAULT NULL,
             `end_time` datetime DEFAULT NULL,
+            `status` integer DEFAULT 0,
             CONSTRAINT `idx_unique_session_id` UNIQUE (`session_id`)
           );
+          CREATE INDEX `idx_session_stream_id` ON bilive_record_session(`stream_id`);
           CREATE INDEX `idx_session_room_id` ON bilive_record_session(`room_id`);
+      - tableName: bilive_record_files
+        DDL: |
+          CREATE TABLE bilive_record_files (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `session_id` text NOT NULL,
+            `stream_id` integer NOT NULL,
+            `title` text NOT NULL,
+            `file_path` text NOT NULL,
+            `file_size` integer DEFAULT NULL,
+            `start_time` datetime NOT NULL,
+            `end_time` datetime DEFAULT NULL,
+            `status` integer NOT NULL DEFAULT 0
+          );
+          CREATE INDEX `idx_session_id` ON bilive_record_files(`session_id`);
+          CREATE INDEX `idx_stream_id` ON bilive_record_files(`stream_id`);
+          CREATE INDEX `idx_file_path` ON bilive_record_files(`file_path`);
     execution:
       - tableName: migrations
         DDL: |
