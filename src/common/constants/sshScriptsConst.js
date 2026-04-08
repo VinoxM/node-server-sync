@@ -3,7 +3,7 @@ set +H;
 source_file="$1";
 target_path="$2";
 
-/usr/local/bin/mc mv "$source_file" "$target_path"
+/usr/local/bin/mc --quiet mv "$source_file" "$target_path"
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
@@ -19,7 +19,7 @@ set +H;
 source_file="$1";
 target_path="$2";
 
-/usr/local/bin/mc cp "$source_file" "$target_path"
+/usr/local/bin/mc --quiet cp "$source_file" "$target_path"
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
@@ -39,7 +39,7 @@ cd /tmp || { echo "Failed to change directory to /tmp" >&2; exit 2; };
 url_source="$1";
 target_path="$2";
 
-curl -fsSL "$url_source" | /usr/local/bin/mc pipe "$target_path"
+curl -fsSL "$url_source" | /usr/local/bin/mc --quiet pipe "$target_path"
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
