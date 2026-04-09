@@ -34,7 +34,7 @@ export async function saveBiliveFile(recordId, event, eventTimestamp, eventData)
             await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime ?? eventTimestamp))
         } else {
             __log.warn(`[Bilive File Opening] Found exists file[${file.id}] from repository, update file open time.`)
-            await biliveFileRep.updateFileClosed(tryResolveTime(fileOpenTime ?? eventTimestamp), file.id)
+            await biliveFileRep.updateFileOpenTime(tryResolveTime(fileOpenTime ?? eventTimestamp), file.id)
         }
     } else if (MEDIA_BILIVE_FILE_EVENT.FileClosed === event) {
         const fileSize = eventData['FileSize'] ?? 0
