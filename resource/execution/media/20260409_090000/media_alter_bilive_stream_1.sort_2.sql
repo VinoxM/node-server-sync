@@ -25,8 +25,7 @@ INSERT INTO
         end_time,
         streaming,
         end_reason,
-        end_by_record_id,
-        video_id
+        end_by_record_id
     )
 SELECT
     `id`,
@@ -39,8 +38,7 @@ SELECT
     end_time,
     streaming,
     end_reason,
-    end_by_record_id,
-    video_id
+    end_by_record_id
 FROM bilive_record_stream;
 
 DROP TABLE bilive_record_stream;
