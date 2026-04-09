@@ -176,6 +176,12 @@ export function generateVideoStorageFilePath(filePath, ext = '.cover.jpg', withP
     return (withProtocol ? 'file://' : '') + path.join(recordFileSavePath, path.dirname(filePath), fileName) + ext
 }
 
+export async function deleteStream(streamId) {
+    const firstFile = await biliveFileRep.selectFirstFileByStreamId(streamId)
+    firstFile && __throwMessage('Cannot delete stream cause file exists in this stream.')
+    await biliveStreamRep.deleteStreamById(streamId);
+}
+
 function tryResolveTime(time) {
     try {
         return new Date(time)

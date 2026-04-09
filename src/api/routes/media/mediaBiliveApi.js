@@ -2,8 +2,8 @@ import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constant
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
-import { getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
-import { getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
+import { deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
+import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 
 const { POST } = apiMethodConst
 
@@ -50,6 +50,14 @@ export default {
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => initStreamVideo(req.body['streamId'], req.body['tags'])
     },
+    "/record/deleteStream": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
+        callback: req => deleteStream(req.body['streamId'])
+    },
     "/record/getStreamFiles": {
         method: POST,
         needSecret,
@@ -66,12 +74,20 @@ export default {
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => uploadFileToMediaByFileId(req.body['fileId'])
     },
-    "/record/deleteFile": {
+    "/record/deletePhysicFile": {
         method: POST,
         needSecret,
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => removeFileByFileId(req.body['fileId'])
-    }
+    },
+    "/record/deleteFile": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
+        callback: req => deleteFile(req.body['fileId'])
+    },
 }

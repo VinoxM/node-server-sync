@@ -48,6 +48,10 @@ export default {
         const params = [MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED, id]
         return __sqliteDB.update(sql, params, null, dbName)
     },
+    deleteFileById: id => {
+        const sql = `DELETE FROM bilive_record_files WHERE id=? AND file_status=?`
+        return __sqliteDB.delete(sql, [id, MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED], null, dbName)
+    },
     selectFilesByStreamId: streamId => {
         const sql = `SELECT ${FULL_QUERY_PARAMETERS} FROM bilive_record_files WHERE stream_id=?`
         return __sqliteDB.selectAll(sql, [streamId], null, dbName)

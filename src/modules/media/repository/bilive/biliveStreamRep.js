@@ -76,6 +76,10 @@ export default {
         const sql = `SELECT br.event,br.event_timestamp,br.event_data FROM bilive_record br WHERE br.id IN (SELECT brs.end_by_record_id FROM bilive_record_stream brs WHERE brs.id=?)`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
+    deleteStreamById: id => {
+        const sql = `DELETE FROM bilive_record_stream WHERE id=?`
+        return __sqliteDB.delete(sql, [id], null, dbName)
+    },
     selectStreamForSearch: (roomId, hostName, pageSize, pageNum) => {
         const params = []
         let sql = `SELECT ${STREAM_FULL_COLUMNS.slice(0, STREAM_FULL_COLUMNS.length - 1).map(c => 'brs.' + c).join(',')}, v.id AS videoExists `

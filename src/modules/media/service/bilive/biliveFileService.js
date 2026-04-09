@@ -120,6 +120,10 @@ async function deleteRemoteFiles(files) {
     }
 }
 
+export async function deleteFile(id) {
+    await biliveFileRep.deleteFileById(id);
+}
+
 function resolveFileSize(bytes, decimals = 2) {
     if (bytes === null || bytes === undefined) return '-'
     if (bytes === 0) return '0 B';
