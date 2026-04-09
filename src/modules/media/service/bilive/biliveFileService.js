@@ -55,8 +55,9 @@ export async function uploadFileToMediaByFileId(id) {
 
 }
 
-async function uploadFileToMedia(file) {
-    const { streamId, filePath, fileStatus, syncStatus } = file
+async function uploadFileToMedia(file, stream) {
+    const { filePath, fileStatus, syncStatus } = file
+    const { videoId } = stream
 }
 
 function resolveFileSize(bytes, decimals = 2) {
