@@ -15,8 +15,13 @@ export default {
         const sql = `SELECT ${FULL_QUERY_PARAMETERS} FROM bilive_record_files WHERE file_path=?`
         return __sqliteDB.selectOne(sql, [filePath], null, dbName)
     },
+    updateFileOpenTime: (startTime, id) => {
+        const sql = `UPDATE bilive_record_files SET start_time WHERE id=?`
+        const params = [startTime, id]
+        return __sqliteDB.update(sql, params, null, dbName)
+    },
     updateFileClosed: (endTime, fileSize, id) => {
-        const sql = `UPDATE bilive_record_files SET end_time=?,file_size=?,status=? WHERE id=?`
+        const sql = `UPDATE bilive_record_files SET end_time=?,file_size=?,file_status=? WHERE id=?`
         const params = [endTime, fileSize, MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED, id]
         return __sqliteDB.update(sql, params, null, dbName)
     },
@@ -24,9 +29,13 @@ export default {
         const sql = `SELECT ${FULL_QUERY_PARAMETERS} FROM bilive_record_files WHERE id=?`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
+    selectFirstFileByStreamId: streamId => {
+        const sql = `SELECT ${FULL_QUERY_PARAMETERS} FROM bilive_record_files WHERE stream_id=? ORDER BY id LIMIT 1`
+        return __sqliteDB.selectOne(sql, [streamId], null, dbName)
+    },
     updateFileUploading: id => {
-        const sql = `UPDATE bilive_record_files SET sync_status=? WHERE id=?`
-        const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING, id]
+        const sql = `UPDATE bilive_record_files SET sync_status=? WHERE id=? AND sync_status=? AND file_status=?`
+        const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING, id, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED, MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED]
         return __sqliteDB.update(sql, params, null, dbName)
     },
     updateFileUploaded: id => {
@@ -34,7 +43,7 @@ export default {
         const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZED, id, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING]
         return __sqliteDB.update(sql, params, null, dbName)
     },
-    setupFileRemoved: id => {
+    updateFileRemoved: id => {
         const sql = `UPDATE bilive_record_files SET file_status=? WHERE id=?`
         const params = [MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED, id]
         return __sqliteDB.update(sql, params, null, dbName)

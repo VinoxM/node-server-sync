@@ -93,6 +93,11 @@ export const MEDIA_BILIVE_FILE_EVENT = {
     FileClosed: 2,
 }
 
+export const MEDIA_BILIVE_STREAM_STATUS = {
+    NOT_LIVE: 0,
+    STREAMING: 1,
+}
+
 export const MEDIA_BILIVE_RECORD_FILE_STATUS = {
     REMOVED: -1,
     OPENING: 0,
@@ -102,5 +107,5 @@ export const MEDIA_BILIVE_RECORD_FILE_STATUS = {
 export const MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS = {
     NOT_SYNCHRONIZED: 0,
     SYNCHRONIZING: 1,
-    SYNCHRONIZED: 2
+    SYNCHRONIZED: 2,
 }

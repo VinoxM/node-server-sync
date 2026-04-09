@@ -1,11 +1,15 @@
 import { pushNotification } from "../../../../api/sockets/notification.js"
-import { MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY } from "../../constants/mediaConst.js"
+import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../../common/constants/sshScriptsConst.js"
+import { getSSHExecutor } from "../../../../core/instance/sshExecutor.js"
+import {
+    MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY,
+    MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS,
+    MEDIA_VIDEO_MINIO_TYPE
+} from "../../constants/mediaConst.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
+import { createMinioManually } from "../mediaMinioService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
-
-export async function getBiliveRecordFileSavePath() {
-    return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
-}
+import { generateVideoStorageFilePath, getStreamVideoId } from "./biliveStreamService.js"
 
 export async function saveBiliveFile(recordId, event, eventTimestamp, eventData) {
     const sessionId = eventData['SessionId']
@@ -21,13 +25,18 @@ export async function saveBiliveFile(recordId, event, eventTimestamp, eventData)
             + `Event data: ${JSON.stringify(eventData)}`)
         return
     }
+    const file = await biliveFileRep.selectByFilePath(filePath)
     if (MEDIA_BILIVE_FILE_EVENT.FileOpening === event) {
         const streamId = await getBiliveLatestStreamIdBySessionId(sessionId, recordId, roomId, hostName, title, areaNameParent, areaNameChild)
-        await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime ?? eventTimestamp))
+        if (!file) {
+            await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime ?? eventTimestamp))
+        } else {
+            __log.warn(`[Bilive File Opening] Found exists file[${file.id}] from repository, update file open time.`)
+            await biliveFileRep.updateFileClosed(tryResolveTime(fileOpenTime ?? eventTimestamp), file.id)
+        }
     } else if (MEDIA_BILIVE_FILE_EVENT.FileClosed === event) {
         const fileSize = eventData['FileSize'] ?? 0
         const fileCloseTime = eventData['FileCloseTime']
-        const file = await biliveFileRep.selectByFilePath(filePath)
         if (!file) {
             printAndPushNotificationWarnMessage(`[Bilive File Closed] Cannot found opening file from repository for file closed event. `
                 + `Create a new file record. File path: ${filePath}. `
@@ -51,13 +60,55 @@ export async function getFilesByStreamId(streamId) {
     })
 }
 
+const CAN_UPLOAD_FILE_STATUS = [
+    MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED
+]
+const CAN_UPLOAD_FILE_SYNC_STATUS = [
+    MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED
+]
 export async function uploadFileToMediaByFileId(id) {
-
+    const file = await biliveFileRep.selectFileById(id)
+    file || __throwMessage('File not found.')
+    const { streamId, filePath, fileStatus, syncStatus } = file
+    CAN_UPLOAD_FILE_STATUS.includes(fileStatus) || __throwMessage('Illegal file status, cannot upload.')
+    CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
+    const videoId = await getStreamVideoId(streamId)
+    if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
+        __throwMessage('Prepare to upload failed.')
+    }
+    const source = generateVideoStorageFilePath(filePath, '.flv')
+    await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.SOURCE, uri: source })
+    const barrage = generateVideoStorageFilePath(filePath, '.xml')
+    await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.BARRAGE, uri: barrage })
+    await biliveFileRep.updateFileUploaded(id)
 }
 
-async function uploadFileToMedia(file, stream) {
-    const { filePath, fileStatus, syncStatus } = file
-    const { videoId } = stream
+export async function removeFileByFileId(id) {
+    const file = await biliveFileRep.selectFileById(id)
+    file || __throwMessage('File not found.')
+    const { filePath, fileStatus } = file
+    MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED === fileStatus && __throwMessage('File has been removed.')
+    const cover = generateVideoStorageFilePath(filePath, '.cover.jpg', false)
+    const source = generateVideoStorageFilePath(filePath, '.flv', false)
+    const barrage = generateVideoStorageFilePath(filePath, '.xml', false)
+    await deleteRemoteFiles([cover, source, barrage])
+    await biliveFileRep.updateFileRemoved(id)
+}
+
+async function deleteRemoteFiles(files) {
+    __log.info(`Ready to delete files: `, files)
+    const executor = getSSHExecutor('fedora')
+    if (!executor) {
+        __log.warn(`SSH executor not ready.`)
+        return -2
+    }
+    try {
+        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ssh script failed.', e)
+        return -3
+    }
 }
 
 function resolveFileSize(bytes, decimals = 2) {

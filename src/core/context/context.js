@@ -22,6 +22,8 @@ export class ApplicationContext {
 
     #propertyCache = new LRUCache(100)
 
+    #actives = []
+
     constructor(resourcePath, applicationType = defaultApplicationType) {
         this.#resourcePath = resourcePath;
         this.#type = String(applicationType).toLocaleLowerCase();
@@ -37,10 +39,10 @@ export class ApplicationContext {
         }
         this.#context = this.#parser.parse(readFileSync(configFile).toString());
         __log.info(`[${placeholder}] Loaded configuration: application.${suffix}.`);
-        const actives = getActives(this.#context)
-        if (actives.length > 0) {
-            __log.info(`[${placeholder}] Configuration actives: ${actives.join(',')}`)
-            actives.forEach(active => {
+        this.#actives = getActives(this.#context)
+        if (this.#actives.length > 0) {
+            __log.info(`[${placeholder}] Configuration actives: ${this.#actives.join(',')}`)
+            this.#actives.forEach(active => {
                 const activeFile = join(this.#resourcePath, `application-${active}.${suffix}`);
                 if (!existsSync(activeFile)) {
                     throw new Error(`Active File not exists: application-${active}.${suffix}.`);
@@ -104,6 +106,9 @@ export class ApplicationContext {
         }
     }
 
+    isActive(label) {
+        return __isNotBlank(label) && this.#actives.includes(label)
+    }
 }
 
 function getActives(context) {

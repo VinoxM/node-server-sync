@@ -72,4 +72,8 @@ export class K8SApplicationContext extends ApplicationContext {
     logPlaceholder() {
         return 'K8S Configuration'
     }
+
+    isActive(label) {
+        return (__isNotBlank(label) && this.#configLabels.includes(label)) || super.isActive(label)
+    }
 }

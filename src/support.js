@@ -95,6 +95,7 @@ export async function setupGlobal(rootPath) {
         },
         subscribe: (sub) => applicationContext.addListen(sub),
         unsubscribe: (sub) => applicationContext.removeListen(sub),
+        isDev: () => applicationContext.isActive?.('dev')
     }
 
     initializeLogger(__env.get('logger.savePath'))

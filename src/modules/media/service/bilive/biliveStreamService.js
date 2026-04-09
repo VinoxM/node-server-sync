@@ -1,7 +1,14 @@
-import { MEDIA_BILIVE_STREAM_EVENT } from "../../constants/mediaConst.js"
+import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_EVENT } from "../../constants/mediaConst.js"
 import biliveStreamRep from '../../repository/bilive/biliveStreamRep.js'
 import { getRoomInfo } from "./biliveApiService.js"
 import { pushNotification } from "../../../../api/sockets/notification.js"
+import { createVideo } from "../mediaVideoService.js"
+import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
+import path from 'path'
+
+export function getBiliveRecordFileSavePath() {
+    return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
+}
 
 async function tryGetRoomInfo(roomId) {
     __log.debug(`[Bilive Stream] Try get bilive room info, roomId: ${roomId}`)
@@ -56,7 +63,7 @@ export async function getBiliveLatestStreamingId(recordId, roomId, hostName, tit
     const roomInfo = await tryGetRoomInfo(roomId)
     if (latestStream) {
         if (roomInfo) {
-            if (checkStartTime(roomInfo.startTime, latestStream.startTime)) {
+            if (__env.isDev() || checkStartTime(roomInfo.startTime, latestStream.startTime)) {
                 __log.debug(`[Bilive Stream] Room's[${roomId}] latest streaming id found.`)
                 return latestStream.id
             } else {
@@ -97,7 +104,7 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
     const timestamp = tryResolveTime(eventTimestamp)
     if (MEDIA_BILIVE_STREAM_EVENT.StreamStarted === event) {
         const latestStream = await biliveStreamRep.insertStartStream(roomId, hostName, title, areaNameParent, areaNameChild, timestamp)
-        __log.info(`[Bilive Stream Started] Setup latest stream[${latestStream.id}] started.`)
+        __log.info(`[Bilive Stream Started] Setup latest stream[${latestStream.lastId}] started.`)
     } else if (MEDIA_BILIVE_STREAM_EVENT.StreamEnded === event) {
         const latestStream = await biliveStreamRep.selectLatestStreamingByRoomId(roomId)
         if (latestStream) {
@@ -119,6 +126,30 @@ export async function searchStream(roomId, hostName, pageSize = 10, pageNum = 1)
 
 export async function getStreamEndedRecordEventData(streamId) {
     return await biliveStreamRep.selectEndedEventDataById(streamId)
+}
+
+export async function getStreamVideoId(streamId) {
+    const stream = await biliveStreamRep.selectOneById(streamId)
+    stream || __throwMessage('Stream not found.')
+    const { title, hostName, startTime, videoId } = stream;
+    if (!videoId) {
+        const category = __env.get('bilive.uploadCategory', 'record')
+        const firstFile = await biliveFileRep.selectFirstFileByStreamId(streamId)
+        if (!firstFile || firstFile.fileStatus !== MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED) {
+            __throwMessage('No valid files were available.')
+        }
+        const { filePath } = firstFile;
+        const cover = generateVideoStorageFilePath(filePath)
+        const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover })
+        return video.id
+    }
+    return videoId;
+}
+
+export function generateVideoStorageFilePath(filePath, ext = '.cover.jpg', withProtocol = true) {
+    const recordFileSavePath = getBiliveRecordFileSavePath()
+    const fileName = path.basename(filePath, path.extname(filePath))
+    return (withProtocol ? 'file://' : '') + path.join(recordFileSavePath, path.dirname(filePath), fileName) + ext
 }
 
 function tryResolveTime(time) {

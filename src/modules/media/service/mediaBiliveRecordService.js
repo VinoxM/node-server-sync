@@ -29,9 +29,9 @@ export async function saveWebhookEvent(body) {
     // save event data
     const record = await biliveRecordRep.insertOneEvent(event, sessionId, roomId, timestamp, eventId, eventDataJson)
     // save stream event data
-    BILIVE_RECORD_STREAM_EVENT_ARRAY.includes(event) && saveBiliveStream(record.lastId, event, eventTimestamp, eventData)
+    BILIVE_RECORD_STREAM_EVENT_ARRAY.includes(event) && await saveBiliveStream(record.lastId, event, eventTimestamp, eventData)
     // save session event data
-    BILIVE_RECORD_SESSION_EVENT_ARRAY.includes(event) && saveBiliveSession(record.lastId, event, eventTimestamp, eventData)
+    BILIVE_RECORD_SESSION_EVENT_ARRAY.includes(event) && await saveBiliveSession(record.lastId, event, eventTimestamp, eventData)
     // save file event data
-    BILIVE_RECORD_FILE_EVENT_ARRAY.includes(event) && saveBiliveFile(record.lastId, event, eventTimestamp, eventData)
+    BILIVE_RECORD_FILE_EVENT_ARRAY.includes(event) && await saveBiliveFile(record.lastId, event, eventTimestamp, eventData)
 }

@@ -2,6 +2,11 @@ const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
+    selectOneById: id => {
+        const sql = `SELECT id, room_id, host_name, title, area_name_parent, area_name_child, start_time, end_time, streaming, end_reason, end_by_record_id, video_id `
+            + `FROM bilive_record_stream WHERE id=?`
+        return __sqliteDB.selectOne(sql, [id], null, dbName)
+    },
     insertStartStream: (roomId, hostName, title, areaNameParent, areaNameChild, startTime, endTime) => {
         const sql = `INSERT INTO bilive_record_stream (room_id, host_name, title, area_name_parent, area_name_child, start_time, end_time) VALUES(?,?,?,?,?,?,?)`
         const params = [roomId, hostName, title, areaNameParent, areaNameChild, startTime, endTime]
