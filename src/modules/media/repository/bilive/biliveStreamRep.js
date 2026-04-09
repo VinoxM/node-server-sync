@@ -20,6 +20,10 @@ export default {
         const sql = `SELECT id, start_time FROM bilive_record_stream WHERE room_id=? AND streaming=1 ORDER BY id DESC LIMIT 1`
         return __sqliteDB.selectOne(sql, [roomId], null, dbName)
     },
+    updateVideoIdById: (videoId, id) => {
+        const sql = `UPDATE bilive_record_stream SET video_id=? WHERE id=?`
+        return __sqliteDB.selectOne(sql, [videoId, id], null, dbName)
+    },
     updateStreamEndedById: (id, endTime, recordId, reason) => {
         const sql = `UPDATE bilive_record_stream SET streaming=0,end_time=?,end_by_record_id=?,end_reason=? WHERE id=?`
         return __sqliteDB.update(sql, [endTime, recordId, reason, id], null, dbName)
@@ -29,12 +33,12 @@ export default {
         return __sqliteDB.update(sql, [roomId], null, dbName)
     },
     selectEndedEventDataById: (id) => {
-        const sql = `SELECT br.event,br.event_timestamp,br.event_data FROM bilive_record br WHERE br.id IN (SELECT brs.record_id FROM bilive_record_stream brs WHERE brs.id=?)`
+        const sql = `SELECT br.event,br.event_timestamp,br.event_data FROM bilive_record br WHERE br.id IN (SELECT brs.end_by_record_id FROM bilive_record_stream brs WHERE brs.id=?)`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
     selectStreamForSearch: (roomId, hostName, pageSize, pageNum) => {
         const params = []
-        let sql = `SELECT id,room_id,host_name,title,area_name_parent,area_name_child,start_time,end_time,streaming,end_reason,end_by_record_id `
+        let sql = `SELECT id,room_id,host_name,title,area_name_parent,area_name_child,start_time,end_time,streaming,end_reason,end_by_record_id,video_id `
             + `FROM bilive_record_stream `
         const concat = []
         if (__isNotBlank(roomId)) {

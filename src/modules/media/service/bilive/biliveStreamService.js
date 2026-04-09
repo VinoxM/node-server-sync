@@ -5,6 +5,7 @@ import { pushNotification } from "../../../../api/sockets/notification.js"
 import { createVideo } from "../mediaVideoService.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import path from 'path'
+import videosRep from "../../repository/videosRep.js"
 
 export function getBiliveRecordFileSavePath() {
     return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
@@ -125,14 +126,19 @@ export async function searchStream(roomId, hostName, pageSize = 10, pageNum = 1)
 }
 
 export async function getStreamEndedRecordEventData(streamId) {
-    return await biliveStreamRep.selectEndedEventDataById(streamId)
+    const data = await biliveStreamRep.selectEndedEventDataById(streamId)
+    return data ? {
+        ...data,
+        eventData: JSON.parse(data.eventData)
+    } : null
 }
 
 export async function getStreamVideoId(streamId) {
     const stream = await biliveStreamRep.selectOneById(streamId)
     stream || __throwMessage('Stream not found.')
     const { title, hostName, startTime, videoId } = stream;
-    if (!videoId) {
+    const video = await videosRep.selectOne(videoId)
+    if (!video) {
         const category = __env.get('bilive.uploadCategory', 'record')
         const firstFile = await biliveFileRep.selectFirstFileByStreamId(streamId)
         if (!firstFile || firstFile.fileStatus !== MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED) {
@@ -141,6 +147,7 @@ export async function getStreamVideoId(streamId) {
         const { filePath } = firstFile;
         const cover = generateVideoStorageFilePath(filePath)
         const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover })
+        await biliveStreamRep.updateVideoIdById(video.id, streamId)
         return video.id
     }
     return videoId;

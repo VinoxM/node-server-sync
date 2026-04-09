@@ -34,8 +34,8 @@ export default {
         return __sqliteDB.selectOne(sql, [streamId], null, dbName)
     },
     updateFileUploading: id => {
-        const sql = `UPDATE bilive_record_files SET sync_status=? WHERE id=? AND sync_status=? AND file_status=?`
-        const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING, id, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED, MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED]
+        const sql = `UPDATE bilive_record_files SET sync_status=? WHERE id=? AND sync_status!=? AND file_status=?`
+        const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING, id, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING, MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED]
         return __sqliteDB.update(sql, params, null, dbName)
     },
     updateFileUploaded: id => {

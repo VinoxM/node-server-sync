@@ -7,6 +7,7 @@ import {
     MEDIA_VIDEO_MINIO_TYPE
 } from "../../constants/mediaConst.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
+import videoMinioRep from "../../repository/videoMinioRep.js"
 import { createMinioManually } from "../mediaMinioService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 import { generateVideoStorageFilePath, getStreamVideoId } from "./biliveStreamService.js"
@@ -64,7 +65,8 @@ const CAN_UPLOAD_FILE_STATUS = [
     MEDIA_BILIVE_RECORD_FILE_STATUS.CLOSED
 ]
 const CAN_UPLOAD_FILE_SYNC_STATUS = [
-    MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED
+    MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED,
+    MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZED
 ]
 export async function uploadFileToMediaByFileId(id) {
     const file = await biliveFileRep.selectFileById(id)
@@ -75,6 +77,11 @@ export async function uploadFileToMediaByFileId(id) {
     const videoId = await getStreamVideoId(streamId)
     if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
         __throwMessage('Prepare to upload failed.')
+    }
+    const coverExists = await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER)
+    if (!coverExists) {
+        const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
+        await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.COVER, uri: cover })
     }
     const source = generateVideoStorageFilePath(filePath, '.flv')
     await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.SOURCE, uri: source })

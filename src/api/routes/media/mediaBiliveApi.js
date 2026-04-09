@@ -43,13 +43,6 @@ export default {
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => getFilesByStreamId(req.body['streamId'])
     },
-    "/record/getRecordPath": {
-        method: POST,
-        needSecret,
-        allowHosts,
-        ignoreOutput: true,
-        callback: () => getBiliveRecordFileSavePath()
-    },
     "/record/uploadFileToMedia": {
         method: POST,
         needSecret,
