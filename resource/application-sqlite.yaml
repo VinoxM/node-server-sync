@@ -292,7 +292,8 @@ sqlite:
             `end_time` datetime DEFAULT NULL,
             `streaming` integer DEFAULT 1,
             `end_reason` text DEFAULT NULL,
-            `end_by_record_id` integer DEFAULT NULL
+            `end_by_record_id` integer DEFAULT NULL,
+            `video_id` integer DEFAULT NULL
           );
           CREATE INDEX `idx_room_id` ON bilive_record_stream(`room_id`);
           CREATE INDEX `idx_host_name` ON bilive_record_stream(`host_name`);

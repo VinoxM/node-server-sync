@@ -3,7 +3,7 @@ import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
 import { getStreamEndedRecordEventData, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
-import { getFilesByStreamId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
+import { getBiliveRecordFileSavePath, getFilesByStreamId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 
 const { POST } = apiMethodConst
 
@@ -48,7 +48,7 @@ export default {
         needSecret,
         allowHosts,
         ignoreOutput: true,
-        callback: () => __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
+        callback: () => getBiliveRecordFileSavePath()
     },
     "/record/uploadFileToMedia": {
         method: POST,

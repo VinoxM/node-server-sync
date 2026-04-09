@@ -3,6 +3,10 @@ import { MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY } from "../../
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 
+export async function getBiliveRecordFileSavePath() {
+    return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
+}
+
 export async function saveBiliveFile(recordId, event, eventTimestamp, eventData) {
     const sessionId = eventData['SessionId']
     const roomId = eventData['RoomId']
@@ -48,11 +52,11 @@ export async function getFilesByStreamId(streamId) {
 }
 
 export async function uploadFileToMediaByFileId(id) {
-    
+
 }
 
 async function uploadFileToMedia(file) {
-    const {} = file
+    const { streamId, filePath, fileStatus, syncStatus } = file
 }
 
 function resolveFileSize(bytes, decimals = 2) {
