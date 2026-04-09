@@ -1,3 +1,5 @@
+import { MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js"
+
 const dbName = 'media'
 const enablePrint = { print: true }
 
@@ -36,19 +38,38 @@ export default {
         return __sqliteDB.selectOne(sql, [roomId], null, dbName)
     },
     selectLatestStreamingByRoomId: (roomId) => {
-        const sql = `SELECT id, start_time FROM bilive_record_stream WHERE room_id=? AND streaming=1 ORDER BY id DESC LIMIT 1`
+        const sql = `SELECT id, start_time, streaming FROM bilive_record_stream WHERE room_id=? AND streaming IN (${MEDIA_BILIVE_STREAM_STATUS.STREAMING}, ${MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED}) ORDER BY id DESC LIMIT 1`
         return __sqliteDB.selectOne(sql, [roomId], null, dbName)
     },
     updateVideoIdById: (videoId, id) => {
         const sql = `UPDATE bilive_record_stream SET video_id=? WHERE id=?`
         return __sqliteDB.selectOne(sql, [videoId, id], null, dbName)
     },
-    updateStreamEndedById: (id, endTime, recordId, reason) => {
-        const sql = `UPDATE bilive_record_stream SET streaming=0,end_time=?,end_by_record_id=?,end_reason=? WHERE id=?`
+    updateStreamReadyToEndedById: (id, endTime, recordId, reason) => {
+        const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED},end_time=?,end_by_record_id=?,end_reason=? WHERE id=?`
         return __sqliteDB.update(sql, [endTime, recordId, reason, id], null, dbName)
     },
+    updateStreamEndedById: (id, endTime, recordId, reason) => {
+        const params = []
+        let sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE}`
+        if (endTime) {
+            sql += `,end_time=?`
+            params.push(endTime)
+        }
+        if (recordId) {
+            sql += `,end_by_record_id=?`
+            params.push(recordId)
+        }
+        if (reason) {
+            sql += `,end_reason=?`
+            params.push(reason)
+        }
+        sql += ` WHERE id=?`
+        params.push(id)
+        return __sqliteDB.update(sql, params, null, dbName)
+    },
     updateStreamEndedByRoomId: (roomId) => {
-        const sql = `UPDATE bilive_record_stream SET streaming=0 WHERE room_id=?`
+        const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE} WHERE room_id=?`
         return __sqliteDB.update(sql, [roomId], null, dbName)
     },
     selectEndedEventDataById: (id) => {

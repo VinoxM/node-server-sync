@@ -96,6 +96,7 @@ export const MEDIA_BILIVE_FILE_EVENT = {
 export const MEDIA_BILIVE_STREAM_STATUS = {
     NOT_LIVE: 0,
     STREAMING: 1,
+    READY_TO_ENDED: 2
 }
 
 export const MEDIA_BILIVE_RECORD_FILE_STATUS = {

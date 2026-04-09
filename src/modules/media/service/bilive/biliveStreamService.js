@@ -1,4 +1,4 @@
-import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_EVENT } from "../../constants/mediaConst.js"
+import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_EVENT, MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js"
 import biliveStreamRep from '../../repository/bilive/biliveStreamRep.js'
 import { getRoomInfo } from "./biliveApiService.js"
 import { pushNotification } from "../../../../api/sockets/notification.js"
@@ -66,7 +66,10 @@ export async function getBiliveLatestStreamingId(recordId, roomId, hostName, tit
     const roomInfo = await tryGetRoomInfo(roomId)
     if (latestStream) {
         if (roomInfo) {
-            if (__env.isDev() || checkStartTime(roomInfo.startTime, latestStream.startTime)) {
+            if (!roomInfo.isLiving && latestStream.streaming === MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED) {
+                await biliveStreamRep.updateStreamEndedById(latestStream.id)
+                return latestStream.id
+            } else if (__env.isDev() || checkStartTime(roomInfo.startTime, latestStream.startTime)) {
                 __log.debug(`[Bilive Stream] Room's[${roomId}] latest streaming id found.`)
                 return latestStream.id
             } else {
@@ -111,8 +114,13 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
     } else if (MEDIA_BILIVE_STREAM_EVENT.StreamEnded === event) {
         const latestStream = await biliveStreamRep.selectLatestStreamingByRoomId(roomId)
         if (latestStream) {
-            await biliveStreamRep.updateStreamEndedById(latestStream.id, timestamp, recordId, 'Normally.')
-            __log.info(`[Bilive Stream Ended] Setup latest stream[${latestStream.id}] ended.`)
+            if (latestStream.streaming === MEDIA_BILIVE_STREAM_STATUS.STREAMING) {
+                await biliveStreamRep.updateStreamReadyToEndedById(latestStream.id, timestamp, recordId, 'Normally.')
+                __log.info(`[Bilive Stream Ended] Setup latest stream[${latestStream.id}] ready to ended.`)
+            } else {
+                await biliveStreamRep.updateStreamEndedById(latestStream.id, timestamp, recordId, 'Directly.')
+                __log.info(`[Bilive Stream Ended] Setup latest stream[${latestStream.id}] ended.`)
+            }
         } else {
             const { lastId } = await biliveStreamRep.insertStartStream(roomId, hostName, title, areaNameParent, areaNameChild, null, timestamp)
             await biliveStreamRep.updateStreamEndedById(lastId, timestamp, recordId, 'Latest stream info not found.')
