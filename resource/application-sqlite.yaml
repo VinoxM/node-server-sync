@@ -278,7 +278,7 @@ sqlite:
             `event_data` text NOT NULL,
             `create_time` datetime DEFAULT CURRENT_TIMESTAMP
           );
-          CREATE INDEX `idx_session_id` ON bilive_record(`session_id`);
+          CREATE INDEX `idx_br_session_id` ON bilive_record(`session_id`);
       - tableName: bilive_record_stream
         DDL: |
           CREATE TABLE bilive_record_stream (
@@ -295,9 +295,9 @@ sqlite:
             `end_by_record_id` integer DEFAULT NULL,
             `video_id` integer DEFAULT NULL
           );
-          CREATE INDEX `idx_room_id` ON bilive_record_stream(`room_id`);
-          CREATE INDEX `idx_host_name` ON bilive_record_stream(`host_name`);
-          CREATE INDEX `idx_title` ON bilive_record_stream(`title`);
+          CREATE INDEX `idx_br_stream_room_id` ON bilive_record_stream(`room_id`);
+          CREATE INDEX `idx_br_stream_host_name` ON bilive_record_stream(`host_name`);
+          CREATE INDEX `idx_br_stream_title` ON bilive_record_stream(`title`);
       - tableName: bilive_record_session
         DDL: |
           CREATE TABLE bilive_record_session (
@@ -310,8 +310,8 @@ sqlite:
             `status` integer DEFAULT 0,
             CONSTRAINT `idx_unique_session_id` UNIQUE (`session_id`)
           );
-          CREATE INDEX `idx_session_stream_id` ON bilive_record_session(`stream_id`);
-          CREATE INDEX `idx_session_room_id` ON bilive_record_session(`room_id`);
+          CREATE INDEX `idx_br_session_stream_id` ON bilive_record_session(`stream_id`);
+          CREATE INDEX `idx_br_session_room_id` ON bilive_record_session(`room_id`);
       - tableName: bilive_record_files
         DDL: |
           CREATE TABLE bilive_record_files (
@@ -326,9 +326,9 @@ sqlite:
             `file_status` integer NOT NULL DEFAULT 0,
             `sync_status` integer NOT NULL DEFAULT 0
           );
-          CREATE INDEX `idx_session_id` ON bilive_record_files(`session_id`);
-          CREATE INDEX `idx_stream_id` ON bilive_record_files(`stream_id`);
-          CREATE INDEX `idx_file_path` ON bilive_record_files(`file_path`);
+          CREATE INDEX `idx_br_files_session_id` ON bilive_record_files(`session_id`);
+          CREATE INDEX `idx_br_files_record_stream_id` ON bilive_record_files(`stream_id`);
+          CREATE INDEX `idx_br_files_record_file_path` ON bilive_record_files(`file_path`);
     execution:
       - tableName: migrations
         DDL: |

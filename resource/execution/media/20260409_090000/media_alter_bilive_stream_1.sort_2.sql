@@ -25,7 +25,8 @@ INSERT INTO
         end_time,
         streaming,
         end_reason,
-        end_by_record_id
+        end_by_record_id,
+        video_id
     )
 SELECT
     `id`,
@@ -38,15 +39,16 @@ SELECT
     end_time,
     streaming,
     end_reason,
-    end_by_record_id
+    end_by_record_id,
+    video_id
 FROM bilive_record_stream;
 
 DROP TABLE bilive_record_stream;
 
 ALTER TABLE bilive_record_stream_new RENAME TO bilive_record_stream;
 
-CREATE INDEX `idx_room_id` ON bilive_record_stream (`room_id`);
+CREATE INDEX `idx_br_stream_room_id` ON bilive_record_stream (`room_id`);
 
-CREATE INDEX `idx_host_name` ON bilive_record_stream (`host_name`);
+CREATE INDEX `idx_br_stream_host_name` ON bilive_record_stream (`host_name`);
 
-CREATE INDEX `idx_title` ON bilive_record_stream (`title`);
+CREATE INDEX `idx_br_stream_title` ON bilive_record_stream (`title`);

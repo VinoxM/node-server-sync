@@ -1,1 +1,0 @@
-UPDATE authors SET name='心宜不是心仪' WHERE name='心宜';
