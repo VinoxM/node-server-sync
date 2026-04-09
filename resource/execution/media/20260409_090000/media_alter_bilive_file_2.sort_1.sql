@@ -5,35 +5,11 @@ CREATE TABLE bilive_record_files_new (
     `title` text NOT NULL,
     `file_path` text NOT NULL,
     `file_size` integer DEFAULT NULL,
-    `start_time` datetime NOT NULL,
+    `start_time` datetime DEFAULT NULL,
     `end_time` datetime DEFAULT NULL,
     `file_status` integer NOT NULL DEFAULT 0,
     `sync_status` integer NOT NULL DEFAULT 0
 );
-
-INSERT INTO
-    bilive_record_files_new (
-        `id`,
-        session_id,
-        stream_id,
-        title,
-        file_path,
-        file_size,
-        start_time,
-        end_time,
-        file_status
-    )
-SELECT
-    id,
-    session_id,
-    stream_id,
-    title,
-    file_path,
-    file_size,
-    start_time,
-    end_time,
-    `status`
-FROM bilive_record_files;
 
 DROP TABLE bilive_record_files;
 

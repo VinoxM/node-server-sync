@@ -321,7 +321,7 @@ sqlite:
             `title` text NOT NULL,
             `file_path` text NOT NULL,
             `file_size` integer DEFAULT NULL,
-            `start_time` datetime NOT NULL,
+            `start_time` datetime DEFAULT NULL,
             `end_time` datetime DEFAULT NULL,
             `file_status` integer NOT NULL DEFAULT 0,
             `sync_status` integer NOT NULL DEFAULT 0
