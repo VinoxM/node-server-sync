@@ -3,7 +3,7 @@ import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
 import { getStreamEndedRecordEventData, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
-import { getFilesByStreamId, uploadFileToMedia } from "../../../modules/media/service/bilive/biliveFileService.js"
+import { getFilesByStreamId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 
 const { POST } = apiMethodConst
 
@@ -56,6 +56,6 @@ export default {
         allowHosts,
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
-        callback: req => uploadFileToMedia(req.body['fileId'])
+        callback: req => uploadFileToMediaByFileId(req.body['fileId'])
     }
 }

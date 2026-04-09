@@ -47,8 +47,12 @@ export async function getFilesByStreamId(streamId) {
     })
 }
 
-export async function uploadFileToMedia(id) {
+export async function uploadFileToMediaByFileId(id) {
+    
+}
 
+async function uploadFileToMedia(file) {
+    const {} = file
 }
 
 function resolveFileSize(bytes, decimals = 2) {

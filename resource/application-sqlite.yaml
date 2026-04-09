@@ -322,7 +322,8 @@ sqlite:
             `file_size` integer DEFAULT NULL,
             `start_time` datetime NOT NULL,
             `end_time` datetime DEFAULT NULL,
-            `status` integer NOT NULL DEFAULT 0
+            `file_status` integer NOT NULL DEFAULT 0,
+            `sync_status` integer NOT NULL DEFAULT 0
           );
           CREATE INDEX `idx_session_id` ON bilive_record_files(`session_id`);
           CREATE INDEX `idx_stream_id` ON bilive_record_files(`stream_id`);
