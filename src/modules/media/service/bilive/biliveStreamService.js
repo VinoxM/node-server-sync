@@ -2,10 +2,12 @@ import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_EVENT } from "../.
 import biliveStreamRep from '../../repository/bilive/biliveStreamRep.js'
 import { getRoomInfo } from "./biliveApiService.js"
 import { pushNotification } from "../../../../api/sockets/notification.js"
-import { createVideo } from "../mediaVideoService.js"
+import { checkCategoryExistsByInside, createVideo } from "../mediaVideoService.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import path from 'path'
 import videosRep from "../../repository/videosRep.js"
+import categoriesRep from "../../repository/categoriesRep.js"
+import videoTagMapRep from "../../repository/videoTagMapRep.js"
 
 export function getBiliveRecordFileSavePath() {
     return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
@@ -133,7 +135,7 @@ export async function getStreamEndedRecordEventData(streamId) {
     } : null
 }
 
-export async function getStreamVideoId(streamId) {
+export async function initStreamVideo(streamId, tags) {
     const stream = await biliveStreamRep.selectOneById(streamId)
     stream || __throwMessage('Stream not found.')
     const { title, hostName, startTime, videoId } = stream;
@@ -146,11 +148,18 @@ export async function getStreamVideoId(streamId) {
         }
         const { filePath } = firstFile;
         const cover = generateVideoStorageFilePath(filePath)
-        const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover })
+        const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover, tags })
         await biliveStreamRep.updateVideoIdById(video.id, streamId)
         return video.id
     }
     return videoId;
+}
+
+export async function getBiliveRecordTags() {
+    const categoryName = __env.get('bilive.uploadCategory', 'record')
+    const category = await categoriesRep.selectOneByName(categoryName)
+    if (!category) return []
+    return videoTagMapRep.selectTagsWithCount(category.id).then(({ data }) => data)
 }
 
 export function generateVideoStorageFilePath(filePath, ext = '.cover.jpg', withProtocol = true) {

@@ -1,11 +1,30 @@
 const dbName = 'media'
 const enablePrint = { print: true }
 
+const STREAM_FULL_COLUMNS = [
+    "id",
+    "room_id",
+    "host_name",
+    "title",
+    "area_name_parent",
+    "area_name_child",
+    "start_time",
+    "end_time",
+    "streaming",
+    "end_reason",
+    "end_by_record_id",
+    "video_id"
+]
+
 export default {
     selectOneById: id => {
-        const sql = `SELECT id, room_id, host_name, title, area_name_parent, area_name_child, start_time, end_time, streaming, end_reason, end_by_record_id, video_id `
+        const sql = `SELECT ${STREAM_FULL_COLUMNS.join(',')} `
             + `FROM bilive_record_stream WHERE id=?`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
+    },
+    selectVideoExistsIdByStreamId: streamId => {
+        const sql = `SELECT brs.video_id FROM bilive_record_stream brs INNER JOIN videos v ON v.id=brs.video_id WHERE brs.id = ?`
+        return __sqliteDB.selectOne(sql, [streamId], null, dbName).then(data => data?.videoId)
     },
     insertStartStream: (roomId, hostName, title, areaNameParent, areaNameChild, startTime, endTime) => {
         const sql = `INSERT INTO bilive_record_stream (room_id, host_name, title, area_name_parent, area_name_child, start_time, end_time) VALUES(?,?,?,?,?,?,?)`
@@ -38,21 +57,22 @@ export default {
     },
     selectStreamForSearch: (roomId, hostName, pageSize, pageNum) => {
         const params = []
-        let sql = `SELECT id,room_id,host_name,title,area_name_parent,area_name_child,start_time,end_time,streaming,end_reason,end_by_record_id,video_id `
-            + `FROM bilive_record_stream `
+        let sql = `SELECT ${STREAM_FULL_COLUMNS.slice(0, STREAM_FULL_COLUMNS.length - 1).map(c => 'brs.' + c).join(',')}, v.id AS videoExists `
+            + `FROM bilive_record_stream brs `
+            + `LEFT JOIN videos v ON v.id=brs.video_id `
         const concat = []
         if (__isNotBlank(roomId)) {
-            concat.push(`room_id=? `)
+            concat.push(`brs.room_id=? `)
             params.push(roomId)
         }
         if (__isNotBlank(hostName)) {
-            concat.push(`host_name like ? `)
+            concat.push(`brs.host_name like ? `)
             params.push(`%${hostName}%`)
         }
         if (concat.length > 0) {
             sql += `WHERE ` + concat.join('AND ')
         }
-        sql += `ORDER BY id DESC `
+        sql += `ORDER BY brs.id DESC `
         if (pageNum !== undefined && pageSize !== undefined) {
             const offset = (pageNum - 1) * pageSize;
             sql += ' LIMIT ? OFFSET ?';

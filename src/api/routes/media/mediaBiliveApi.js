@@ -2,7 +2,7 @@ import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constant
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
-import { getBiliveRecordFileSavePath, getStreamEndedRecordEventData, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
+import { getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
 import { getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 
 const { POST } = apiMethodConst
@@ -34,6 +34,21 @@ export default {
         ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => getStreamEndedRecordEventData(req.body['streamId'])
+    },
+    "/record/getBiliveRecordTags": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        callback: () => getBiliveRecordTags()
+    },
+    "/record/initStreamVideo": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
+        callback: req => initStreamVideo(req.body['streamId'], req.body['tags'])
     },
     "/record/getStreamFiles": {
         method: POST,
