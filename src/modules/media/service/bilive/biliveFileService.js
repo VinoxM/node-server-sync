@@ -101,6 +101,7 @@ export async function uploadFileToMediaByFileId(id) {
 async function uploadVideoStorage(videoId, type, uri) {
     const code = await createMinioManually({ videoId, type, uri })
     const desc = MEDIA_TYPE_DESCRIPTION[type]
+    __log.info(`Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`)
     Tracer.tryStreamMessage(`Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`)
 }
 
