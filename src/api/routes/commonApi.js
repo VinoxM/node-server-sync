@@ -1,5 +1,6 @@
 import apiMethodConst from "../../common/constants/apiMethodConst.js";
 import { getRequestRealIp } from "../../common/utils/requestUtil.js";
+import { Tracer } from "../../core/infra/tracer.js";
 import { ipBlocker } from "../../core/instance/ipBlocker.js";
 import { tokenBucket } from "../../core/instance/tokenBucket.js";
 import { reloadApplicationContext } from "../../support.js";
@@ -50,5 +51,24 @@ export default {
         method: GET,
         needSecret: () => 'mAou5820.doNothing',
         callback: () => "Ok"
+    },
+    '/testStream': {
+        method: POST,
+        ignoreSecret: true,
+        maybeStream: true,
+        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        callback: (req) => {
+            return new Promise(resolve => {
+                let count = 0
+                const interval = setInterval(() => {
+                    if (count >= 5) {
+                        clearInterval(interval)
+                        return resolve('OK')
+                    }
+                    Tracer.tryStreamMessage('hello')
+                    count++
+                }, 5000)
+            })
+        }
     }
 }
