@@ -1,9 +1,11 @@
 import { pushNotification } from "../../../../api/sockets/notification.js"
 import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../../common/constants/sshScriptsConst.js"
+import { Tracer } from "../../../../core/infra/tracer.js"
 import { getSSHExecutor } from "../../../../core/instance/sshExecutor.js"
 import {
     MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY,
     MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS,
+    MEDIA_TYPE_DESCRIPTION,
     MEDIA_VIDEO_MINIO_TYPE
 } from "../../constants/mediaConst.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
@@ -80,16 +82,26 @@ export async function uploadFileToMediaByFileId(id) {
     if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
         __throwMessage('Prepare to upload failed.')
     }
+    // upload cover if not exists
     const coverExists = await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER)
     if (!coverExists) {
         const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
-        await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.COVER, uri: cover })
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover)
     }
+    // upload source
     const source = generateVideoStorageFilePath(filePath, '.flv')
-    await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.SOURCE, uri: source })
+    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source)
+    // upload barrage
     const barrage = generateVideoStorageFilePath(filePath, '.xml')
-    await createMinioManually({ videoId, type: MEDIA_VIDEO_MINIO_TYPE.BARRAGE, uri: barrage })
+    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage)
+    // setup file uploaded
     await biliveFileRep.updateFileUploaded(id)
+}
+
+async function uploadVideoStorage(videoId, type, uri) {
+    const code = await createMinioManually({ videoId, type, uri })
+    const desc = MEDIA_TYPE_DESCRIPTION[type]
+    Tracer.tryStreamMessage(`Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`)
 }
 
 export async function removeFileByFileId(id) {

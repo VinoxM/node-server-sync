@@ -1,4 +1,5 @@
 import { Client } from 'ssh2';
+import { Tracer } from '../infra/tracer.js';
 
 class SSHExecutor {
     #config;
@@ -55,15 +56,17 @@ class SSHExecutor {
         if (this.#idleTimer) clearTimeout(this.#idleTimer);
         if (this.#isDisconnecting || this.#pendingCount > 0) return;
 
-        this.#idleTimer = setTimeout(async () => {
-            __log.log(`[${this.#label}] Idle timeout reached (${this.#idleTimeout}ms). Cleaning up...`);
-            try {
-                await this.disconnect();
-                this.#onDestroy?.(this.#label);
-            } catch (err) {
-                __log.error(`[${this.#label}] Error during idle disconnect:`, err);
-            }
-        }, this.#idleTimeout);
+        Tracer.runClearly(() => {
+            this.#idleTimer = setTimeout(async () => {
+                __log.log(`[${this.#label}] Idle timeout reached (${this.#idleTimeout}ms). Cleaning up...`);
+                try {
+                    await this.disconnect();
+                    this.#onDestroy?.(this.#label);
+                } catch (err) {
+                    __log.error(`[${this.#label}] Error during idle disconnect:`, err);
+                }
+            }, this.#idleTimeout);
+        })
     }
 
     /**
@@ -123,11 +126,21 @@ class SSHExecutor {
 
         const safeArgs = args.map(arg => `"${String(arg).replace(/"/g, '\\"')}"`).join(' ');
         const fullCmd = `${scriptPath} ${safeArgs}`;
-        const onData = options.onData ?? (data => __log.log(data));
+        const onData = options.onData ?? (data => __log.print(data));
 
         return new Promise((resolve, reject) => {
+            const cleanup = () => {
+                this.#conn.removeListener('close', onConnClose);
+            };
+
+            const onConnClose = () => reject(new Error('Connection lost during execution'));
+            this.#conn.once('close', onConnClose);
+
             this.#conn.exec(fullCmd, (err, stream) => {
-                if (err) return reject(err);
+                if (err) {
+                    cleanup();
+                    return reject(err);
+                }
 
                 let stdout = '';
                 let stderr = '';
@@ -145,11 +158,9 @@ class SSHExecutor {
                 });
 
                 stream.on('close', (code) => {
+                    cleanup(); // 任务完成，移除监听器
                     resolve({ code, stdout, stderr });
                 });
-
-                // 处理执行中连接突然断开的情况
-                this.#conn.once('close', () => reject(new Error('Connection lost during execution')));
             });
         });
     }

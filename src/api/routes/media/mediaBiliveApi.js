@@ -71,6 +71,7 @@ export default {
         needSecret,
         allowHosts,
         ignoreOutput: true,
+        maybeStream: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => uploadFileToMediaByFileId(req.body['fileId'])
     },

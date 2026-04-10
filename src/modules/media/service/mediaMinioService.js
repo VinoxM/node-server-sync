@@ -54,11 +54,13 @@ export async function createMinioManually(minioObj) {
     if (task === null) {
         // update video minio status
         await updateVideoStatusByVideoMinioStatus(videoId);
+        return 1
     } else {
-        await executeAsyncTaskChain([
+        const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
         ], 10000)
+        return status === 'timeout' ? 0 : 1
     }
 }
 
@@ -245,12 +247,14 @@ export async function retryMinio(minioId) {
     if (task === null) {
         // update video status
         await updateVideoStatusByVideoMinioStatus(videoId)
+        return 1
     } else {
         // execute async task chain
-        await executeAsyncTaskChain([
+        const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
         ], 10000)
+        return status === 'timeout' ? 0 : 1
     }
 }
 

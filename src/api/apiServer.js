@@ -69,7 +69,7 @@ class ApiServer {
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
-            const { method: m, callback, disabled, ignoreTrace } = config;
+            const { method: m, callback, disabled } = config;
             if (disabled) {
                 continue;
             }
@@ -91,11 +91,15 @@ class ApiServer {
                         }
                     }, (err) => reject(err, requestData), requestData);
                 }
-                if (ignoreTrace) {
+                if (config?.ignoreTrace) {
                     doRequest()
                 } else {
                     const traceId = Tracer.generateTraceId(tracePrefix)
-                    Tracer.run({ traceId }, doRequest)
+                    if (config?.maybeStream) {
+                        Tracer.run({ traceId, response: res }, doRequest)
+                    } else {
+                        Tracer.run({ traceId }, doRequest)
+                    }
                 }
             })
             __log.info(`[Server] Request Mapping: [${methodFormat(method)}] ${key}`)
@@ -148,36 +152,51 @@ class ApiServer {
 }
 
 function resolve(obj, { req, res, config }) {
-    if (config?.ignoreReturn) {
-        __log.info(`[Request Return] ${req.method}:${req.url}`)
-        return;
-    }
+    Tracer.clearStreamHeartbeat();
+    if (res.destroyed || res.writableEnded || config?.ignoreReturn) return;
     const result = {
         code: 0,
         message: 'Success.'
     }
     if (obj !== undefined) result.data = obj
-    res.send(result);
-    if (config?.ignoreOutput) {
-        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url}`)
+    const printParams = []
+    if (res.headersSent) {
+        Tracer.tryStreamMessage(result, 'done')
+        res.end();
+        printParams.push(`[Request StreamEnd]`)
     } else {
-        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==> `, result);
+        res.send(result);
+        printParams.push(`[Request Return]`)
     }
+    printParams.push(`[${methodFormat(req.method)}]`, req.url)
+    if (!config?.ignoreOutput) {
+        printParams.push(`==>`, result)
+    }
+    __log.info(...printParams);
 }
 
 function reject(ex, { req, res }) {
+    Tracer.clearStreamHeartbeat();
     if (__isError(ex)) __log.error(`[Request Error] Message: ${ex.msg || ex.message} ${ex.error ? `Cause: ${ex.error.message}` : ''}`, ex);
     const resultObj = {
         code: ex?.code < 0 ? ex.code : -1,
         message: [-2, -3, -404].includes(ex?.code) ? "Bad Request." : (ex?.msg || "Server Error.")
     }
     let status = 200
-    if (ex && 'status' in ex) {
+    if (ex && typeof ex === 'object' && 'status' in ex) {
         status = ex.status
     }
-    res.status(status);
-    res.send(resultObj);
-    __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
+    if (res.destroyed || res.writableEnded) {
+        __log.info(`[Request Destroyed] [${methodFormat(req.method)}] ${req.url} ==x `, resultObj);
+    } else if (res.headersSent) {
+        Tracer.tryStreamMessage(resultObj, 'done')
+        res.end();
+        __log.info(`[Request StreamEnd] [${methodFormat(req.method)}] ${req.url} ==x `, resultObj);
+    } else {
+        res.status(status);
+        res.send(resultObj);
+        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
+    }
 }
 
 function methodFormat(method) {

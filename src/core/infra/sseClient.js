@@ -1,4 +1,4 @@
-import { getRequestRealIp } from '../../common/utils/requestUtil.js'
+import { getRequestRealIp, resolveStreamMessage } from '../../common/utils/requestUtil.js'
 import { ContextSubscribe } from '../context/subscribe.js'
 
 export class SSEClient extends ContextSubscribe {
@@ -70,7 +70,7 @@ export class SSEClient extends ContextSubscribe {
     }
 
     sendMessage(message) {
-        const msgArr = resolveMessage(message)
+        const msgArr = resolveStreamMessage(message)
         for (const msg of msgArr) {
             this.#response?.write(msg)
         }
@@ -78,7 +78,7 @@ export class SSEClient extends ContextSubscribe {
 
     emitEvent(event, message) {
         this.#response?.write(`event: ${event}\n`)
-        const msgArr = resolveMessage(message)
+        const msgArr = resolveStreamMessage(message)
         for (const msg of msgArr) {
             this.#response?.write(msg)
         }
@@ -99,25 +99,4 @@ export class SSEClient extends ContextSubscribe {
             __log.error(ignored)
         }
     }
-}
-
-function resolveMessage(message) {
-    let str = ''
-    if (typeof message === 'string') {
-        str = message
-    } else if (typeof message === 'object') {
-        str = JSON.stringify(message)
-    }
-    if (str === '') {
-        return ['data: \n\n']
-    }
-    str = encodeURIComponent(str)
-    str = Buffer.from(str, 'utf-8').toString('base64')
-    let result = []
-    const splitLen = 500
-    const num = Math.ceil(str.length / splitLen)
-    for (let i = 0; i < num; i++) {
-        result.push(str.substring(i * splitLen, Math.min(str.length, (i + 1) * splitLen)))
-    }
-    return result.map((s, i) => `data: ${s}\n${num - i === 1 ? '\n' : ''}`)
 }
