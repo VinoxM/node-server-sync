@@ -1,4 +1,4 @@
-import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js"
+import { MEDIA_MINIO_STATUS, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
@@ -49,9 +49,14 @@ export default {
         return __sqliteDB.delete(sql, [minioId], null, dbName)
     },
     selectMinioCompleteByVideoId: videoId => {
-        const sql = `SELECT COUNT(*) as total, (COUNT(*) > 0 AND SUM(status NOT IN (${MEDIA_MINIO_STATUS.COMPLETE}, ${MEDIA_MINIO_STATUS.FAILED})) = 0) AS complete `
+        // const sql = `SELECT COUNT(*) as total, (COUNT(*) > 0 AND SUM(status NOT IN (${MEDIA_MINIO_STATUS.COMPLETE}, ${MEDIA_MINIO_STATUS.FAILED})) = 0) AS complete `
+        //     + `FROM video_minio `
+        //     + `WHERE video_id = ? AND type IN (${MEDIA_MINIO_TYPE_MAIN.join(",")})`
+        const sql = `SELECT `
+            + `COUNT(CASE WHEN type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) AS coverCount,`
+            + `COUNT(CASE WHEN type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) AS sourceCount `
             + `FROM video_minio `
-            + `WHERE video_id = ? AND type IN (${MEDIA_MINIO_TYPE_MAIN.join(",")})`
+            + `WHERE video_id = ?`
         return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoId: videoId => {

@@ -1,5 +1,6 @@
 import { pushNotification } from "../../../../api/sockets/notification.js"
 import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../../common/constants/sshScriptsConst.js"
+import { dateFormat } from "../../../../common/utils/dateUtil.js"
 import { Tracer } from "../../../../core/infra/tracer.js"
 import { getSSHExecutor } from "../../../../core/instance/sshExecutor.js"
 import {
@@ -74,7 +75,7 @@ const CAN_UPLOAD_FILE_SYNC_STATUS = [
 export async function uploadFileToMediaByFileId(id) {
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
-    const { streamId, filePath, fileStatus, syncStatus } = file
+    const { streamId, filePath, fileStatus, syncStatus, startTime } = file
     CAN_UPLOAD_FILE_STATUS.includes(fileStatus) || __throwMessage('Illegal file status, cannot upload.')
     CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
     const videoId = await biliveStreamRep.selectVideoExistsIdByStreamId(streamId);
@@ -88,18 +89,29 @@ export async function uploadFileToMediaByFileId(id) {
         const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
         await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover)
     }
-    // upload source
-    const source = generateVideoStorageFilePath(filePath, '.flv')
-    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source)
+    const title = generateStorageTitle(startTime)
     // upload barrage
     const barrage = generateVideoStorageFilePath(filePath, '.xml')
-    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage)
+    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title)
+    // upload source
+    const source = generateVideoStorageFilePath(filePath, '.flv')
+    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title)
     // setup file uploaded
     await biliveFileRep.updateFileUploaded(id)
 }
 
-async function uploadVideoStorage(videoId, type, uri) {
-    const code = await createMinioManually({ videoId, type, uri })
+function generateStorageTitle(startTime) {
+    if (!startTime) return null
+    try {
+        const d = new Date(startTime)
+        return dateFormat(d, '[yyyy/MM/dd HH:mm:ss]')
+    } catch (error) {
+        return null
+    }
+}
+
+async function uploadVideoStorage(videoId, type, uri, title) {
+    const code = await createMinioManually({ videoId, type, uri, title })
     const desc = MEDIA_TYPE_DESCRIPTION[type]
     const message = `Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`
     __log.info(message)

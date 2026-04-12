@@ -165,12 +165,12 @@ function notifyUpdateMediaMinioStatusFailed(message, id) {
 }
 
 export async function updateVideoStatusByVideoMinioStatus(videoId) {
-    const { total, complete } = await videoMinioRep.selectMinioCompleteByVideoId(videoId)
+    const { coverCount, sourceCount } = await videoMinioRep.selectMinioCompleteByVideoId(videoId)
     let videoStatus = 0;
-    if (total === 0) {
+    if (coverCount + sourceCount === 0) {
         __log.warn(`[${videoId}] Video minio not found, setup video status to prepared.`)
         videoStatus = MEDIA_VIDEO_STATUS.PREPARED
-    } else if (complete) {
+    } else if (coverCount === 1 && sourceCount === 1) {
         __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
         videoStatus = MEDIA_VIDEO_STATUS.COMPLETE
     } else {
