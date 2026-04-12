@@ -1,8 +1,8 @@
 import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_EVENT, MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js"
 import biliveStreamRep from '../../repository/bilive/biliveStreamRep.js'
-import { getRoomInfo } from "./biliveApiService.js"
+import { biliveApi } from "./biliveApiService.js"
 import { pushNotification } from "../../../../api/sockets/notification.js"
-import { checkCategoryExistsByInside, createVideo } from "../mediaVideoService.js"
+import { createVideo } from "../mediaVideoService.js"
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import path from 'path'
 import videosRep from "../../repository/videosRep.js"
@@ -16,7 +16,7 @@ export function getBiliveRecordFileSavePath() {
 async function tryGetRoomInfo(roomId) {
     __log.debug(`[Bilive Stream] Try get bilive room info, roomId: ${roomId}`)
     try {
-        const data = await getRoomInfo(roomId)
+        const data = await biliveApi.getRoomInfo(roomId)
         if (data) {
             const isLiving = data?.['live_status'] === 1
             const startTime = isLiving && data?.['live_time'] !== '0000-00-00 00:00:00' ? new Date(data?.['live_time']) : null

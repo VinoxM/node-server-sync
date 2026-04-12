@@ -4,6 +4,7 @@ import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
 import { deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
 import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
+import { biliveRecordApi } from "../../../modules/media/service/bilive/biliveApiService.js"
 
 const { POST } = apiMethodConst
 
@@ -19,6 +20,22 @@ export default {
         preCheck: req => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
         callback: req => saveWebhookEvent(req.body)
     },
+    "/record/api/room": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        callback: () => biliveRecordApi.getAllRooms()
+    },
+    "/record/api/file": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        ignoreOutput: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['filePath']),
+        callback: req => biliveRecordApi.getFilesInfo(req.body['filePath'])
+    },
+    /** Media Bilive Manager */
     "/record/searchStream": {
         method: POST,
         needSecret,

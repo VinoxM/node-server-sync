@@ -51,24 +51,5 @@ export default {
         method: GET,
         needSecret: () => 'mAou5820.doNothing',
         callback: () => "Ok"
-    },
-    '/testStream': {
-        method: POST,
-        ignoreSecret: true,
-        maybeStream: true,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
-        callback: (req) => {
-            return new Promise(resolve => {
-                let count = 0
-                const interval = setInterval(() => {
-                    if (count >= 5) {
-                        clearInterval(interval)
-                        return resolve('OK')
-                    }
-                    Tracer.tryStreamMessage('hello')
-                    count++
-                }, 5000)
-            })
-        }
     }
 }
