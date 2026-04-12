@@ -6,7 +6,7 @@ package-lock.json
 /log/*
 .vscode
 test/*
-src-temp/*
+src-temp
 src-commonjs/*
 package-temp.json
 /scripts/.env
