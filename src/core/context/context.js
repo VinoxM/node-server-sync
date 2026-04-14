@@ -4,6 +4,7 @@ import * as YAML from "yaml";
 import { getItem, mergeObject } from "../../common/utils/objectUtil.js";
 import { ContextSubscribe } from "./subscribe.js";
 import { LRUCache } from "../infra/extendMap.js";
+import { Tracer } from "../infra/tracer.js";
 
 const defaultApplicationType = "yaml";
 const parserHandler = {
@@ -38,10 +39,10 @@ export class ApplicationContext {
             throw new Error(`File not exists: application.${suffix}.`);
         }
         this.#context = this.#parser.parse(readFileSync(configFile).toString());
-        __log.info(`[${placeholder}] Loaded configuration: application.${suffix}.`);
+        Tracer.runClearly(() => __log.info(`[${placeholder}] Loaded configuration: application.${suffix}.`));
         this.#actives = getActives(this.#context)
         if (this.#actives.length > 0) {
-            __log.info(`[${placeholder}] Configuration actives: ${this.#actives.join(',')}`)
+            Tracer.runClearly(() => __log.info(`[${placeholder}] Configuration actives: ${this.#actives.join(',')}`));
             this.#actives.forEach(active => {
                 const activeFile = join(this.#resourcePath, `application-${active}.${suffix}`);
                 if (!existsSync(activeFile)) {
@@ -49,7 +50,7 @@ export class ApplicationContext {
                 }
                 const activeJson = this.#parser.parse(readFileSync(activeFile).toString());
                 mergeObject(this.#context, activeJson);
-                __log.info(`[${placeholder}] Loaded configuration: application-${active}.${suffix}.`);
+                Tracer.runClearly(() => __log.info(`[${placeholder}] Loaded configuration: application-${active}.${suffix}.`));
             })
         }
         return JSON.parse(JSON.stringify(this.#context));
@@ -85,7 +86,7 @@ export class ApplicationContext {
         if (subscribe && subscribe instanceof ContextSubscribe && subscribe.setupSubscribeId(this.#subscribeId)) {
             this.#subscribed.set(this.#subscribeId, subscribe)
             this.#subscribeId++
-            __log.debug(`[${this.logPlaceholder()}] Subscribed: ${subscribe.getLabel()}.`)
+            Tracer.runClearly(() => __log.debug(`[${this.logPlaceholder()}] Subscribed: ${subscribe.getLabel()}.`))
         }
     }
 
@@ -93,7 +94,7 @@ export class ApplicationContext {
         if (subscribe && subscribe instanceof ContextSubscribe) {
             const subscribeId = subscribe.getSubscribeId()
             if (this.#subscribed.delete(subscribeId)) {
-                __log.debug(`[${this.logPlaceholder()}] Unsubscribed: ${subscribe.getLabel()}.`)
+                Tracer.runClearly(() => __log.debug(`[${this.logPlaceholder()}] Unsubscribed: ${subscribe.getLabel()}.`))
             }
         }
     }

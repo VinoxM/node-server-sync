@@ -47,7 +47,7 @@ class Aria2Socket extends ContextSubscribe {
             this.doSubscribe()
             this.#initialized = true
         }
-        this.close()
+        this.close(this.#client)
         const options = __env.get("aria2.rpc", {})
         const { host, port, secret, savePath } = options
         if (!host || !port) return;
@@ -69,20 +69,19 @@ class Aria2Socket extends ContextSubscribe {
      */
     #connect() {
         if (this.#ready) return;
-        this.close()
         __log.debug(`[Aria2Socket] Prepare to connect: ${this.#wsUrl}`)
         const client = new WebSocket(this.#wsUrl)
-        client.on('open', () => this.#onOpen())
+        const instanceId = generateUUID()
+        client.on('open', () => this.#onOpen(instanceId))
         client.on('message', data => this.#onMessage(data))
-        client.on('error', e => this.#onError(e))
-        client.on('close', () => this.#onClose())
+        client.on('error', e => this.#onError(e, client))
+        client.on('close', () => this.#onClose(client, instanceId))
         this.#client = client
     }
 
     #reconnect() {
         if (this.#ready || this.#reconnecting) return
         this.#reconnecting = true
-        this.close()
         if (this.#nextConnectDelay > this.#maxConnectDelay) {
             __log.warn(`[Aria2Socket] The maximum retry delay time: ${this.#maxConnectDelay} has been reached, retries will stop.`)
             this.#reconnecting = false
@@ -94,8 +93,8 @@ class Aria2Socket extends ContextSubscribe {
         this.#connectTimeout = setTimeout(() => this.#connect(), this.#nextConnectDelay * 1000)
     }
 
-    #onOpen() {
-        __log.info('[Aria2Socket] Aria2 connected.')
+    #onOpen(instanceId) {
+        __log.info(`[Aria2Socket] Aria2 connected. InstanceId: ${instanceId}`)
         this.#ready = true;
         this.#reconnecting = false;
         this.#nextConnectDelay = 5;
@@ -115,28 +114,30 @@ class Aria2Socket extends ContextSubscribe {
         }
     }
 
-    #onError(e) {
-        __log.error('[Aria2Socket] Aria2 connect error.', e)
-        this.close()
+    #onError(e, client) {
+        __log.error('[Aria2Socket] Aria2 error.', e)
+        this.close(client)
     }
 
-    #onClose() {
-        __log.info('[Aria2Socket] Aria2 closed.')
-        this.#ready = false
-        this.#reconnecting = false
-        this.#reconnect()
-    }
-
-    close() {
-        this.#ready = false
-        if (this.#client) {
-            try {
-                this.#client?.close?.();
-            } catch (e) {
-                __log.error('[Aria2Socket] Aria2 close error.', e)
-            }
+    #onClose(client, instanceId) {
+        __log.info(`[Aria2Socket] Aria2 closed. InstanceId: ${instanceId}`)
+        if (this.#client === client) {
+            this.#ready = false
+            this.#reconnecting = false
+            this.#reconnect()
         }
-        this.#client = null
+    }
+
+    close(client) {
+        this.#ready = false
+        if (this.#client === client) {
+            this.#client = null
+        }
+        try {
+            client?.close?.();
+        } catch (e) {
+            __log.error('[Aria2Socket] Aria2 close error.', e)
+        }
         this.#connectTimeout && clearTimeout(this.#connectTimeout)
     }
 

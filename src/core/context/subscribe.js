@@ -1,3 +1,5 @@
+import { Tracer } from "../infra/tracer.js"
+
 export class ContextSubscribe {
 
     #subscribeId = null
@@ -27,8 +29,10 @@ export class ContextSubscribe {
     }
 
     onRefresh() {
-        __log.debug(`[ContextSubscribe:${this.getLabel()}] Emit onRefresh callback.`)
-        this.#onRefreshCallback?.()
+        Tracer.runClearly(() => {
+            __log.debug(`[ContextSubscribe:${this.getLabel()}] Emit onRefresh callback.`)
+            this.#onRefreshCallback?.()
+        })
     }
 
     getLabel() {
