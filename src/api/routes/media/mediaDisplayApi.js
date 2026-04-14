@@ -21,9 +21,9 @@ function checkInsideHeader(req) {
     checkHeaderKeyNotBlank(req, 'inside')
     checkHeaderKeyMatchIfPresent(req, 'inside', ['[0|1]'])
     if (parseInt(req.headers['inside']) === 0) {
-        checkHeaderKeyValue(req, 'secret', needSecret())
+        checkHeaderKeyValue(req, 'secret', btoa(needSecret()))
     } else {
-        checkHeaderKeyValue(req, 'secret', insideDisplaySecret)
+        checkHeaderKeyValue(req, 'secret', btoa(insideDisplaySecret))
     }
 }
 
