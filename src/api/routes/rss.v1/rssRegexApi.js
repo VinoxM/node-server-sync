@@ -10,7 +10,6 @@ export default {
     basePath: "/rss",
     "/regex/history": {
         method: GET,
-        ignoreOutput: true,
         callback: () => {
             return getRssRegex();
         }

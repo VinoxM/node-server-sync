@@ -169,7 +169,7 @@ function resolve(obj, { req, res, config }) {
         printParams.push(`[Request Return]`)
     }
     printParams.push(`[${methodFormat(req.method)}]`, req.url)
-    if (!config?.ignoreOutput) {
+    if (config?.printResponse) {
         printParams.push(`==>`, result)
     }
     __log.info(...printParams);

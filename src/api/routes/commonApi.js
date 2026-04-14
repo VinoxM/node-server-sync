@@ -1,6 +1,5 @@
 import apiMethodConst from "../../common/constants/apiMethodConst.js";
 import { getRequestRealIp } from "../../common/utils/requestUtil.js";
-import { Tracer } from "../../core/infra/tracer.js";
 import { ipBlocker } from "../../core/instance/ipBlocker.js";
 import { tokenBucket } from "../../core/instance/tokenBucket.js";
 import { reloadApplicationContext } from "../../support.js";

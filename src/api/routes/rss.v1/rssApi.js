@@ -12,14 +12,12 @@ export default {
     basePath: "/rss",
     "/getSeason": {
         method: GET,
-        ignoreOutput: true,
         callback: () => {
             return rssRep.selectRssSubscribeSeasons().then(({ data }) => data.map(d => d.season));
         }
     },
     "/getSearch": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => {
             try {
                 checkQueryKeyNotBlank(req, NAME);
@@ -34,7 +32,6 @@ export default {
     },
     "/getSearch.goon": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, SEASON),
         callback: (req) => {
             return rssRep.selectRssSubscribeCauseGoon(req.query.season).then(({ data }) => data);
@@ -42,7 +39,6 @@ export default {
     },
     "/getOne.results": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, ID),
         callback: (req) => {
             const { id, withOutHide } = req.query;
@@ -51,7 +47,6 @@ export default {
     },
     "/getOne.detail": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, ID),
         callback: async (req) => {
             const { id } = req.query;
@@ -67,7 +62,6 @@ export default {
     },
     "/getMatchers": {
         method: GET,
-        ignoreOutput: true,
         callback: () => __env.get("rss.matchers", [])
     }
 }

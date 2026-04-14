@@ -8,7 +8,6 @@ export default {
     "/getAll": {
         disabled: true,
         method: GET,
-        ignoreOutput: true,
         callback: () => {
             return rssTrackerRep.selectAll().then(({ data }) => data);
         }

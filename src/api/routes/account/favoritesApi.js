@@ -12,7 +12,6 @@ export default {
         method: POST,
         needSecret,
         needAuth: true,
-        ignoreOutput: true,
         callback: async req => {
             const subsIds = req.body['subsIds']
             const uid = req.userInfo.id
@@ -24,7 +23,6 @@ export default {
         needSecret,
         needAuth: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId']),
-        ignoreOutput: true,
         callback: req => {
             const { rssSubsId } = req.body
             const { id: uid } = req.userInfo
@@ -39,7 +37,6 @@ export default {
         needSecret,
         needAuth: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId']),
-        ignoreOutput: true,
         callback: req => {
             const { rssSubsId } = req.body
             const { id: uid } = req.userInfo

@@ -12,7 +12,6 @@ export default {
     basePath: "/rss/link",
     "/getMany": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, QUERY_PID),
         callback: (req) => {
             return rssLinkRep.selectByPid(req.query.pid).then(data=>data.data);

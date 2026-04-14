@@ -64,7 +64,6 @@ export default {
     },
     '/getEpisodeMatchers': {
         method: GET,
-        ignoreOutput: true,
         callback: () => getEpisodeMatches()
     }
 }

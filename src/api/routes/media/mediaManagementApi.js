@@ -102,7 +102,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: req => searchMinio(req.body['videoId'])
     },
@@ -153,7 +152,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
         callback: req => getTaskInfoAndDownloadStatus(req.body['ids']),
     },
@@ -162,7 +160,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'category'),
         callback: req => getFilterRulesByCategory(req.body['category'])
     },

@@ -51,14 +51,12 @@ export default {
     basePath: "/rss/v2",
     "/getSeason": {
         method: GET,
-        ignoreOutput: true,
         callback: () => {
             return rssRep.selectRssSubscribeSeasonsV2().then(({ data }) => Object.fromEntries(data.map(d => [d.season, d.count])));
         }
     },
     "/getSearch": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => {
             try {
                 checkQueryKeyNotBlank(req, NAME);
@@ -73,7 +71,6 @@ export default {
     },
     "/getOne.detail": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, ID),
         callback: async (req) => {
             const { id, needTr = false } = req.query;
@@ -125,7 +122,6 @@ export default {
     },
     '/getOneForEdit': {
         method: GET,
-        ignoreOutput: true,
         needAuth: true,
         needSecret: () => "mAou5820.subscribe",
         preCheck: (req) => checkQueryKeyNotBlank(req, ID),
@@ -144,7 +140,6 @@ export default {
     },
     '/getOne.results': {
         method: GET,
-        ignoreOutput: true,
         needAuth: true,
         needSecret: () => "mAou5820.subscribe",
         preCheck: (req) => checkQueryKeyNotBlank(req, ID),

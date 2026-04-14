@@ -39,7 +39,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid', 'operator']),
         callback: req => pauseOrResumeTask(req.body['gid'], req.body['operator'])
     }

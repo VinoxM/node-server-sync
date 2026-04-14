@@ -10,7 +10,7 @@ export default {
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const { ignoreSecret, needSecret = getDefaultSecret } = config;
         try {
-            (!ignoreSecret && needSecret && checkHeaderKeyValue(req, apiHeaderConst.SECRET, needSecret()));
+            (!ignoreSecret && needSecret && checkHeaderKeyValue(req, apiHeaderConst.SECRET, btoa(needSecret())));
         } catch (error) {
             return reject(error);
         }

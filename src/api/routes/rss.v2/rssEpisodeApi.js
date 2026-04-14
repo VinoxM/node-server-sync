@@ -17,7 +17,6 @@ export default {
         method: POST,
         allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
         needSecret,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => {
             const status = req.body.status
@@ -40,7 +39,6 @@ export default {
         method: POST,
         needAuth: true,
         needSecret,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
         callback: req => rssEpisodeRep.selectBySubsId(req.body.rssSubsId).then(({ data }) => data)
     },
@@ -55,7 +53,6 @@ export default {
         method: POST,
         needAuth: true,
         needSecret,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
         callback: req => rssEpisodeRep.selectFailedBySubsId(req.body.rssSubsId).then(({ data }) => data)
     },

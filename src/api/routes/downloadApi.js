@@ -27,7 +27,6 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
-        ignoreOutput: true,
         preCheck: (req) => {
             try {
                 checkBodyKeysNotBlank(req, ['uuid'])
@@ -43,7 +42,6 @@ export default {
         method: POST,
         needSecret,
         allowCIDR,
-        ignoreOutput: true,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['hash']),
         callback: (req) => {
             return qbitService.torrentFiles(req.body.hash)

@@ -37,7 +37,6 @@ export default {
         method: POST,
         ignoreSecret: true,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkInsideHeader(req),
         callback: req => searchVideos(req.body, isInsideRequest(req))
     },
@@ -45,7 +44,6 @@ export default {
         method: POST,
         ignoreSecret: true,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkInsideHeader(req),
         callback: req => categoriesRep.selectByInside(isInsideRequest(req)).then(({ data }) => data)
     },
@@ -53,7 +51,6 @@ export default {
         method: POST,
         ignoreSecret: true,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async req => {
             const categoryId = req.body['categoryId']
@@ -66,7 +63,6 @@ export default {
         method: POST,
         ignoreSecret: true,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async req => {
             const { videoId, categoryId } = req.body
@@ -79,7 +75,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async req => videoMinioRep.selectSourceByVideoId(req.body['videoId']).then(({ data }) => data)
     },
@@ -87,7 +82,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async req => videoMinioRep.selectBarrageByVideoId(req.body['videoId']).then(({ data }) => data)
     },
@@ -95,7 +89,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: req => checkVideoFilterRules(req.body)
     },
@@ -103,7 +96,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         callback: req => getMinioClientMatchers(req.body)
     },
 }

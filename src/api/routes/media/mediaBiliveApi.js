@@ -16,7 +16,6 @@ export default {
     "/record/webhook": {
         method: POST,
         ignoreSecret: true,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
         callback: req => saveWebhookEvent(req.body)
     },
@@ -24,14 +23,12 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         callback: () => biliveRecordApi.getAllRooms()
     },
     "/record/api/file": {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['filePath']),
         callback: req => biliveRecordApi.getFilesInfo(req.body['filePath'])
     },
@@ -40,7 +37,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['pageSize', 'pageNum']),
         callback: req => searchStream(req.body['roomId'], req.body['hostName'], req.body['pageSize'], req.body['pageNum'])
     },
@@ -48,7 +44,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => getStreamEndedRecordEventData(req.body['streamId'])
     },
@@ -56,14 +51,12 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         callback: () => getBiliveRecordTags()
     },
     "/record/initStreamVideo": {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => initStreamVideo(req.body['streamId'], req.body['tags'])
     },
@@ -71,7 +64,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => deleteStream(req.body['streamId'])
     },
@@ -79,7 +71,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => getFilesByStreamId(req.body['streamId'])
     },
@@ -87,7 +78,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         maybeStream: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => uploadFileToMediaByFileId(req.body['fileId'])
@@ -96,7 +86,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => removeFileByFileId(req.body['fileId'])
     },
@@ -104,7 +93,6 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
-        ignoreOutput: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => deleteFile(req.body['fileId'])
     },

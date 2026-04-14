@@ -298,7 +298,6 @@ export default {
     },
     "/subTest": {
         method: POST,
-        ignoreOutput: true,
         preCheck: (req) => checkBodyKeyNotBlank(req, URL),
         callback: async (req) => {
             return new Promise((resolve, reject) => {

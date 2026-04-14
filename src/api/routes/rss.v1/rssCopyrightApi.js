@@ -12,7 +12,6 @@ export default {
     basePath: "/rss/copyright",
     "/getMany": {
         method: GET,
-        ignoreOutput: true,
         preCheck: (req) => checkQueryKeyNotBlank(req, QUERY_PID),
         callback: (req) => {
             return rssCopyrightRep.selectByPid(req.query.pid).then(data => data.data);
@@ -63,7 +62,6 @@ export default {
     },
     "/getImage": {
         method: GET,
-        ignoreOutput: true,
         callback: () => {
             return rssCopyrightRep.selectAllImage();
         }
