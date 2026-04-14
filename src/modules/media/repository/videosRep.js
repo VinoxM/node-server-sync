@@ -1,4 +1,8 @@
-import { MEDIA_CATEGORY_TYPE, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js"
+import {
+    MEDIA_CATEGORY_TYPE, MEDIA_MINIO_STATUS,
+    MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE,
+    MEDIA_VIDEO_STATUS
+} from "../constants/mediaConst.js"
 import { HybridLRUCache } from "../../../core/infra/extendMap.js"
 
 const dbName = 'media'
@@ -55,18 +59,39 @@ export default {
         const sql = `UPDATE videos SET ${columnName}=? WHERE id=?`
         return __sqliteDB.update(sql, [minioId, videoId], null, dbName)
     },
-    updateVideoStatus: (videoId, status) => {
-        const sql = 'UPDATE videos SET status=? WHERE id=?'
-        const params = [status, videoId]
-        return __sqliteDB.update(sql, params, null, dbName)
+    updateVideoStatus: (videoId) => {
+        return __sqliteDB.getTransactionDB(async db => {
+            const sql = `UPDATE videos `
+                + `SET status = (`
+                + `SELECT CASE `
+                + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 `
+                + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 THEN 1 `
+                + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 `
+                + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 THEN 3 `
+                + `ELSE 2 `
+                + `END `
+                + `FROM video_minio vm `
+                + `WHERE vm.video_id = videos.id`
+                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED}`;
+            await db.update(sql, [videoId]);
+            const video = await db.selectOne(`SELECT status FROM videos WHERE id=?`, [videoId])
+            return video?.status
+        }, null, dbName)
+    },
+    updateVideoRemoved: videoId => {
+        const sql = `UPDATE videos SET status=${MEDIA_VIDEO_STATUS.REMOVED} WHERE id=?`
+        return __sqliteDB.update(sql, [videoId], null, dbName)
     },
     updateVideoTitle: (videoId, title) => {
         const sql = 'UPDATE videos SET title=? WHERE id=?'
         const params = [title, videoId]
         return __sqliteDB.update(sql, params, null, dbName)
     },
-    selectOne: videoId => {
-        const sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
+    selectOne: (videoId, ignoreRemoved = false) => {
+        let sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
+        if (ignoreRemoved) {
+            sql += ` AND status!=${MEDIA_VIDEO_STATUS.REMOVED}`
+        }
         return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     deleteOne: async videoId => {

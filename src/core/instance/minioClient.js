@@ -112,12 +112,12 @@ class MinioClient extends ContextSubscribe {
     }
 
     async deleteObject(minioLink, errorCallback) {
-        let result = null
         const label = this.#getSuitableMinioLabel(minioLink)
         try {
             this.#clientReady(label) || __throwMessage(`Minio not ready.`)
             const { bucket, objectName } = splitMinioLink(minioLink)
-            result = await this.#client.get(label).removeObject(bucket, objectName)
+            await this.#client.get(label).removeObject(bucket, objectName)
+            return true;
         } catch (ex) {
             if (__isFunction(errorCallback)) {
                 errorCallback(ex, label)
@@ -125,7 +125,7 @@ class MinioClient extends ContextSubscribe {
                 throw ex
             }
         }
-        return result
+        return false
     }
 }
 

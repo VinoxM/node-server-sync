@@ -7,7 +7,7 @@ import videoTagMapRep from "../repository/videoTagMapRep.js";
 import videoMinioRep from "../repository/videoMinioRep.js";
 import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterService.js";
-import { resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
+import { deleteVideoMinio, resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
@@ -78,7 +78,7 @@ export async function createVideo(videoObj) {
     // resolve video barrages
     const barrageTasks = await resolveMultiStorage(videoObj.barrage, videoId, category, author, MEDIA_VIDEO_MINIO_TYPE.BARRAGE)
     tasks.push(...barrageTasks)
-    
+
     if (tasks.length === 0) {
         // update video status
         await updateVideoStatusByVideoMinioStatus(videoId)
@@ -112,14 +112,14 @@ async function resolveMultiStorage(sourceValue, videoId, category, author, type)
 }
 
 export async function updateVideoTitle(id, title) {
-    const video = await videosRep.selectOne(id)
+    const video = await videosRep.selectOne(id, true)
     video || __throwMessage('Video not found')
     await videosRep.updateVideoTitle(id, title)
 }
 
 export async function updateVideoTags(videoId, tags, operator) {
     VIDEO_TAG_OPERATOR.includes(operator) || __throwMessage('Invalid operator.')
-    const video = await videosRep.selectOne(videoId)
+    const video = await videosRep.selectOne(videoId, true)
     video || __throwMessage('Video not found')
     const tagIds = await handleTags(tags)
     switch (operator) {
@@ -149,8 +149,13 @@ export async function removeVideo(videoId) {
     const video = await videosRep.selectOne(videoId)
     video || __throwMessage('Video not found.')
     CAN_DELETE_VIDEO_STATUS.includes(video.status) || __throwMessage('Cannot remove video.')
-    const minioExists = await videoMinioRep.selectMinioExistsByVideoId(videoId)
-    minioExists && __throwMessage('Cannot remove video, cause storage exists in this video.')
+    const minioExists = await videoMinioRep.selectUploadingMinioExistsByVideoId(videoId)
+    minioExists && __throwMessage('Cannot remove video, cause uploading storage exists in this video.')
+    await videosRep.updateVideoRemoved(videoId)
+    const minioList = await videoMinioRep.selectByVideoId(videoId).then(({ data }) => data)
+    for (const { id } of minioList) {
+        await deleteVideoMinio(id, true)
+    }
     await videosRep.deleteOne(videoId)
     await videoTagMapRep.deleteTags(videoId)
 }

@@ -5,7 +5,7 @@ import videosRep from "../repository/videosRep.js";
 import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
 import { getMinioClient } from "../../../core/instance/minioClient.js";
-import { addTask } from "./mediaTaskService.js";
+import { addTask, removeTask } from "./mediaTaskService.js";
 import aria2TaskRep from "../repository/aria2TaskRep.js";
 import categoriesRep from '../repository/categoriesRep.js';
 import authorsRep from '../repository/authorsRep.js';
@@ -13,6 +13,7 @@ import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
+import { Tracer } from '../../../core/infra/tracer.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -27,6 +28,10 @@ export async function searchMinio(videoId) {
     return minioList;
 }
 
+const CAN_NOT_CREATE_MINIO_VIDEO_STATUS = [
+    MEDIA_VIDEO_STATUS.ANALYZING,
+    MEDIA_VIDEO_STATUS.REMOVED
+]
 export async function createMinioManually(minioObj) {
     const { videoId, type, uri, sort, title } = minioObj
     // validate type
@@ -39,7 +44,7 @@ export async function createMinioManually(minioObj) {
     minioExists && __throwMessage('Minio exists.')
     // validate video status
     const { categoryId, authorId, status } = videoInfo
-    MEDIA_VIDEO_STATUS.ANALYZING === status && __throwMessage('Video is analyzing, cannot create minio.')
+    CAN_NOT_CREATE_MINIO_VIDEO_STATUS.includes(status) && __throwMessage('Invalid video status, cannot create minio.')
     // validate category exists
     const categoryInfo = await categoriesRep.selectOneById(categoryId)
     categoryInfo || __throwMessage('Category not exists.')
@@ -165,19 +170,14 @@ function notifyUpdateMediaMinioStatusFailed(message, id) {
 }
 
 export async function updateVideoStatusByVideoMinioStatus(videoId) {
-    const { coverCount, sourceCount } = await videoMinioRep.selectMinioCompleteByVideoId(videoId)
-    let videoStatus = 0;
-    if (coverCount === 0 || sourceCount === 0) {
+    const videoStatus = await videosRep.updateVideoStatus(videoId)
+    if (videoStatus === MEDIA_VIDEO_STATUS.PREPARED) {
         __log.warn(`[${videoId}] Video minio not found, setup video status to prepared.`)
-        videoStatus = MEDIA_VIDEO_STATUS.PREPARED
-    } else if (coverCount > 0 && sourceCount > 0) {
-        __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
-        videoStatus = MEDIA_VIDEO_STATUS.COMPLETE
-    } else {
+    } else if (videoStatus === MEDIA_VIDEO_STATUS.UPLOADING) {
         __log.info(`[${videoId}] Video minio any resolving, setup video status to uploading.`)
-        videoStatus = MEDIA_VIDEO_STATUS.UPLOADING
+    } else if (videoStatus === MEDIA_VIDEO_STATUS.COMPLETE) {
+        __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
     }
-    await videosRep.updateVideoStatus(videoId, videoStatus)
     return videoStatus
 }
 
@@ -266,17 +266,27 @@ export async function updateMinioTitleAndSort(body) {
 /** 
  * Minio management: DELETE
  */
-export async function deleteVideoMinio(minioId) {
+const CANT_NOT_DELETE_MINIO_STATUS = [
+    MEDIA_MINIO_STATUS.UPLOADING
+]
+export async function deleteVideoMinio(minioId, safely = false) {
     const minioInfo = await videoMinioRep.selectOneById(minioId)
     if (!minioInfo) return;
-    const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
-    __isNotEmptyArray(aria2Tasks) && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
-    const { id, link } = minioInfo
+    const { id, link, status } = minioInfo
+    safely && CANT_NOT_DELETE_MINIO_STATUS.includes(status) && __throwMessage('Minio can not delete.')
     const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
+    const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
+    if (__isNotEmptyArray(aria2Tasks)) {
+        safely && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
+        for (const { id } of aria2Tasks) {
+            await removeTask(id);
+        }
+    }
     if (rows > 0) {
         __log.info(`[${id}] Ready to remove minio.`)
         if (__isNotBlank(link)) {
-            await deleteMinioAndObject(link, id)
+            const minioDeleted = await deleteMinioAndObject(link, id)
+            minioDeleted || __throwMessage(`Minio object delete failed.`)
         }
     }
     await videoMinioRep.deleteByMinioId(id)
@@ -287,9 +297,9 @@ async function deleteMinioAndObject(minioLink, minioId) {
     const client = getMinioClient()
     if (!client?.ready()) {
         logAndPushNotification(`Delete minio object failed. Cause client not ready.`)
-        return
+        return false;
     }
-    await client.deleteObject(minioLink, err => logAndPushNotification(err.message ?? 'Unknown minio error.', minioId))
+    return client.deleteObject(minioLink, err => logAndPushNotification(err.message ?? 'Unknown minio error.', minioId))
 }
 
 function logAndPushNotification(message, minioId) {

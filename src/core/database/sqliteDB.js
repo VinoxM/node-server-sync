@@ -221,10 +221,18 @@ export class SqliteDB {
         return this.#queryOne(sql, params, options, dbName);
     }
 
-    getTransactionDB(callback, reject, dbName) {
+    async getTransactionDB(callback, reject, dbName) {
         const dbName_ = dbName || this.#defaultDbName
         if (this.#schema.hasOwnProperty(dbName_)) {
-            return new TransactionSqliteDB(dbName_, this.#dbPath).beginTransaction(callback).catch(reject)
+            try {
+                return await new TransactionSqliteDB(dbName_, this.#dbPath).beginTransaction(callback)
+            } catch (error) {
+                if (__isFunction?.(reject)) {
+                    reject(error)
+                } else {
+                    throw error
+                }
+            }
         }
         throw new Error(`No such schema: ${dbName_}`)
     }
@@ -277,7 +285,7 @@ class TransactionSqliteDB {
         return new Promise((resolve, reject) => {
             const printer = getPrinter(options)
             printer(`===> Preparing: ${sql}`);
-            if (params && params.length > 0 && print) {
+            if (params && params.length > 0) {
                 printer(`===> Parameters: `, params.length < 10 ? params : params.length);
             }
             const context = Tracer.getStore()
@@ -312,7 +320,7 @@ class TransactionSqliteDB {
         });
     }
 
-    beginTransaction(callback) {
+    async beginTransaction(callback) {
         const this_ = this;
         const db = this.#connection;
         const snapshot = Tracer.getStore()

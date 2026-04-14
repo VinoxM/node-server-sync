@@ -4,8 +4,8 @@ const dbName = 'media'
 const enablePrint = { print: true }
 
 export default {
-    selectMinioExistsByVideoId: videoId => {
-        const sql = `SELECT EXISTS(SELECT 1 FROM video_minio WHERE video_id = ? LIMIT 1) AS [exists]`
+    selectUploadingMinioExistsByVideoId: videoId => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM video_minio WHERE video_id = ? AND status = ${MEDIA_MINIO_STATUS.UPLOADING} LIMIT 1) AS [exists]`
         return __sqliteDB.selectOne(sql, [videoId], null, dbName).then(({ exists }) => exists)
     },
     selectMinioExistsByVideoIdAndType: (videoId, type) => {
@@ -33,8 +33,12 @@ export default {
         return __sqliteDB.update(sql, [status, id, currentStatus], null, dbName)
     },
     setupFailedByIdWhenNotComplete: (id) => {
-        const sql = 'UPDATE video_minio SET status=? WHERE id=? AND status!=?'
-        return __sqliteDB.update(sql, [MEDIA_MINIO_STATUS.FAILED, id, MEDIA_MINIO_STATUS.COMPLETE], null, dbName)
+        const CAN_NOT_SETUP_FAILED_MINIO_STATUS = [MEDIA_MINIO_STATUS.COMPLETE, MEDIA_MINIO_STATUS.REMOVED]
+        let sql = 'UPDATE video_minio SET status=? WHERE id=?'
+        if (CAN_NOT_SETUP_FAILED_MINIO_STATUS.length > 0) {
+            sql += ` AND status NOT IN (${CAN_NOT_SETUP_FAILED_MINIO_STATUS.join(',')})`
+        }
+        return __sqliteDB.update(sql, [MEDIA_MINIO_STATUS.FAILED, id], null, dbName)
     },
     updateOriginUriById: (originUri, id) => {
         const sql = 'UPDATE video_minio SET origin_uri=? WHERE id=?'
@@ -47,17 +51,6 @@ export default {
     deleteByMinioId: minioId => {
         const sql = `DELETE FROM video_minio WHERE id = ? AND status=${MEDIA_MINIO_STATUS.REMOVED}`
         return __sqliteDB.delete(sql, [minioId], null, dbName)
-    },
-    selectMinioCompleteByVideoId: videoId => {
-        // const sql = `SELECT COUNT(*) as total, (COUNT(*) > 0 AND SUM(status NOT IN (${MEDIA_MINIO_STATUS.COMPLETE}, ${MEDIA_MINIO_STATUS.FAILED})) = 0) AS complete `
-        //     + `FROM video_minio `
-        //     + `WHERE video_id = ? AND type IN (${MEDIA_MINIO_TYPE_MAIN.join(",")})`
-        const sql = `SELECT `
-            + `COUNT(CASE WHEN type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) AS coverCount,`
-            + `COUNT(CASE WHEN type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) AS sourceCount `
-            + `FROM video_minio `
-            + `WHERE video_id = ?`
-        return __sqliteDB.selectOne(sql, [videoId], null, dbName)
     },
     selectByVideoId: videoId => {
         const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE video_id=?`

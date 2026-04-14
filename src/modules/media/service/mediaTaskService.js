@@ -7,7 +7,6 @@ import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../common/constants/sshScript
 import { pushNotification } from "../../../api/sockets/notification.js";
 
 const MEDIA_ARIA2_SAVE_DIR = "./media";
-const CAN_UPDATE_ARIA2_TASK_STATUS = [MEDIA_ARIA2_TASK_STATUS.COMPLETE, MEDIA_ARIA2_TASK_STATUS.FAILED, MEDIA_ARIA2_TASK_STATUS.DOWNLOADING]
 
 /**
  * Add video step1 from status: ANALYZING.
@@ -94,6 +93,11 @@ async function deleteRemoteFiles(files) {
  * Minio status:
  * PREPARED/UPLOADING -> UPLOADING/FAILED
  */
+const CAN_UPDATE_ARIA2_TASK_STATUS = [
+    MEDIA_ARIA2_TASK_STATUS.COMPLETE,
+    MEDIA_ARIA2_TASK_STATUS.FAILED,
+    MEDIA_ARIA2_TASK_STATUS.DOWNLOADING
+]
 export async function updateTaskStatus(gid, status) {
     const taskStatus = parseInt(status)
     // validate aria2 status

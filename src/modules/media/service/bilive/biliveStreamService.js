@@ -147,7 +147,7 @@ export async function initStreamVideo(streamId, tags) {
     const stream = await biliveStreamRep.selectOneById(streamId)
     stream || __throwMessage('Stream not found.')
     const { title, hostName, startTime, videoId } = stream;
-    const video = await videosRep.selectOne(videoId)
+    const video = await videosRep.selectOne(videoId, true)
     if (!video) {
         const category = __env.get('bilive.uploadCategory', 'record')
         const firstFile = await biliveFileRep.selectFirstFileByStreamId(streamId)
