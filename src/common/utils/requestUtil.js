@@ -24,6 +24,14 @@ export function getRequestTokenHash(req) {
     return (req.headers?.['authorization'] ?? '').replace('Bearer ', '')
 }
 
+export function getRequestClientIdAndClientSecret(req) {
+    const clientId = (req.headers?.['client-id'] ?? '')
+    const clientSecret = (req.headers?.['client-secret'] ?? '')
+    return {
+        clientId, clientSecret
+    }
+}
+
 export function resolveStreamMessage(message) {
     let str = ''
     if (typeof message === 'string') {

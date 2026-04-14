@@ -1,6 +1,6 @@
 import { RedisAuthorizationStore } from "./authorizationStore.js"
 import { aesCrypto } from '../../core/instance/aesCrypto.js'
-import { getRequestTokenHash } from "../../common/utils/requestUtil.js"
+import { getRequestClientIdAndClientSecret, getRequestTokenHash } from "../../common/utils/requestUtil.js"
 
 const authTokenStore = new RedisAuthorizationStore()
 
@@ -22,11 +22,31 @@ export const decodeAuthorization = async req => {
     if (req.userInfo) return req.userInfo
     const token = getRequestTokenHash(req)
     try {
+        const clientId = verifyClient(req)
         let userInfo = null
-        if (__isNotBlank(token) && await verifyToken(token, decode => userInfo = decode)) {
+        if (__isNotBlank(token) && await verifyToken(token, decode => {
+            if (decode.clientId === clientId) {
+                userInfo = decode
+            } else {
+                __throwMessage(`Invalid token.`)
+            }
+        })) {
             return userInfo
         }
     } catch (ignored) {
     }
     return null
+}
+
+export const verifyClient = req => {
+    const { clientId, clientSecret } = getRequestClientIdAndClientSecret(req)
+    __isAnyBlank(clientId, clientSecret) && __throwMessage('Client is blank.')
+    const allowedClients = __env.get('auth.allowedClients', [])
+    __isEmptyArray(allowedClients) && __throwMessage('Client not configure.')
+    for (const client of allowedClients) {
+        if (client?.id === clientId && btoa(client?.secret ?? '') === clientSecret) {
+            return clientId
+        }
+    }
+    __throwMessage('Client not supported.')
 }

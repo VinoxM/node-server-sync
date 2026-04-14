@@ -1,11 +1,14 @@
 import jwt from 'jsonwebtoken';
 import ms from 'ms';
 import { generateUUID } from '../../common/utils/cryptoUtil.js';
-import { authorizationSyncScript } from '../../common/constants/luaScriptsConst.js';
+import { authorizationSyncScript, deleteUserTokensScript } from '../../common/constants/luaScriptsConst.js';
+import { GetterContextSubscribe } from '../../core/context/subscribe.js';
 
-const userMaxTokenStore = () => __env.get('auth.maxTokenStore', 3)
+const authOptionsGetter = new GetterContextSubscribe('AuthorizationStoreOption', () => __env.get('auth', {}))
 
-const defaultTokenExpire = () => __env.get('auth.defaultTokenExpire', '30d')
+const userMaxTokenStore = () => authOptionsGetter.getValue()?.maxTokenStore ?? 3
+
+const defaultTokenExpire = () => authOptionsGetter.getValue()?.defaultTokenExpire ?? '30d'
 
 const defaultTokenRedisTTL = () => {
     const expire = defaultTokenExpire()
@@ -20,7 +23,7 @@ const defaultTokenRedisTTL = () => {
     return Math.floor(milliseconds / 1000);
 }
 
-const secretKey = () => __env.get('auth.secretKey') ?? __env.get('api.defaultSecret')
+const secretKey = () => authOptionsGetter.getValue()?.secretKey ?? __env.get('api.defaultSecret')
 
 function generateJWT(payload, expire) {
     return jwt.sign(payload, secretKey(), {
@@ -46,15 +49,20 @@ function decodeJWT(token) {
 }
 
 export class AuthorizationStore {
-    #store = new Map();     // Map<uid, Array<hash>>
+    #store = new Map();     // Map<uid, Map<clientId, Array<hash>>>
     #hashStore = new Map(); // Map<hash, token>
 
     constructor() { }
 
     initialize() { }
 
-    _touch(uid, hash, token) {
-        let userTokens = this.#store.get(uid) || [];
+    _touch(uid, hash, clientId = 'default', token) {
+        if (!this.#store.has(uid)) {
+            this.#store.set(uid, new Map());
+        }
+        const clientMap = this.#store.get(uid);
+
+        let userTokens = clientMap.get(clientId) || [];
         const idx = userTokens.indexOf(hash);
         if (idx !== -1) {
             userTokens.splice(idx, 1);
@@ -66,15 +74,16 @@ export class AuthorizationStore {
             const expiredHash = userTokens.shift();
             this.#hashStore.delete(expiredHash);
         }
-        this.#store.set(uid, userTokens);
-        token && this.#hashStore.set(hash, token);
+
+        clientMap.set(clientId, userTokens);
+        if (token) this.#hashStore.set(hash, token);
     }
 
     async generateToken(payload, expire) {
-        const { id: uid } = payload;
+        const { id: uid, clientId } = payload;
         const token = generateJWT(payload, expire);
         const hash = generateUUID().replace(/-/g, '');
-        this._touch(uid, hash, token);
+        this._touch(uid, hash, clientId, token);
         return hash;
     }
 
@@ -84,41 +93,60 @@ export class AuthorizationStore {
         const token = this.#hashStore.get(hash);
         if (verifyJWT(token)) {
             const decode = decodeJWT(token);
-            this._touch(decode.id, hash);
-            if (typeof callback === 'function') callback(decode);
-            return true;
+            if (decode) {
+                this._touch(decode.id, hash, decode.clientId);
+                if (typeof callback === 'function') callback(decode);
+                return true;
+            }
         }
         return false;
     }
 
     async deleteToken(hash) {
-        if (this.#hashStore.has(hash)) {
-            const token = this.#hashStore.get(hash)
-            const decode = decodeJWT(token) ?? {}
-            const { id = -1 } = decode
-            const tokenArr = Array.from(this.#store.get(id) ?? [])
-            if (tokenArr.includes(token)) {
-                const index = tokenArr.indexOf(token)
-                tokenArr.splice(index, 1)
+        const token = this.#hashStore.get(hash);
+        if (token) {
+            const decode = decodeJWT(token) || {};
+            const { id: uid, clientId } = decode;
+            
+            const clientMap = this.#store.get(uid);
+            if (clientMap && clientMap.has(clientId)) {
+                const tokenArr = clientMap.get(clientId);
+                const index = tokenArr.indexOf(hash);
+                if (index !== -1) tokenArr.splice(index, 1);
             }
-            this.#hashStore.delete(hash)
+            this.#hashStore.delete(hash);
         }
     }
 
     async deleteTokenByUid(uid) {
         if (this.#store.has(uid)) {
-            const userTokens = Array.from(this.#store.get(uid))
-            userTokens.forEach(h => this.#hashStore.delete(h))
-            this.#store.delete(uid)
+            const clientMap = this.#store.get(uid);
+            for (const hashes of clientMap.values()) {
+                hashes.forEach(h => this.#hashStore.delete(h));
+            }
+            this.#store.delete(uid);
+        }
+    }
+
+    async deleteTokenByClient(uid, clientId) {
+        const clientMap = this.#store.get(uid);
+        if (clientMap && clientMap.has(clientId)) {
+            const hashes = clientMap.get(clientId);
+            hashes.forEach(h => this.#hashStore.delete(h));
+            clientMap.delete(clientId);
         }
     }
 
     _getSnapshot() {
-        return Array.from(this.#hashStore.entries()).map(([hash, token]) => ({
-            hash,
-            token,
-            uid: (decodeJWT(token) || {}).id
-        }));
+        return Array.from(this.#hashStore.entries()).map(([hash, token]) => {
+            const decode = decodeJWT(token) || {};
+            return {
+                hash,
+                token,
+                uid: decode.id,
+                clientId: decode.clientId
+            };
+        });
     }
 
     _getInternalToken(hash) {
@@ -138,9 +166,9 @@ export class RedisAuthorizationStore extends AuthorizationStore {
     }
 
     initialize() {
-        if (this.#initialized) return
+        if (this.#initialized) return;
         this.#redis = __redisClient;
-        this.#initialized = true
+        this.#initialized = true;
         this.#trySync();
         this.#initHeartbeat();
     }
@@ -164,7 +192,7 @@ export class RedisAuthorizationStore extends AuthorizationStore {
         try {
             const data = this._getSnapshot();
             for (const item of data) {
-                await this.#applyToRedis(item.uid, item.hash, item.token);
+                await this.#applyToRedis(item.uid, item.hash, item.token, item.clientId);
             }
         } finally {
             __log.info("[AuthorizationStore] Data synchronization complete.");
@@ -172,11 +200,12 @@ export class RedisAuthorizationStore extends AuthorizationStore {
         }
     }
 
-    async #applyToRedis(uid, hash, token) {
+    async #applyToRedis(uid, hash, token, clientId) {
         const max = userMaxTokenStore();
+        const redisKey = `user_tokens:${uid}:${clientId}`;
         return await this.#redis.eval(
             authorizationSyncScript,
-            [`user_tokens:${uid}`],
+            [redisKey],
             [Date.now().toString(), hash, max.toString(), token, defaultTokenRedisTTL().toString()]
         );
     }
@@ -185,7 +214,7 @@ export class RedisAuthorizationStore extends AuthorizationStore {
         const hash = await super.generateToken(payload, expire);
         const token = this._getInternalToken(hash);
         if (this.#isOnline) {
-            await this.#applyToRedis(payload.id, hash, token);
+            await this.#applyToRedis(payload.id, hash, token, payload.clientId);
         }
         return hash;
     }
@@ -198,14 +227,16 @@ export class RedisAuthorizationStore extends AuthorizationStore {
                 token = res.data;
                 const decode = decodeJWT(token);
                 if (decode) {
-                    this._touch(decode.id, hash, token);
+                    this._touch(decode.id, hash, decode.clientId, token);
                 }
             }
         }
+
         if (token && verifyJWT(token)) {
             const decode = decodeJWT(token);
             if (this.#isOnline) {
-                this.#redis.zAdd(`user_tokens:${decode.id}`, Date.now(), hash).catch(() => { });
+                const redisKey = `user_tokens:${decode.id}:${decode.clientId}`;
+                this.#redis.zAdd(redisKey, Date.now(), hash).catch(() => { });
             }
             if (typeof callback === 'function') callback(decode);
             return true;
@@ -215,34 +246,49 @@ export class RedisAuthorizationStore extends AuthorizationStore {
 
     async deleteToken(hash) {
         const token = this._getInternalToken(hash);
-        let uid = -1;
-        if (token) {
-            const decode = decodeJWT(token) ?? {};
-            uid = decode.id ?? -1;
-        }
-        if (this.#isOnline && uid !== -1) {
+        if (this.#isOnline && token) {
+            const decode = decodeJWT(token) || {};
+            const uid = decode.id;
+            const clientId = decode.clientId;
             await Promise.all([
-                this.#redis.zRem(`user_tokens:${uid}`, hash),
+                this.#redis.zRem(`user_tokens:${uid}:${clientId}`, hash),
                 this.#redis.expire(`token:${hash}`, 0)
             ]);
         }
         return super.deleteToken(hash);
     }
 
+    async deleteTokenByClient(uid, clientId) {
+        if (this.#isOnline) {
+            const redisKey = `user_tokens:${uid}:${clientId}`;
+            const res = await this.#redis.zRange(redisKey, 0, -1);
+            if (res && res.code === 0 && Array.isArray(res.data)) {
+                const deleteTasks = res.data.map(h => this.#redis.expire(`token:${h}`, 0));
+                deleteTasks.push(this.#redis.expire(redisKey, 0));
+                await Promise.all(deleteTasks);
+            }
+        }
+        return super.deleteTokenByClient(uid, clientId);
+    }
+
     async deleteTokenByUid(uid) {
         if (this.#isOnline) {
             try {
-                const res = await this.#redis.zRange(`user_tokens:${uid}`, 0, -1);
-                if (res.code === 0 && Array.isArray(res.data)) {
-                    const hashes = res.data;
-                    const deleteTasks = hashes.map(h => this.#redis.expire(`token:${h}`, 0));
-                    deleteTasks.push(this.#redis.expire(`user_tokens:${uid}`, 0));
-                    await Promise.all(deleteTasks);
+                const pattern = `user_tokens:${uid}:*`;
+                
+                const res = await this.#redis.eval(
+                    deleteUserTokensScript,
+                    [pattern],
+                    []
+                );
+
+                if (res && res.code === 0) {
+                    __log.info(`[RedisAuth] Cleaned up all tokens for uid: ${uid}. Keys affected: ${res.data}`);
                 }
             } catch (e) {
-                __log.error(`[RedisAuth] Delete user tokens failed: ${e.message}`);
+                __log.error(`[RedisAuth] Lua delete failed for uid ${uid}: ${e.message}`);
             }
         }
-        return super.deleteTokenByUid(uid);
+        return super.deleteTokenByUid(uid); 
     }
 }

@@ -28,7 +28,7 @@ export async function resetPassword(uname, password, newPassword) {
     }
 }
 
-export async function userLogin(uname, password) {
+export async function userLogin(uname, password, clientId) {
     const userInfo = await accountRep.selectByUname(uname)
     if (!userInfo) {
         __throwMessage('User not exists.', -1)
@@ -36,7 +36,7 @@ export async function userLogin(uname, password) {
     if (userInfo?.password !== password) {
         __throwMessage('Password incorrect.', -1)
     }
-    const tokenHash = await createToken({ id: userInfo.id, uname: userInfo.uname })
+    const tokenHash = await createToken({ id: userInfo.id, uname: userInfo.uname, clientId })
     return encryptData(tokenHash)
 }
 

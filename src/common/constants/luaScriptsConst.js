@@ -35,3 +35,20 @@ export const authorizationSyncScript = `
     redis.call('SET', 'token:' .. ARGV[2], ARGV[4], 'EX', ARGV[5])
     return 1
 `
+
+export const deleteUserTokensScript = `
+    local keys = redis.call('KEYS', KEYS[1])
+    local deletedCount = 0
+    for _, clientKey in ipairs(keys) do
+        -- 获取该端下的所有 Hash
+        local hashes = redis.call('ZRANGE', clientKey, 0, -1)
+        for _, hash in ipairs(hashes) do
+            -- 删除具体的 token:hash 内容
+            redis.call('DEL', 'token:' .. hash)
+        end
+        -- 删除客户端列表 Key
+        redis.call('DEL', clientKey)
+        deletedCount = deletedCount + 1
+    end
+    return deletedCount
+`;
