@@ -93,5 +93,13 @@ export default {
         sql += " WHERE id=?";
         parameters.push(id);
         return (transactionDB || __sqliteDB).update(sql, parameters, enablePrint, dbName);
+    },
+    selectTaskExistsSubs: (season) => {
+        const sql = 'SELECT rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, COUNT(rtt.id) AS [count] '
+            + 'FROM rss_subscribe rs '
+            + 'INNER JOIN rss_torrent_task rtt ON rtt.rss_subs_id=rs.id '
+            + 'WHERE rs.season=? '
+            + 'GROUP BY rs.id'
+        return __sqliteDB.selectAll(sql, [season], null, dbName)
     }
 }

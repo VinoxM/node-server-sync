@@ -28,7 +28,7 @@ export const PAUSED = {
     "pausedUP": "已完成下载, 但做种已暂停"
 }
 
-export const STOPED = {
+export const STOPPED = {
     'stoppedDL': "下载已停止"
 }
 

@@ -1,15 +1,16 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import apiQueryConst from "../../../common/constants/apiQueryConst.js";
-import { checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
+import { checkBodyKeyMatch, checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
 import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js";
 import rssCopyrightRep from "../../../modules/rss/repository/rssCopyrightRep.js";
 import rssEpisodeRep from "../../../modules/rss/repository/rssEpisodeRep.js";
 import rssLinkRep from "../../../modules/rss/repository/rssLinkRep.js";
 import rssRep from "../../../modules/rss/repository/rssRep.js";
+import rssSubscribeRep from "../../../modules/rss/repository/rssSubscribeRep.js";
 import rssTaskRep from "../../../modules/rss/repository/rssTaskRep.js";
 import rssTrackerRep from "../../../modules/rss/repository/rssTrackerRep.js";
 
-const { GET } = apiMethodConst
+const { GET, POST } = apiMethodConst
 const { SEASON, ID, NAME } = apiQueryConst
 
 const handleSearch = (data) => {
@@ -161,5 +162,12 @@ export default {
                 });
             });
         }
+    },
+    '/getTaskExistsSubscriptions': {
+        method: POST,
+        needAuth: true,
+        needSecret: () => "mAou5820.subscribe",
+        preCheck: (req) => checkBodyKeyMatch(req, SEASON, [/^2[0-9]{3}-(01|04|07|10)$/]),
+        callback: req => rssSubscribeRep.selectTaskExistsSubs(req.body.season).then(({ data }) => data)
     }
 }
