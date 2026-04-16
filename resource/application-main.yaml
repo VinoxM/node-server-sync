@@ -11,7 +11,7 @@ server:
 axios:
   proxy:
     protocol: http
-    host: frp
+    host: 192.168.31.100
     port: 7890
 api:
   requestBodyLimit: 2 * 1024 * 1024
@@ -115,7 +115,7 @@ clash:
       redir-port: 7890
   subscription:
     sources:
-      - url: https://new.adoptangelaboradvacotionclwonthorughconfrmcompimentdeseertaltar.org/sub/553e7c3da73124ed/clash
+      - url: https://is.domainforsub.work/sub/553e7c3da73124ed
         label: Cloud
         isDefault: true
   concat:
