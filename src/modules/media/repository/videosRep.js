@@ -209,14 +209,23 @@ export default {
     //     return __sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
     // }
     selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize) => {
-        // 1. 构建主表过滤条件与参数
         let sqlConcat = [];
         let params = [];
 
-        if (categoryId) {
+        // --- 核心逻辑：所有过滤条件都必须在内层完成 ---
+
+        // 1. 分类类型过滤（如果没传具体 categoryId）
+        let categoryJoin = '';
+        if (!categoryId) {
+            // 必须在内层子查询就 JOIN categories 来过滤 type
+            categoryJoin = 'INNER JOIN categories tc_inner ON tc_inner.id = tv.category_id ';
+            sqlConcat.push(' tc_inner.type = ?');
+            params.push(isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL);
+        } else {
             sqlConcat.push(' tv.category_id = ?');
             params.push(categoryId);
         }
+
         if (authorId) {
             sqlConcat.push(' tv.author_id = ?');
             params.push(authorId);
@@ -230,7 +239,7 @@ export default {
             params.push(status);
         }
 
-        // 标签过滤逻辑 (保持在子查询内)
+        // 标签过滤
         if (tagNames) {
             const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
             if (tagList.length > 0) {
@@ -250,14 +259,15 @@ export default {
 
         const whereClause = sqlConcat.length > 0 ? ' WHERE ' + sqlConcat.join(' AND ') : '';
 
-        // 分页计算
         let limitOffset = '';
         if (pageNum !== undefined && pageSize !== undefined) {
             const offset = (pageNum - 1) * pageSize;
             limitOffset = ' LIMIT ' + pageSize + ' OFFSET ' + offset;
         }
 
-        // 2. 最终 SQL 拼接 (核心优化：延迟关联 + 标量子查询)
+        // --- 2. 最终 SQL 拼接 ---
+        // 内层 keys 子查询负责：过滤 + 排序 + 分页 (只拿 ID)
+        // 外层主查询负责：关联详情 (取剩下的所有字段)
         let sql = 'SELECT '
             + 'v.id, v.unique_id, v.title, v.author_id, v.category_id, '
             + 'v.upload_time, v.status, v.create_time, '
@@ -267,22 +277,15 @@ export default {
             + 'FROM ('
             + 'SELECT tv.id '
             + 'FROM videos tv '
+            + categoryJoin // 如果需要按类型过滤，内层必须 JOIN
             + whereClause + ' '
-            + 'ORDER BY tv.category_id, tv.upload_time DESC, tv.id DESC '
+            + 'ORDER BY tv.upload_time DESC, tv.id DESC ' // 使用索引排序
             + limitOffset
             + ') AS keys '
             + 'JOIN videos v ON v.id = keys.id '
             + 'INNER JOIN categories tc ON tc.id = v.category_id '
-            + 'LEFT JOIN authors ta ON ta.id = v.author_id AND ta.category_id = v.category_id';
-
-        // 如果没有指定分类，则应用 Inside/Normal 过滤
-        if (!categoryId) {
-            const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL;
-            sql += ' WHERE tc.type = ' + categoryType;
-        }
-
-        // 最终排序（基于分页后的结果集）
-        sql += ' ORDER BY v.upload_time DESC, v.id DESC';
+            + 'LEFT JOIN authors ta ON ta.id = v.author_id AND ta.category_id = v.category_id '
+            + 'ORDER BY v.upload_time DESC, v.id DESC';
 
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
@@ -304,7 +307,7 @@ export default {
         if (tagNames) {
             const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
             if (tagList.length > 0) {
-                const placeholders = tagList.map(function () { return '?'; }).join(',');
+                const placeholders = tagList.map(() => '?').join(',');
                 sqlConcat.push(' tv.id IN ('
                     + 'SELECT vtm.video_id '
                     + 'FROM video_tag_map vtm '
@@ -313,7 +316,7 @@ export default {
                     + 'GROUP BY vtm.video_id '
                     + 'HAVING COUNT(DISTINCT tt.id) = ?'
                     + ')');
-                tagList.forEach(function (name) { params.push(name); });
+                tagList.forEach(name => params.push(name));
                 params.push(tagList.length);
             }
         }
