@@ -105,36 +105,114 @@ export default {
         }
         return result
     },
+    // selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize) => {
+    //     let sql = `SELECT `
+    //         + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
+    //         + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
+    //         + `MAX(CASE WHEN tm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} THEN tm.link ELSE NULL END) AS cover `
+    //         + `FROM videos tv `
+    //         + `INNER JOIN categories tc ON tc.id = tv.category_id `
+    //     if (!categoryId) {
+    //         sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `
+    //     }
+    //     sql += `LEFT JOIN authors ta ON ta.id = tv.author_id AND ta.category_id = tv.category_id `
+    //         + `LEFT JOIN video_minio tm ON tm.video_id = tv.id `;
+    //     const sqlConcat = [];
+    //     const params = [];
+    //     if (tagNames) {
+    //         const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
+    //         if (tagList.length > 0) {
+    //             const placeholders = tagList.map(() => '?').join(',');
+    //             sqlConcat.push(` tv.id IN (`
+    //                 + `SELECT vtm.video_id `
+    //                 + `FROM video_tag_map vtm `
+    //                 + `JOIN tags tt ON vtm.tag_id = tt.id `
+    //                 + `WHERE tt.name IN (${placeholders}) `
+    //                 + `GROUP BY vtm.video_id `
+    //                 + `HAVING COUNT(DISTINCT tt.id) = ?`
+    //                 + `)`);
+    //             tagList.forEach(name => params.push(name));
+    //             params.push(tagList.length);
+    //         }
+    //     }
+    //     if (categoryId) {
+    //         sqlConcat.push(' tv.category_id = ?');
+    //         params.push(categoryId);
+    //     }
+    //     if (authorId) {
+    //         sqlConcat.push(' tv.author_id = ?');
+    //         params.push(authorId);
+    //     }
+    //     if (title) {
+    //         sqlConcat.push(' tv.title LIKE ?');
+    //         params.push(`%${title}%`);
+    //     }
+    //     if (status) {
+    //         sqlConcat.push(' tv.status = ?');
+    //         params.push(status);
+    //     }
+    //     if (sqlConcat.length > 0) {
+    //         sql += ' WHERE ' + sqlConcat.join(' AND ');
+    //     }
+    //     sql += ' GROUP BY tv.id';
+    //     sql += ' ORDER BY tv.upload_time DESC, tv.id DESC';
+    //     if (pageNum !== undefined && pageSize !== undefined) {
+    //         const offset = (pageNum - 1) * pageSize;
+    //         sql += ' LIMIT ? OFFSET ?';
+    //         params.push(pageSize, offset);
+    //     }
+    //     return __sqliteDB.selectAll(sql, params, null, dbName);
+    // },
+    // countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {
+    //     let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `
+    //         + `INNER JOIN categories tc ON tc.id = tv.category_id `;
+    //     const sqlConcat = [];
+    //     const params = [];
+    //     if (!categoryId) {
+    //         sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `;
+    //     }
+    //     if (tagNames) {
+    //         const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
+    //         if (tagList.length > 0) {
+    //             const placeholders = tagList.map(() => '?').join(',');
+    //             sqlConcat.push(` tv.id IN (`
+    //                 + `SELECT vtm.video_id `
+    //                 + `FROM video_tag_map vtm `
+    //                 + `JOIN tags tt ON vtm.tag_id = tt.id `
+    //                 + `WHERE tt.name IN (${placeholders}) `
+    //                 + `GROUP BY vtm.video_id `
+    //                 + `HAVING COUNT(DISTINCT tt.id) = ?`
+    //                 + `)`);
+    //             tagList.forEach(name => params.push(name));
+    //             params.push(tagList.length);
+    //         }
+    //     }
+    //     if (categoryId) {
+    //         sqlConcat.push(' tv.category_id = ?');
+    //         params.push(categoryId);
+    //     }
+    //     if (authorId) {
+    //         sqlConcat.push(' tv.author_id = ?');
+    //         params.push(authorId);
+    //     }
+    //     if (title) {
+    //         sqlConcat.push(' tv.title LIKE ?');
+    //         params.push(`%${title}%`);
+    //     }
+    //     if (status) {
+    //         sqlConcat.push(' tv.status = ?');
+    //         params.push(status);
+    //     }
+    //     if (sqlConcat.length > 0) {
+    //         sql += ' WHERE ' + sqlConcat.join(' AND ');
+    //     }
+    //     return __sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
+    // }
     selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize) => {
-        let sql = `SELECT `
-            + `tv.id, tv.unique_id, tv.title, tv.author_id, ta.name AS author, `
-            + `tv.category_id, tc.name AS category, tv.upload_time, tv.status, tv.create_time, `
-            + `MAX(CASE WHEN tm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} THEN tm.link ELSE NULL END) AS cover `
-            + `FROM videos tv `
-            + `INNER JOIN categories tc ON tc.id = tv.category_id `
-        if (!categoryId) {
-            sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `
-        }
-        sql += `LEFT JOIN authors ta ON ta.id = tv.author_id AND ta.category_id = tv.category_id `
-            + `LEFT JOIN video_minio tm ON tm.video_id = tv.id `;
-        const sqlConcat = [];
-        const params = [];
-        if (tagNames) {
-            const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
-            if (tagList.length > 0) {
-                const placeholders = tagList.map(() => '?').join(',');
-                sqlConcat.push(` tv.id IN (`
-                    + `SELECT vtm.video_id `
-                    + `FROM video_tag_map vtm `
-                    + `JOIN tags tt ON vtm.tag_id = tt.id `
-                    + `WHERE tt.name IN (${placeholders}) `
-                    + `GROUP BY vtm.video_id `
-                    + `HAVING COUNT(DISTINCT tt.id) = ?`
-                    + `)`);
-                tagList.forEach(name => params.push(name));
-                params.push(tagList.length);
-            }
-        }
+        // 1. 构建主表过滤条件与参数
+        let sqlConcat = [];
+        let params = [];
+
         if (categoryId) {
             sqlConcat.push(' tv.category_id = ?');
             params.push(categoryId);
@@ -145,48 +223,102 @@ export default {
         }
         if (title) {
             sqlConcat.push(' tv.title LIKE ?');
-            params.push(`%${title}%`);
+            params.push('%' + title + '%');
         }
         if (status) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
         }
-        if (sqlConcat.length > 0) {
-            sql += ' WHERE ' + sqlConcat.join(' AND ');
+
+        // 标签过滤逻辑 (保持在子查询内)
+        if (tagNames) {
+            const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
+            if (tagList.length > 0) {
+                const placeholders = tagList.map(function () { return '?'; }).join(',');
+                sqlConcat.push(' tv.id IN ('
+                    + 'SELECT vtm.video_id '
+                    + 'FROM video_tag_map vtm '
+                    + 'JOIN tags tt ON vtm.tag_id = tt.id '
+                    + 'WHERE tt.name IN (' + placeholders + ') '
+                    + 'GROUP BY vtm.video_id '
+                    + 'HAVING COUNT(DISTINCT tt.id) = ?'
+                    + ')');
+                tagList.forEach(function (name) { params.push(name); });
+                params.push(tagList.length);
+            }
         }
-        sql += ' GROUP BY tv.id';
-        sql += ' ORDER BY tv.upload_time DESC, tv.id DESC';
+
+        const whereClause = sqlConcat.length > 0 ? ' WHERE ' + sqlConcat.join(' AND ') : '';
+
+        // 分页计算
+        let limitOffset = '';
         if (pageNum !== undefined && pageSize !== undefined) {
             const offset = (pageNum - 1) * pageSize;
-            sql += ' LIMIT ? OFFSET ?';
-            params.push(pageSize, offset);
+            limitOffset = ' LIMIT ' + pageSize + ' OFFSET ' + offset;
         }
+
+        // 2. 最终 SQL 拼接 (核心优化：延迟关联 + 标量子查询)
+        let sql = 'SELECT '
+            + 'v.id, v.unique_id, v.title, v.author_id, v.category_id, '
+            + 'v.upload_time, v.status, v.create_time, '
+            + 'tc.name AS category, '
+            + 'ta.name AS author, '
+            + '(SELECT link FROM video_minio WHERE video_id = v.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover '
+            + 'FROM ('
+            + 'SELECT tv.id '
+            + 'FROM videos tv '
+            + whereClause + ' '
+            + 'ORDER BY tv.category_id, tv.upload_time DESC, tv.id DESC '
+            + limitOffset
+            + ') AS keys '
+            + 'JOIN videos v ON v.id = keys.id '
+            + 'INNER JOIN categories tc ON tc.id = v.category_id '
+            + 'LEFT JOIN authors ta ON ta.id = v.author_id AND ta.category_id = v.category_id';
+
+        // 如果没有指定分类，则应用 Inside/Normal 过滤
+        if (!categoryId) {
+            const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL;
+            sql += ' WHERE tc.type = ' + categoryType;
+        }
+
+        // 最终排序（基于分页后的结果集）
+        sql += ' ORDER BY v.upload_time DESC, v.id DESC';
+
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
     countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {
-        let sql = `SELECT COUNT(DISTINCT tv.id) as total FROM videos tv `
-            + `INNER JOIN categories tc ON tc.id = tv.category_id `;
+        // 1. 初始 SQL 结构
+        // 逻辑优化：如果有 categoryId，直接在 videos 表过滤，不需要 JOIN categories 表
+        let sql = 'SELECT COUNT(DISTINCT tv.id) as total FROM videos tv ';
+
+        // 只有在没有具体 categoryId 时，为了区分 Inside/Normal 类型才需要 JOIN categories
+        if (!categoryId) {
+            sql += 'INNER JOIN categories tc ON tc.id = tv.category_id '
+                + 'AND tc.type = ' + (isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL) + ' ';
+        }
+
         const sqlConcat = [];
         const params = [];
-        if (!categoryId) {
-            sql += `AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `;
-        }
+
+        // 2. 标签过滤逻辑 (保持高效的子查询方式)
         if (tagNames) {
             const tagList = Array.isArray(tagNames) ? tagNames : [tagNames];
             if (tagList.length > 0) {
-                const placeholders = tagList.map(() => '?').join(',');
-                sqlConcat.push(` tv.id IN (`
-                    + `SELECT vtm.video_id `
-                    + `FROM video_tag_map vtm `
-                    + `JOIN tags tt ON vtm.tag_id = tt.id `
-                    + `WHERE tt.name IN (${placeholders}) `
-                    + `GROUP BY vtm.video_id `
-                    + `HAVING COUNT(DISTINCT tt.id) = ?`
-                    + `)`);
-                tagList.forEach(name => params.push(name));
+                const placeholders = tagList.map(function () { return '?'; }).join(',');
+                sqlConcat.push(' tv.id IN ('
+                    + 'SELECT vtm.video_id '
+                    + 'FROM video_tag_map vtm '
+                    + 'JOIN tags tt ON vtm.tag_id = tt.id '
+                    + 'WHERE tt.name IN (' + placeholders + ') '
+                    + 'GROUP BY vtm.video_id '
+                    + 'HAVING COUNT(DISTINCT tt.id) = ?'
+                    + ')');
+                tagList.forEach(function (name) { params.push(name); });
                 params.push(tagList.length);
             }
         }
+
+        // 3. 基础过滤条件
         if (categoryId) {
             sqlConcat.push(' tv.category_id = ?');
             params.push(categoryId);
@@ -195,17 +327,19 @@ export default {
             sqlConcat.push(' tv.author_id = ?');
             params.push(authorId);
         }
-        if (title) {
-            sqlConcat.push(' tv.title LIKE ?');
-            params.push(`%${title}%`);
-        }
         if (status) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
         }
+        if (title) {
+            sqlConcat.push(' tv.title LIKE ?');
+            params.push('%' + title + '%');
+        }
+
         if (sqlConcat.length > 0) {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
-        return __sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
+
+        return __sqliteDB.selectOne(sql, params, null, dbName).then(res => res?.total || 0);
     }
 }
