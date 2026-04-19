@@ -1,4 +1,4 @@
-import { MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js"
+import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js"
 
 const dbName = 'media'
 const enablePrint = { print: true }
@@ -82,9 +82,13 @@ export default {
     },
     selectStreamForSearch: (roomId, hostName, pageSize, pageNum) => {
         const params = []
-        let sql = `SELECT ${STREAM_FULL_COLUMNS.slice(0, STREAM_FULL_COLUMNS.length - 1).map(c => 'brs.' + c).join(',')}, v.id AS videoExists `
+        let sql = `SELECT ${STREAM_FULL_COLUMNS.slice(0, STREAM_FULL_COLUMNS.length - 1).map(c => 'brs.' + c).join(',')}, `
+            + `v.id AS videoExists, `
+            + `COUNT(brf.id) AS recordExists, `
+            + `SUM(CASE WHEN brf.file_status=${MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED} THEN 0 ELSE 1 END) AS fileExists `
             + `FROM bilive_record_stream brs `
             + `LEFT JOIN videos v ON v.id=brs.video_id `
+            + `LEFT JOIN bilive_record_files brf on brf.stream_id=brs.id `
         const concat = []
         if (__isNotBlank(roomId)) {
             concat.push(`brs.room_id=? `)
@@ -97,7 +101,7 @@ export default {
         if (concat.length > 0) {
             sql += `WHERE ` + concat.join('AND ')
         }
-        sql += `ORDER BY brs.id DESC `
+        sql += `GROUP BY brs.id ORDER BY brs.id DESC`
         if (pageNum !== undefined && pageSize !== undefined) {
             const offset = (pageNum - 1) * pageSize;
             sql += ' LIMIT ? OFFSET ?';
