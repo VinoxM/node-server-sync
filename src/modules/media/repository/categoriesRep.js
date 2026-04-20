@@ -33,7 +33,7 @@ export default {
     },
     deleteOne: async categoryId => {
         const result = { rows: 0 }
-        const category = await __sqliteDB.selectOne('SELECT id, name FROM categories WHERE id=?', [id], null, dbName)
+        const category = await __sqliteDB.selectOne('SELECT id, name FROM categories WHERE id=?', [categoryId], null, dbName)
         if (category) {
             const sql = `DELETE FROM categories WHERE id=?`
             const res = await __sqliteDB.delete(sql, [categoryId], null, dbName)
