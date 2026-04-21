@@ -13,7 +13,6 @@ import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
-import { Tracer } from '../../../core/infra/tracer.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -64,7 +63,7 @@ export async function createMinioManually(minioObj) {
         const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
-        ], 10000)
+        ], 5000)
         return status === 'timeout' ? 0 : 1
     }
 }
@@ -253,7 +252,7 @@ export async function retryMinio(minioId) {
         const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
-        ], 10000)
+        ], 5000)
         return status === 'timeout' ? 0 : 1
     }
 }

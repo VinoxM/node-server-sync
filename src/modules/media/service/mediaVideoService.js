@@ -85,7 +85,7 @@ export async function createVideo(videoObj) {
     } else {
         // execute async task chain
         tasks.push(async () => updateVideoStatusByVideoMinioStatus(videoId))
-        await executeAsyncTaskChain(tasks, 10000)
+        await executeAsyncTaskChain(tasks, 5000)
     }
     return { id: videoId };
 }
