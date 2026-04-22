@@ -5,6 +5,7 @@ import { GetterContextSubscribe } from '../../../core/context/subscribe.js';
 import rssSubtitleRep from '../repository/rssSubtitleRep.js';
 import { RSS_SUBTITLE_FILE_STATUS, RSS_SUBTITLE_STATUS } from '../constants/rssSubtitleStatusConst.js';
 import { SSH_CMD_BATCH_DELETE_SIMPLE, SSH_CMD_MINIO_COPY_SCRIPT_U_QBIT } from '../../../common/constants/sshScriptsConst.js';
+import { getSSHExecutor } from '../../../core/instance/sshExecutor.js';
 
 const rssSubtitleMatchers = new GetterContextSubscribe('RssSubtitleMatchers', () => __env.get('rss.subtitleMatchers', []))
 export function getRssSubtitleMatchers() {
