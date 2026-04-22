@@ -1,3 +1,5 @@
+import { EPISODE_STATUS } from "../constants/rssTaskStatusConst.js"
+
 const dbName = 'rss'
 const enablePrint = { print: true }
 
@@ -39,6 +41,10 @@ export default {
     deleteOneById: (id) => {
         const sql = 'DELETE FROM rss_episode WHERE id=?'
         return __sqliteDB.delete(sql, [id], null, dbName)
+    },
+    selectSourceBySubsIdAndEpisode: (rssSubsId, episode) => {
+        const sql = `SELECT minio_link FROM rss_episode WHERE rss_subs_id=? AND episode=? AND status=?`
+        return __sqliteDB.selectOne(sql, [rssSubsId, episode, EPISODE_STATUS.COMPLETE], null, dbName)
     },
     /* Failed episode */
     selectOneFailedById: id => {

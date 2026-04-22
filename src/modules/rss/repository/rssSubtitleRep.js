@@ -73,5 +73,9 @@ export default {
     selectBySubsId: rssSubsId => {
         const sql = `SELECT ${FULL_COLUMN.join(',')} FROM rss_episode_subtitle WHERE rss_subs_id=?`
         return __sqliteDB.selectAll(sql, [rssSubsId], null, dbName);
+    },
+    selectBySubsIdAndEpisode: (rssSubsId, episode) => {
+        const sql = `SELECT ${FULL_COLUMN.join(',')} FROM rss_episode_subtitle WHERE rss_subs_id=? AND episode=? AND status=?`
+        return __sqliteDB.selectAll(sql, [rssSubsId, episode, RSS_SUBTITLE_STATUS.COMPLETE], null, dbName);
     }
 }

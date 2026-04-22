@@ -1,12 +1,14 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import apiQueryConst from "../../../common/constants/apiQueryConst.js";
-import { checkBodyKeyMatch, checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
+import { checkBodyKeyMatch, checkBodyKeysNotBlank, checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
 import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js";
 import rssCopyrightRep from "../../../modules/rss/repository/rssCopyrightRep.js";
 import rssEpisodeRep from "../../../modules/rss/repository/rssEpisodeRep.js";
+import rssFontsRep from "../../../modules/rss/repository/rssFontsRep.js";
 import rssLinkRep from "../../../modules/rss/repository/rssLinkRep.js";
 import rssRep from "../../../modules/rss/repository/rssRep.js";
 import rssSubscribeRep from "../../../modules/rss/repository/rssSubscribeRep.js";
+import rssSubtitleRep from "../../../modules/rss/repository/rssSubtitleRep.js";
 import rssTaskRep from "../../../modules/rss/repository/rssTaskRep.js";
 import rssTrackerRep from "../../../modules/rss/repository/rssTrackerRep.js";
 
@@ -169,5 +171,28 @@ export default {
         needSecret: () => "mAou5820.subscribe",
         preCheck: (req) => checkBodyKeyMatch(req, SEASON, [/^2[0-9]{3}-(01|04|07|10)$/]),
         callback: req => rssSubscribeRep.selectEpisodesExistsSubs(req.body.season).then(({ data }) => data)
+    },
+    "/getRssEpisodeSource": {
+        method: POST,
+        needSecret: () => "mAou5820.subscribe",
+        preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
+        callback: async req => {
+            const { rssSubsId, episode } = req.body
+            const episodeData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
+            const result = { url: episodeData?.minioLink || null, subtitles: [] }
+            if (!episodeData?.minioLink) return result
+            const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode)
+            if (rows === 0) return result
+            for (const subtitle of data) {
+                const { minioLink, fonts, title } = subtitle
+                const obj = { url: minioLink, fonts, title }
+                if (__isNotBlank(fonts)) {
+                    const fontArr = await rssFontsRep.selectByTitles(fonts.split(','))
+                    obj.fonts = fontArr.map(f => f.minioLink)
+                }
+                result.subtitles.push(obj)
+            }
+            return result;
+        }
     }
 }
