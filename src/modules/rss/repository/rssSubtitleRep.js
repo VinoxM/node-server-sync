@@ -17,6 +17,10 @@ const FULL_COLUMN = [
 ]
 
 export default {
+    selectExistsByFileNameAndRootPath: (fileName, rootPath) => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM rss_episode_subtitle WHERE file_name = ? AND root_path = ? LIMIT 1) AS [exists]`
+        return __sqliteDB.selectOne(sql, [fileName, rootPath], null, dbName).then(({ exists }) => exists)
+    },
     insertOne: (subtitle) => {
         const sql = `INSERT INTO rss_episode_subtitle(rss_task_id, rss_subs_id, title, episode, minio_link, root_path, file_name, fonts, status, file_status) `
             + `VALUES(?,?,?,?,?,?,?,?,?,?)`

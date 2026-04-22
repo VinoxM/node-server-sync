@@ -47,6 +47,12 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
     let result = false
     const ext = path.extname(fileName)
     if (!isFileExtSubtitle(ext)) return result;
+    const filePath = path.join(rootPath, fileName)
+    const fileExists = await rssSubtitleRep.selectExistsByFileNameAndRootPath(fileName, rootPath);
+    if (fileExists) {
+        __log.warn(`[RSS Subtitle] Skip resolve episode subtitle, cause resolved. File path: ${filePath}`)
+        return result;
+    }
     result = true;
     const episodeSubtitle = {
         taskId,
@@ -66,7 +72,6 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
 
     if (!episodeSubtitle.minioLink) return result;
     // copy episode subtitle to minio
-    const filePath = path.join(rootPath, fileName)
     const complete = await uploadSubtitleToMinio(filePath, subtitleId, episode.minioLink)
     if (!complete) return result;
 
