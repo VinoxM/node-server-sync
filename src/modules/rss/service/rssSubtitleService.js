@@ -94,7 +94,8 @@ export async function retryUploadEpisodeSubtitle(id) {
     // get episode subtitle from repository
     const subtitle = await rssSubtitleRep.selectOneById(id)
     subtitle || __throwMessage('Rss episode subtitle not exists.')
-    const { rootPath, fileName, minioLink, fileStatus } = subtitle
+    const { rootPath, fileName, minioLink, status, fileStatus } = subtitle
+    status === RSS_SUBTITLE_STATUS.FAILED || __throwMessage('Cannot retry subtitle upload.')
     fileStatus === RSS_SUBTITLE_FILE_STATUS.REMOVED && __throwMessage('Subtitle file removed.')
     const filePath = path.join(rootPath, fileName)
     __isBlank(minioLink) && __throwMessage('Minio link is blank.')
