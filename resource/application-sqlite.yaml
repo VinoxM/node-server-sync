@@ -146,6 +146,14 @@ sqlite:
           );
           CREATE INDEX `idx_rss_ep_st_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
           CREATE INDEX `idx_rss_ep_st_task_id` ON rss_episode_subtitle(`rss_task_id`);
+      - tableName: rss_fonts
+        DDL: |
+          CREATE TABLE rss_fonts (
+            `id` integer PRIMARY KEY NOT NULL,
+            `title` text NOT NULL,
+            `minio_link` text DEFAULT NULL,
+            CONSTRAINT `idx_rss_fonts_title` UNIQUE (`title`)
+          );
     kuro:
       - tableName: kuro_community_account
         DDL: |
