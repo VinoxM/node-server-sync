@@ -94,12 +94,15 @@ export default {
         parameters.push(id);
         return (transactionDB || __sqliteDB).update(sql, parameters, enablePrint, dbName);
     },
-    selectTaskExistsSubs: (season) => {
-        const sql = 'SELECT rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, COUNT(rtt.id) AS [count] '
-            + 'FROM rss_subscribe rs '
-            + 'INNER JOIN rss_torrent_task rtt ON rtt.rss_subs_id=rs.id '
-            + 'WHERE rs.season=? '
-            + 'GROUP BY rs.id'
+    selectEpisodesExistsSubs: (season) => {
+        const sql = `SELECT rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, `
+            + `(SELECT COUNT(*) FROM rss_torrent_task WHERE rss_subs_id = rs.id) as taskCount, `
+            + `(SELECT COUNT(*) FROM rss_episode WHERE rss_subs_id = rs.id) as episodeCount, `
+            + `(SELECT COUNT(*) FROM rss_episode_failed WHERE rss_subs_id = rs.id) as episodeFailedCount, `
+            + `(SELECT COUNT(*) FROM rss_episode_subtitle WHERE rss_subs_id = rs.id) as subtitleCount `
+            + `FROM rss_subscribe rs `
+            + `WHERE rs.season=? `
+            + `AND (taskCount + episodeCount + episodeFailedCount + subtitleCount) > 0`
         return __sqliteDB.selectAll(sql, [season], null, dbName)
     }
 }

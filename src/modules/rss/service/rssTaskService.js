@@ -12,6 +12,7 @@ import rssTaskRep from "../repository/rssTaskRep.js";
 import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisodeService.js";
 import { filterUserRssFavorites } from "../../account/service/rssFavoritesService.js";
 import { pushNotification } from '../../../api/sockets/notification.js';
+import { resolveEpisodeSubtitle } from './rssSubtitleService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -143,7 +144,11 @@ async function resolveTaskEpisode(rssTask) {
             fileName: file
         }
 
-        if (!isFileExtAnime(ext)) {
+        const isAnimeExt = isFileExtAnime(ext)
+
+        const isSupportedExt = isAnimeExt || await resolveEpisodeSubtitle(id, rssSubsId, file, rootPath, rssSubs.season, animeName)
+
+        if (!isSupportedExt) {
             __log.error(`[RssTask] Resolve task[${rssTask.id}] file ext failed, cause it's not a video file: ${filePath}`)
             skippedCount++
             continue

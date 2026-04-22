@@ -163,11 +163,11 @@ export default {
             });
         }
     },
-    '/getTaskExistsSubscriptions': {
+    '/getEpisodeExistsSubscriptions': {
         method: POST,
         needAuth: true,
         needSecret: () => "mAou5820.subscribe",
         preCheck: (req) => checkBodyKeyMatch(req, SEASON, [/^2[0-9]{3}-(01|04|07|10)$/]),
-        callback: req => rssSubscribeRep.selectTaskExistsSubs(req.body.season).then(({ data }) => data)
+        callback: req => rssSubscribeRep.selectEpisodesExistsSubs(req.body.season).then(({ data }) => data)
     }
 }

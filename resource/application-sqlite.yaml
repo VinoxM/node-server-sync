@@ -101,8 +101,7 @@ sqlite:
             `status` varchar(1) NOT NULL,
             CONSTRAINT `idx_rss_result_id` UNIQUE (`rss_result_id`)
           )
-        sqlScript: "@/resource/script/rss_torrent_task.sql"
-        forceImport: false
+          CREATE INDEX `idx_rss_tt_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
       - tableName: rss_episode
         DDL: |
           CREATE TABLE rss_episode (
@@ -114,9 +113,7 @@ sqlite:
             `status` varchar(1) NOT NULL,
             CONSTRAINT `idx_rss_id_episode` UNIQUE (`rss_subs_id`, `episode`)
           )
-        # sqlScript: "@/resource/script/rss_episode.sql"
-        # recreate: true
-        forceImport: false
+          CREATE INDEX `idx_rss_ep_task_id` ON rss_episode_subtitle(`rss_task_id`);
       - tableName: rss_episode_failed
         DDL: |
           CREATE TABLE rss_episode_failed (
@@ -130,24 +127,25 @@ sqlite:
             `reason` varchar(1) NOT NULL,
             `create_time` datetime NOT NULL
           )
-        sqlScript: "@/resource/script/rss_episode_failed.sql"
-        recreate: false
-        forceImport: false
-      # - tableName: rss_episode_subtitle
-      #   DDL: |
-      #     CREATE TABLE rss_episode_subtitle (
-      #       `id` integer PRIMARY KEY NOT NULL,
-      #       `rss_task_id` integer NOT NULL,
-      #       `rss_subs_id` integer NOT NULL,
-      #       `title` text DEFAULT NULL,
-      #       `episode` varchar(10) DEFAULT NULL,
-      #       `minio_link` varchar(500) DEFAULT NULL,
-      #       `root_path` varchar(500) NOT NULL,
-      #       `file_name` varchar(500) NOT NULL,
-      #       `fonts` text DEFAULT NULL,
-      #       `status` integer NOT NULL,
-      #       `file_status` integer NOT NULL
-      #     )
+          CREATE INDEX `idx_rss_epf_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
+          CREATE INDEX `idx_rss_epf_task_id` ON rss_episode_subtitle(`rss_task_id`);
+      - tableName: rss_episode_subtitle
+        DDL: |
+          CREATE TABLE rss_episode_subtitle (
+            `id` integer PRIMARY KEY NOT NULL,
+            `rss_task_id` integer NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            `title` text DEFAULT NULL,
+            `episode` varchar(10) DEFAULT NULL,
+            `minio_link` varchar(500) DEFAULT NULL,
+            `root_path` varchar(500) NOT NULL,
+            `file_name` varchar(500) NOT NULL,
+            `fonts` text DEFAULT NULL,
+            `status` integer NOT NULL,
+            `file_status` integer NOT NULL
+          );
+          CREATE INDEX `idx_rss_ep_st_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
+          CREATE INDEX `idx_rss_ep_st_task_id` ON rss_episode_subtitle(`rss_task_id`);
     kuro:
       - tableName: kuro_community_account
         DDL: |

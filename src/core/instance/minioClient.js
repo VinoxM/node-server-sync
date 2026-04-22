@@ -127,6 +127,40 @@ class MinioClient extends ContextSubscribe {
         }
         return false
     }
+
+    async getObject(minioLink, errorCallback) {
+        const label = this.#getSuitableMinioLabel(minioLink)
+        try {
+            this.#clientReady(label) || __throwMessage(`Minio not ready.`)
+            const { bucket, objectName } = splitMinioLink(minioLink)            
+            return await this.#client.get(label).getObject(bucket, objectName);
+        } catch (ex) {
+            if (__isFunction(errorCallback)) {
+                errorCallback(ex, label)
+            } else {
+                throw ex
+            }
+        }
+        return null
+    }
+
+    async putObject(minioLink, bufferContent, metaData = {}, errorCallback) {
+        if (!(bufferContent instanceof Buffer)) return null;
+        const bufferLength = bufferContent.length
+        const label = this.#getSuitableMinioLabel(minioLink)
+        try {
+            this.#clientReady(label) || __throwMessage(`Minio not ready.`)
+            const { bucket, objectName } = splitMinioLink(minioLink)            
+            return await this.#client.get(label).putObject(bucket, objectName, bufferContent, bufferLength, metaData);
+        } catch (ex) {
+            if (__isFunction(errorCallback)) {
+                errorCallback(ex, label)
+            } else {
+                throw ex
+            }
+        }
+        return null
+    }
 }
 
 function tryEvaluateExpiry(expiry, label) {
