@@ -334,3 +334,20 @@ export function getMinioClientMatchers() {
     client.ready() || __throwMessage('Minio not ready.')
     return client.getMinioMatchers()
 }
+
+export function generateMinioSourceSafely(minioLink) {
+    const client = getMinioClient()
+    if (client?.ready?.()) {
+        const clientMatchers = client.getMinioMatchers() || []
+        for (const label in clientMatchers) {
+            const { matcher, hostname } = clientMatchers[label];
+            try {
+                if (new RegExp(matcher).test(source)) {
+                    return `http://${hostname}${source}`
+                }
+            } catch (ex) {
+            }
+        }
+    }
+    return `https://minio-api-media.vinoxm.name${minioLink}`
+}

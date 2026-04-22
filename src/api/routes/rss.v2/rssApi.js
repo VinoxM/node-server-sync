@@ -2,6 +2,7 @@ import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import apiQueryConst from "../../../common/constants/apiQueryConst.js";
 import { checkBodyKeyMatch, checkBodyKeysNotBlank, checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
 import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js";
+import { generateMinioSourceSafely } from "../../../modules/media/service/mediaMinioService.js";
 import rssCopyrightRep from "../../../modules/rss/repository/rssCopyrightRep.js";
 import rssEpisodeRep from "../../../modules/rss/repository/rssEpisodeRep.js";
 import rssFontsRep from "../../../modules/rss/repository/rssFontsRep.js";
@@ -179,8 +180,9 @@ export default {
         callback: async req => {
             const { rssSubsId, episode } = req.body
             const episodeData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
-            const result = { url: episodeData?.minioLink || null, subtitles: [] }
+            const result = { url: null, subtitles: [] }
             if (!episodeData?.minioLink) return result
+            result.url = generateMinioSourceSafely(episodeData.minioLink)
             const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode)
             if (rows === 0) return result
             for (const subtitle of data) {
@@ -188,7 +190,7 @@ export default {
                 const obj = { url: minioLink, fonts, title }
                 if (__isNotBlank(fonts)) {
                     const fontArr = await rssFontsRep.selectByTitles(fonts.split(','))
-                    obj.fonts = fontArr.map(f => f.minioLink)
+                    obj.fonts = fontArr.map(f => generateMinioSourceSafely(f.minioLink))
                 }
                 result.subtitles.push(obj)
             }
