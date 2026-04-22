@@ -73,7 +73,7 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
 
     if (!episodeSubtitle.minioLink) return result;
     // copy episode subtitle to minio
-    const complete = await uploadSubtitleToMinio(filePath, episode.minioLink, subtitleId)
+    const complete = await uploadSubtitleToMinio(filePath, episodeSubtitle.minioLink, subtitleId)
     if (!complete) {
         __log.warn(`[RSS Subtitle] Upload subtitle[${subtitleId}] to minio failed.`)
         return result;
