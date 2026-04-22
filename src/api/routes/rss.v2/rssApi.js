@@ -185,18 +185,19 @@ export default {
             result.url = generateMinioSourceSafely(episodeData.minioLink)
             const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode)
             if (rows === 0) return result
+            const unsupportedFontSet = new Set()
             for (const subtitle of data) {
                 const { minioLink, fonts, title } = subtitle
                 const obj = { url: generateMinioSourceSafely(minioLink), fonts, title }
                 if (__isNotBlank(fonts)) {
                     const fontNameArr = fonts.split(',')
                     const fontArr = await rssFontsRep.selectByTitles(fontNameArr)
-                    const unsupportedFonts = fontNameArr.filter(f => !fontArr.some(_f => f.title === f))
-                    result.unsupportedFonts.push(...unsupportedFonts)
+                    fontNameArr.forEach(f => fontArr.some(_f => _f.title === f) || unsupportedFontSet.add(f))
                     obj.fonts = fontArr.map(f => generateMinioSourceSafely(f.minioLink))
                 }
                 result.subtitles.push(obj)
             }
+            result.unsupportedFonts = Array.from(unsupportedFontSet)
             return result;
         }
     }
