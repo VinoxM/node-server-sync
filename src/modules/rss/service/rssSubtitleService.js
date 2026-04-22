@@ -105,6 +105,7 @@ export async function retryUploadEpisodeSubtitle(id) {
     complete || __throwMessage('Upload to minio failed.')
     const deleted = await removeRemoteServerFile([filePath])
     deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(id, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    const ext = path.extname(fileName)
     if (ext === '.srt') {
         const newMinioLink = await convertMinioSrtToVtt(minioLink)
         newMinioLink && await rssSubtitleRep.updateSubtitleMinioLinkById(id, newMinioLink)
