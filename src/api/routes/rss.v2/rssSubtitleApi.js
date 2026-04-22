@@ -1,7 +1,7 @@
 import apiMethodConst from '../../../common/constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
 import rssSubtitleRep from '../../../modules/rss/repository/rssSubtitleRep.js';
-import { deleteEpisodeSubtitle, deleteEpisodeSubtitleFile, getRssSubtitleMatchers, recalculateEpisodeSubtitleFonts, updateEpisodeSubtitle } from '../../../modules/rss/service/rssSubtitleService.js';
+import { deleteEpisodeSubtitle, deleteEpisodeSubtitleFile, getRssSubtitleMatchers, recalculateEpisodeSubtitleFonts, retryUploadEpisodeSubtitle, updateEpisodeSubtitle } from '../../../modules/rss/service/rssSubtitleService.js';
 
 const { POST } = apiMethodConst;
 
@@ -22,6 +22,13 @@ export default {
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']) && checkBodyKeysExists(req, ['episode', 'title', 'fonts']),
         callback: req => updateEpisodeSubtitle(req.body.id, req.body['episode'], req.body['title'], req.body['fonts'])
+    },
+    '/retryUploadEpisodeSubtitle': {
+        method: POST,
+        needAuth: true,
+        needSecret,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id']),
+        callback: req => retryUploadEpisodeSubtitle(req.body.id)
     },
     '/recalculateAssSubtitleFonts': {
         method: POST,

@@ -72,8 +72,11 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
 
     if (!episodeSubtitle.minioLink) return result;
     // copy episode subtitle to minio
-    const complete = await uploadSubtitleToMinio(filePath, subtitleId, episode.minioLink)
-    if (!complete) return result;
+    const complete = await uploadSubtitleToMinio(filePath, episode.minioLink, subtitleId)
+    if (!complete) {
+        __log.warn(`[RSS Subtitle] Upload subtitle[${subtitleId}] to minio failed.`)
+        return result;
+    }
 
     const deleted = await removeRemoteServerFile([filePath])
     deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
@@ -85,6 +88,28 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         fonts && await rssSubtitleRep.updateSubtitleFontsById(subtitleId, fonts.join(','))
     }
     return result;
+}
+
+export async function retryUploadEpisodeSubtitle(id) {
+    // get episode subtitle from repository
+    const subtitle = await rssSubtitleRep.selectOneById(id)
+    subtitle || __throwMessage('Rss episode subtitle not exists.')
+    const { rootPath, fileName, minioLink, fileStatus } = subtitle
+    fileStatus === RSS_SUBTITLE_FILE_STATUS.REMOVED && __throwMessage('Subtitle file removed.')
+    const filePath = path.join(rootPath, fileName)
+    __isBlank(minioLink) && __throwMessage('Minio link is blank.')
+    const complete = await uploadSubtitleToMinio(filePath, minioLink, id)
+
+    complete || __throwMessage('Upload to minio failed.')
+    const deleted = await removeRemoteServerFile([filePath])
+    deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(id, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    if (ext === '.srt') {
+        const newMinioLink = await convertMinioSrtToVtt(minioLink)
+        newMinioLink && await rssSubtitleRep.updateSubtitleMinioLinkById(id, newMinioLink)
+    } else if (ext === '.ass') {
+        const fonts = await getMinioAssFonts(minioLink)
+        fonts && await rssSubtitleRep.updateSubtitleFontsById(id, fonts.join(','))
+    }
 }
 
 export async function updateEpisodeSubtitle(id, episode, title, fonts) {
