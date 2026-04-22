@@ -6,6 +6,7 @@ import rssSubtitleRep from '../repository/rssSubtitleRep.js';
 import { RSS_SUBTITLE_FILE_STATUS, RSS_SUBTITLE_STATUS } from '../constants/rssSubtitleStatusConst.js';
 import { SSH_CMD_BATCH_DELETE_SIMPLE, SSH_CMD_MINIO_COPY_SCRIPT_U_QBIT } from '../../../common/constants/sshScriptsConst.js';
 import { getSSHExecutor } from '../../../core/instance/sshExecutor.js';
+import { pushNotification } from '../../../api/sockets/notification.js';
 
 const rssSubtitleMatchers = new GetterContextSubscribe('RssSubtitleMatchers', () => __env.get('rss.subtitleMatchers', []))
 export function getRssSubtitleMatchers() {
@@ -195,10 +196,16 @@ async function uploadSubtitleToMinio(filePath, minioLink, subtitleId) {
 }
 
 async function executeSshScript(resourcePath, minioLink, script) {
+    const client = getMinioClient()
+    if (!client?.ready()) {
+        logAndPushNotification(`Upload subtitle minio object failed. Cause client not ready.`)
+        return -1
+    }
+    const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
     const executor = getSSHExecutor('fedora')
     if (!executor) return -2
     try {
-        const { code } = await executor.exec(script, [resourcePath, minioLink]);
+        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink]);
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e)
@@ -268,4 +275,10 @@ async function deleteMinioObject(minioLink) {
     const client = getMinioClient()
     client?.ready() || __throwMessage('Minio client not ready.')
     return await client.deleteObject(minioLink);
+}
+
+function logAndPushNotification(message, id) {
+    const msg = (__isNotBlank(id) ? `[${id}] ` : '') + `${message}`
+    __log.error(msg)
+    pushNotification(msg)
 }
