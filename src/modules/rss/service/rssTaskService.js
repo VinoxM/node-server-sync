@@ -148,9 +148,9 @@ async function resolveTaskEpisode(rssTask) {
 
         const isAnimeExt = isFileExtAnime(ext)
 
-        const isSupportedExt = isAnimeExt || await resolveEpisodeSubtitle(id, rssSubsId, file, rootPath, rssSubs.season, animeName)
+        isAnimeExt || await resolveEpisodeSubtitle(id, rssSubsId, file, rootPath, rssSubs.season, animeName)
 
-        if (!isSupportedExt) {
+        if (!isAnimeExt) {
             __log.error(`[RssTask] Resolve task[${rssTask.id}] file ext failed, cause it's not a video file: ${filePath}`)
             skippedCount++
             continue
