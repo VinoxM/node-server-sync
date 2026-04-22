@@ -1,0 +1,1 @@
+UPDATE rss_episode_subtitle SET status=3 WHERE id IN (1,2)
