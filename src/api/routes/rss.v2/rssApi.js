@@ -187,7 +187,7 @@ export default {
             if (rows === 0) return result
             for (const subtitle of data) {
                 const { minioLink, fonts, title } = subtitle
-                const obj = { url: minioLink, fonts, title }
+                const obj = { url: generateMinioSourceSafely(minioLink), fonts, title }
                 if (__isNotBlank(fonts)) {
                     const fontArr = await rssFontsRep.selectByTitles(fonts.split(','))
                     obj.fonts = fontArr.map(f => generateMinioSourceSafely(f.minioLink))
