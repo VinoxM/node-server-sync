@@ -13,6 +13,8 @@ import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisode
 import { filterUserRssFavorites } from "../../account/service/rssFavoritesService.js";
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { resolveEpisodeSubtitle } from './rssSubtitleService.js';
+import { getSSHExecutor } from '../../../core/instance/sshExecutor.js';
+import { SSH_CMD_BATCH_DELETE_SIMPLE, SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 } from '../../../common/constants/sshScriptsConst.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -134,8 +136,8 @@ async function resolveTaskEpisode(rssTask) {
         if (index > -1) {
             file = file.substring(index + 1)
         }
-        const filePath = join(rootPath, file)
-        const ext = path.extname(file)
+        let filePath = join(rootPath, file)
+        let ext = path.extname(file)
         const animeName = rssSubs.name
         const episodeFailed = {
             rssTaskId: id,
@@ -173,6 +175,25 @@ async function resolveTaskEpisode(rssTask) {
             episodeFailed.reason = EPISODE_FAILED_REASON.EPISODE_EXISTS
             await rssEpisodeRep.insertOneFailed(episodeFailed)
             continue
+        }
+
+        if (ext === '.mkv') {
+            const mp4FileName = file.substring(file.length - 4) + '.mp4'
+            const mp4FilePath = join(rootPath, mp4FileName)
+            __log.info(`[RssTask] Task[${rssTask.id}] file episode file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
+            const convertResult = await convertMkvToMp4(filePath, mp4FilePath)
+            if (convertResult === 1) {
+                episodeFailed.fileName = mp4FileName;
+                const originFilePath = filePath;
+                filePath = mp4FilePath;
+                ext = '.mp4';
+                __log.info(`[RssTask] Task[${rssTask.id}] file episode file convert to mp4 success. Remove origin mkv file: ${originFilePath}`)
+                await deleteRemoteFiles([originFilePath])
+            } else {
+                episodeFailed.reason = EPISODE_FAILED_REASON.UNKNOWN
+                await rssEpisodeRep.insertOneFailed(episodeFailed)
+                continue
+            }
         }
 
         // generate minio link and save
@@ -354,5 +375,36 @@ async function removeCompleteTask(task) {
         hash ??= info.hash
         await deleteTag(uuid)
         await deleteTorrent(hash, true)
+    }
+}
+
+async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
+    const executor = getSSHExecutor('fedora')
+    if (!executor) {
+        return -2
+    }
+    try {
+        const { code } = await executor.exec(SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4, [mkvFilePath, mp4FilePath]);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ffmpeg convert ssh script failed.', e.message ?? e)
+        return 2
+    }
+}
+
+
+async function deleteRemoteFiles(files) {
+    __log.info(`Ready to delete files: `, files)
+    const executor = getSSHExecutor('fedora')
+    if (!executor) {
+        __log.warn(`SSH executor not ready.`)
+        return -2
+    }
+    try {
+        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files);
+        return parseInt(code)
+    } catch (e) {
+        __log.error('Execute ssh script failed.', e)
+        return -3
     }
 }

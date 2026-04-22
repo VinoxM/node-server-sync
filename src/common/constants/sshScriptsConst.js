@@ -73,3 +73,14 @@ for path in "$@"; do
     rm -f "$path" "\${path}.aria2"
 done
 ' --`;
+
+export const SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 = `bash -c '
+set +H
+if ffmpeg -loglevel error -i "$1" -c copy -movflags +faststart "$2"; then
+    echo "Convert Success"
+    exit 1
+else
+    echo "Convert Failed"
+    exit 2
+fi
+' --`;
