@@ -180,9 +180,10 @@ export default {
         callback: async req => {
             const { rssSubsId, episode } = req.body
             const episodeData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
-            const result = { url: null, subtitles: [], unsupportedFonts: [] }
+            const result = { url: null, subtitles: [], unsupportedFonts: [], title: null }
             if (!episodeData?.minioLink) return result
             result.url = generateMinioSourceSafely(episodeData.minioLink)
+            result.title = __isBlank(episodeData.title) ? null : `${episodeData.title} - ${episode}`
             const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode)
             if (rows === 0) return result
             const unsupportedFontSet = new Set()

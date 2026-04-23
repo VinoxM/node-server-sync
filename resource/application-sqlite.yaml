@@ -198,6 +198,15 @@ sqlite:
             CONSTRAINT `idx_uid_rss_id` UNIQUE (`uid`, `rss_subs_id`)
           )
     media:
+      - tableName: options
+        DDL: |
+          CREATE TABLE options (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `label` text NOT NULL,
+            `value` text DEFAULT NULL,
+            `update_time` datetime NOT NULL,
+            CONSTRAINT `idx_media_opts_label` UNIQUE (`label`)
+          );
       - tableName: videos
         DDL: |
           CREATE TABLE videos (

@@ -43,7 +43,10 @@ export default {
         return __sqliteDB.delete(sql, [id], null, dbName)
     },
     selectSourceBySubsIdAndEpisode: (rssSubsId, episode) => {
-        const sql = `SELECT minio_link FROM rss_episode WHERE rss_subs_id=? AND episode=? AND status=?`
+        const sql = `SELECT re.minio_link, rs.title `
+            + `FROM rss_episode re `
+            + `INNER JOIN rss_subscribe rs ON rs.id=re.rss_subs_id `
+            + `WHERE re.rss_subs_id=? AND re.episode=? AND re.status=?`
         return __sqliteDB.selectOne(sql, [rssSubsId, episode, EPISODE_STATUS.COMPLETE], null, dbName)
     },
     /* Failed episode */
