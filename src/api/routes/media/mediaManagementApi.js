@@ -17,6 +17,7 @@ import {
     removeVideo, updateVideoTags, updateVideoTitle
 } from "../../../modules/media/service/mediaVideoService.js"
 import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
+import { getOptions, updateOption } from "../../../modules/media/service/mediaOptionsService.js"
 
 const { POST } = apiMethodConst
 
@@ -187,5 +188,19 @@ export default {
             __log.info("[Video Tags Mapping] Cleaned mappings: ", deletedVideoIds)
             return { rows: deletedVideoIds?.length ?? 0 }
         }
+    },
+    /** Media Options */
+    "/options/getAllOptions": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        callback: req => getOptions()
+    },
+    '/options/updateOne': {
+        method: POST,
+        needSecret,
+        allowHosts,
+        preCheck: req => checkBodyKeysNotBlank(req, ['id', 'value', 'description']),
+        callback: req => updateOption(req.body.id, req.body.description, req.body.value)
     }
 }

@@ -203,6 +203,7 @@ sqlite:
           CREATE TABLE options (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `label` text NOT NULL,
+            `description` text DEFAULT NULL,
             `value` text DEFAULT NULL,
             `update_time` datetime NOT NULL,
             CONSTRAINT `idx_media_opts_label` UNIQUE (`label`)

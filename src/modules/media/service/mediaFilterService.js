@@ -1,10 +1,26 @@
-import { MEDIA_FILTER_TYPE } from "../constants/mediaConst.js"
+import {
+    MEDIA_FILTER_TYPE,
+    MEDIA_POLICY_MODE,
+    MEDIA_POLICY_MODE_DEFAULT,
+    MEDIA_POLICY_MODE_LABEL
+} from "../constants/mediaConst.js"
 import categoriesRep from "../repository/categoriesRep.js"
 import filterRulesRep, { getCacheByCategory, OPERATOR_TABLE } from "../repository/filterRulesRep.js"
 import videosRep from "../repository/videosRep.js"
+import { getOptionValue } from "./mediaOptionsService.js"
 
 const CAN_OPERATOR_FILTER_TYPE = Object.values(MEDIA_FILTER_TYPE)
 const ALLOWED_OPERATOR = Object.keys(OPERATOR_TABLE)
+
+async function getMediaPolicyMode() {
+    const value = await getOptionValue(MEDIA_POLICY_MODE_LABEL)
+    return __isNotBlank(value) ? value : MEDIA_POLICY_MODE_DEFAULT
+}
+
+export async function getPolicyDefaultAllowed() {
+    const mediaPolicyMode = await getMediaPolicyMode()
+    return mediaPolicyMode === MEDIA_POLICY_MODE.DEFAULT_ALLOWED
+}
 
 export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniqueId) {
     const cache = await getCacheByCategory(categoryId)
@@ -13,7 +29,7 @@ export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniq
     if (whitelist?.uniqueId?.has(uniqueId)) return true
     if (blacklist?.author?.has(author)) return false
     if (whitelist?.author?.has(author)) return true
-    return true
+    return await getPolicyDefaultAllowed();
 }
 
 export async function checkVideoFilterRules(body) {
@@ -25,9 +41,10 @@ export async function checkVideoFilterRules(body) {
     const cache = await getCacheByCategory(categoryId)
     const { whitelist, blacklist } = cache
     const uniqueIds = []
+    const defaultAllowed = await getPolicyDefaultAllowed()
     for (const rule of rules) {
         const { author, uniqueId } = rule
-        const result = { downloaded: null, blocked: false, allowed: false }
+        const result = { downloaded: null, blocked: false, allowed: defaultAllowed }
         if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
             result.allowed = true
         } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
