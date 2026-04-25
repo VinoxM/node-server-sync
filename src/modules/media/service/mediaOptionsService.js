@@ -43,8 +43,7 @@ export async function getOptions() {
 }
 
 export async function getMediaUploadTimeoutOption() {
-    const value = await getOption(MEDIA_UPLOAD_TIMEOUT_LABEL)
-    console.log(value)
+    const value = await getOptionValue(MEDIA_UPLOAD_TIMEOUT_LABEL)
     try {
         const result = parseInt(value ?? MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
         return isNaN(result) ? MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE : result
