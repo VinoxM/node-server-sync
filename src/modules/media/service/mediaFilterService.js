@@ -44,11 +44,13 @@ export async function checkVideoFilterRules(body) {
     const defaultAllowed = await getPolicyDefaultAllowed()
     for (const rule of rules) {
         const { author, uniqueId } = rule
-        const result = { downloaded: null, blocked: false, allowed: defaultAllowed }
-        if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
-            result.allowed = true
-        } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
+        const result = { downloaded: null, blocked: false, allowed: false }
+        if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
             result.blocked = true
+        } else if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
+            result.allowed = true
+        } else {
+            result.allowed = defaultAllowed
         }
         if (__isNotBlank(uniqueId)) {
             uniqueIds.push(uniqueId)
