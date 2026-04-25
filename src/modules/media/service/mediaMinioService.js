@@ -62,7 +62,6 @@ export async function createMinioManually(minioObj) {
         return 1
     } else {        
         const uploadTimeout = await getMediaUploadTimeoutOption()
-        __log.info(`uploadTimeout: `, uploadTimeout)
         const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
