@@ -45,7 +45,7 @@ export async function getOptions() {
 export async function getMediaUploadTimeoutOption() {
     const value = await getOption(MEDIA_UPLOAD_TIMEOUT_LABEL)
     try {
-        return parseInt(value || MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
+        return parseInt(value ?? MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
     } catch (error) {
         return 5000
     }
