@@ -9,6 +9,7 @@ import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaCo
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterService.js";
 import { deleteVideoMinio, resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
+import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -84,8 +85,9 @@ export async function createVideo(videoObj) {
         await updateVideoStatusByVideoMinioStatus(videoId)
     } else {
         // execute async task chain
+        const uploadTimeout = await getMediaUploadTimeoutOption()
         tasks.push(async () => updateVideoStatusByVideoMinioStatus(videoId))
-        await executeAsyncTaskChain(tasks, 5000)
+        await executeAsyncTaskChain(tasks, uploadTimeout)
     }
     return { id: videoId };
 }

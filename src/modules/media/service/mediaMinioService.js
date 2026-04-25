@@ -13,6 +13,7 @@ import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
+import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -59,11 +60,12 @@ export async function createMinioManually(minioObj) {
         // update video minio status
         await updateVideoStatusByVideoMinioStatus(videoId);
         return 1
-    } else {
+    } else {        
+        const uploadTimeout = await getMediaUploadTimeoutOption()
         const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
-        ], 5000)
+        ], uploadTimeout)
         return status === 'timeout' ? 0 : 1
     }
 }
@@ -249,10 +251,11 @@ export async function retryMinio(minioId) {
         return 1
     } else {
         // execute async task chain
+        const uploadTimeout = await getMediaUploadTimeoutOption()
         const { status } = await executeAsyncTaskChain([
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
-        ], 5000)
+        ], uploadTimeout)
         return status === 'timeout' ? 0 : 1
     }
 }

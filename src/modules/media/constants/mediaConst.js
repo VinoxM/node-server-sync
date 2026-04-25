@@ -117,3 +117,7 @@ export const MEDIA_POLICY_MODE = {
     DEFAULT_ALLOWED: '1',
 }
 export const MEDIA_POLICY_MODE_DEFAULT = MEDIA_POLICY_MODE.DEFAULT_ALLOWED
+
+/** Media upload timeout */
+export const MEDIA_UPLOAD_TIMEOUT_LABEL = 'MediaUploadTimeout'
+export const MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE = '5000'

@@ -1,3 +1,4 @@
+import { MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE, MEDIA_UPLOAD_TIMEOUT_LABEL } from "../constants/mediaConst.js";
 import optionsRep from "../repository/optionsRep.js";
 
 let CACHE_INITIALIZED = false;
@@ -39,4 +40,13 @@ export async function getOptions() {
     }
     CACHE_INITIALIZED = true;
     return data
+}
+
+export async function getMediaUploadTimeoutOption() {
+    const value = await getOption(MEDIA_UPLOAD_TIMEOUT_LABEL)
+    try {
+        return parseInt(value || MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
+    } catch (error) {
+        return 5000
+    }
 }
