@@ -75,7 +75,6 @@ const CAN_UPLOAD_FILE_SYNC_STATUS = [
 export async function uploadFileToMediaByFileId(id) {
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
-    __log.info(file)
     const { streamId, filePath, fileStatus, syncStatus, startTime } = file
     CAN_UPLOAD_FILE_STATUS.includes(fileStatus) || __throwMessage('Illegal file status, cannot upload.')
     CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
@@ -84,21 +83,24 @@ export async function uploadFileToMediaByFileId(id) {
     if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
         __throwMessage('Prepare to upload failed.')
     }
-    // upload cover if not exists
-    const coverExists = await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER)
-    if (!coverExists) {
-        const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
-        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover)
+    try {
+        // upload cover if not exists
+        const coverExists = await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER)
+        if (!coverExists) {
+            const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
+            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover)
+        }
+        const title = generateStorageTitle(startTime)
+        // upload barrage
+        const barrage = generateVideoStorageFilePath(filePath, '.xml')
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title)
+        // upload source
+        const source = generateVideoStorageFilePath(filePath, '.flv')
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title)
+    } finally {
+        // setup file uploaded
+        await biliveFileRep.updateFileUploaded(id)
     }
-    const title = generateStorageTitle(startTime)
-    // upload barrage
-    const barrage = generateVideoStorageFilePath(filePath, '.xml')
-    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title)
-    // upload source
-    const source = generateVideoStorageFilePath(filePath, '.flv')
-    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title)
-    // setup file uploaded
-    await biliveFileRep.updateFileUploaded(id)
 }
 
 function generateStorageTitle(startTime) {
