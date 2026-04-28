@@ -5,7 +5,7 @@ import rssRep from "../repository/rssRep.js";
 import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
 import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
-import { SSH_CMD_MINIO_MOVE_SCRIPT_U_QBIT } from "../../../common/constants/sshScriptsConst.js";
+import { SSH_CMD_MINIO_MOVE_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { pushNotification } from "../../../api/sockets/notification.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
@@ -162,12 +162,12 @@ async function executeRetryFailedEpisodeResolveCommand(filePath, minioLink) {
         return -1;
     }
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
-    const executor = getSSHExecutor('fedora')
+    const executor = getSSHExecutor('storage')
     if (!executor) {
         return -2
     }
     try {
-        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT_U_QBIT, [filePath, suitableMinioLink]);
+        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [filePath, suitableMinioLink]);
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e.message ?? e)

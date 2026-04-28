@@ -216,7 +216,7 @@ async function executeSshScript(resourcePath, minioLink, script) {
         return -1
     }
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
-    const executor = getSSHExecutor('fedora')
+    const executor = getSSHExecutor('storage')
     if (!executor) return -2
     try {
         const { code } = await executor.exec(script, [resourcePath, suitableMinioLink]);

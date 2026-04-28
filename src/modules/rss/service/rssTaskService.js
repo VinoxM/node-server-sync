@@ -379,7 +379,7 @@ async function removeCompleteTask(task) {
 }
 
 async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
-    const executor = getSSHExecutor('fedora')
+    const executor = getSSHExecutor('storage')
     if (!executor) {
         return -2
     }
@@ -395,7 +395,7 @@ async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
 
 async function deleteRemoteFiles(files) {
     __log.info(`Ready to delete files: `, files)
-    const executor = getSSHExecutor('fedora')
+    const executor = getSSHExecutor('storage')
     if (!executor) {
         __log.warn(`SSH executor not ready.`)
         return -2

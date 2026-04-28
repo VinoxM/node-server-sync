@@ -136,7 +136,7 @@ export async function removeFileByFileId(id) {
 
 async function deleteRemoteFiles(files) {
     __log.info(`Ready to delete files: `, files)
-    const executor = getSSHExecutor('fedora')
+    const executor = getSSHExecutor('storage')
     if (!executor) {
         __log.warn(`SSH executor not ready.`)
         return -2
