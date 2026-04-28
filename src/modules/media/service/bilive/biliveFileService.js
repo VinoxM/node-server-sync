@@ -75,6 +75,7 @@ const CAN_UPLOAD_FILE_SYNC_STATUS = [
 export async function uploadFileToMediaByFileId(id) {
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
+    __log.info(file)
     const { streamId, filePath, fileStatus, syncStatus, startTime } = file
     CAN_UPLOAD_FILE_STATUS.includes(fileStatus) || __throwMessage('Illegal file status, cannot upload.')
     CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
