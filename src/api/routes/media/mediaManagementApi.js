@@ -18,6 +18,8 @@ import {
 } from "../../../modules/media/service/mediaVideoService.js"
 import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
 import { getOptions, updateOption } from "../../../modules/media/service/mediaOptionsService.js"
+import videosRep from "../../../modules/media/repository/videosRep.js"
+import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
 
 const { POST } = apiMethodConst
 
@@ -141,6 +143,29 @@ export default {
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => updateMinioTitleAndSort(req.body),
     },
+    "/storage/multiStatus": {
+        method: POST,
+        needSecret,
+        allowHosts,
+        preCheck: req => {
+            checkBodyKeyNotBlank(req, 'videoId')
+            try {
+                checkBodyKeyNotEmptyArray(req, 'taskIds')
+            } catch (error) {
+                checkBodyKeyNotEmptyArray(req, 'sourceIds')
+            }
+        },
+        callback: async req => {
+            const result = { tasks: {}, sources: {}, videoStatus: null }
+            const { videoId, taskIds = [], sourceIds = [] } = req.body
+            await Promise.all([
+                videosRep.selectOne(videoId).then(video => result.videoStatus = video?.status ?? null),
+                videoMinioRep.selectByMinioIds(sourceIds).then(({ data }) => data?.forEach(d => result.sources[d.id] = d.status)),
+                getTaskInfoAndDownloadStatus(taskIds).then(r => result.tasks = r)
+            ])
+            return result
+        },
+    },
     /** Task */
     "/storage/deleteTask": {
         method: POST,
@@ -148,13 +173,6 @@ export default {
         allowHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => removeTask(req.body['taskId']),
-    },
-    "/task/multiStatus": {
-        method: POST,
-        needSecret,
-        allowHosts,
-        preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
-        callback: req => getTaskInfoAndDownloadStatus(req.body['ids']),
     },
     /** Policy management: FilterRules */
     "/policy/getRules": {

@@ -56,6 +56,13 @@ export default {
         const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE video_id=?`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)
     },
+    selectByMinioIds: async minioIds => {
+        if (__isEmptyArray(minioIds)) {
+            return { rows: 0, data: [] }
+        }
+        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE id IN (${minioIds.map(() => '?').join(',')})`
+        return __sqliteDB.selectAll(sql, minioIds, null, dbName)
+    },
     selectSourceByVideoId: videoId => {
         const sql = `SELECT id, link, title, sort FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND status=${MEDIA_MINIO_STATUS.COMPLETE} ORDER BY sort`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)

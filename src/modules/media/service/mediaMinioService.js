@@ -20,9 +20,18 @@ const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 export async function searchMinio(videoId) {
     const minioList = await videoMinioRep.selectByVideoId(videoId).then(({ data }) => data)
     if (Array.isArray(minioList)) {
+        const minioIdMapping = new Map();
         for (let i = 0; i < minioList.length; i++) {
             const minio = minioList[i];
-            minio.tasks = await aria2TaskRep.selectByMinioId(minio.id).then(({ data }) => data)
+            minio.tasks = [];
+            minioIdMapping.set(minio.id, minio)
+        }
+        if (minioIdMapping.size > 0) {
+            const { rows, data } = await aria2TaskRep.selectByMinioIds(Array.from(minioIdMapping.keys()))
+            if (rows > 0) {
+                data.forEach(task => minioIdMapping.get(task.minioId)?.tasks?.push?.(task))
+            }
+            minioIdMapping.clear()
         }
     }
     return minioList;
@@ -32,6 +41,9 @@ const CAN_NOT_CREATE_MINIO_VIDEO_STATUS = [
     MEDIA_VIDEO_STATUS.ANALYZING,
     MEDIA_VIDEO_STATUS.REMOVED
 ]
+export function validateVideoStatusCanNotCreateMinio(status) {
+    CAN_NOT_CREATE_MINIO_VIDEO_STATUS.includes(status) && __throwMessage('Invalid video status, cannot create minio.')
+}
 export async function createMinioManually(minioObj) {
     const { videoId, type, uri, sort, title } = minioObj
     // validate type
@@ -44,7 +56,7 @@ export async function createMinioManually(minioObj) {
     minioExists && __throwMessage('Minio exists.')
     // validate video status
     const { categoryId, authorId, status } = videoInfo
-    CAN_NOT_CREATE_MINIO_VIDEO_STATUS.includes(status) && __throwMessage('Invalid video status, cannot create minio.')
+    validateVideoStatusCanNotCreateMinio(status)
     // validate category exists
     const categoryInfo = await categoriesRep.selectOneById(categoryId)
     categoryInfo || __throwMessage('Category not exists.')
@@ -60,7 +72,7 @@ export async function createMinioManually(minioObj) {
         // update video minio status
         await updateVideoStatusByVideoMinioStatus(videoId);
         return 1
-    } else {        
+    } else {
         const uploadTimeout = await getMediaUploadTimeoutOption()
         const { status } = await executeAsyncTaskChain([
             task,

@@ -12,7 +12,7 @@ import {
 import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import biliveStreamRep from "../../repository/bilive/biliveStreamRep.js"
 import videoMinioRep from "../../repository/videoMinioRep.js"
-import { createMinioManually } from "../mediaMinioService.js"
+import { createMinioManually, validateVideoStatusCanNotCreateMinio } from "../mediaMinioService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 import { generateVideoStorageFilePath } from "./biliveStreamService.js"
 
@@ -78,8 +78,10 @@ export async function uploadFileToMediaByFileId(id) {
     const { streamId, filePath, fileStatus, syncStatus, startTime } = file
     CAN_UPLOAD_FILE_STATUS.includes(fileStatus) || __throwMessage('Illegal file status, cannot upload.')
     CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
-    const videoId = await biliveStreamRep.selectVideoExistsIdByStreamId(streamId);
-    videoId || __throwMessage('Stream video not initialized.')
+    const video = await biliveStreamRep.selectExistsVideoByStreamId(streamId);
+    video || __throwMessage('Stream video not initialized.')
+    const { videoId, status: videoStatus } = video
+    validateVideoStatusCanNotCreateMinio(videoStatus)
     if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
         __throwMessage('Prepare to upload failed.')
     }

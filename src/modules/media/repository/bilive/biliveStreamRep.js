@@ -24,9 +24,9 @@ export default {
             + `FROM bilive_record_stream WHERE id=?`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
-    selectVideoExistsIdByStreamId: streamId => {
-        const sql = `SELECT brs.video_id FROM bilive_record_stream brs INNER JOIN videos v ON v.id=brs.video_id WHERE brs.id = ?`
-        return __sqliteDB.selectOne(sql, [streamId], null, dbName).then(data => data?.videoId)
+    selectExistsVideoByStreamId: streamId => {
+        const sql = `SELECT brs.video_id, v.status FROM bilive_record_stream brs INNER JOIN videos v ON v.id=brs.video_id WHERE brs.id = ?`
+        return __sqliteDB.selectOne(sql, [streamId], null, dbName)
     },
     insertStartStream: (roomId, hostName, title, areaNameParent, areaNameChild, startTime, endTime) => {
         const sql = `INSERT INTO bilive_record_stream (room_id, host_name, title, area_name_parent, area_name_child, start_time, end_time) VALUES(?,?,?,?,?,?,?)`

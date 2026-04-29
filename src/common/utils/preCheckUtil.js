@@ -20,7 +20,7 @@ const dataFrom = {
 }
 
 function requestValidate(request, options) {
-    const { from, valid, key, args = [], print = defaultPrint, infoMessage, errorMessage, errorCode = -3, errorStatus = 400 } = options
+    const { from, valid, key, args = [], print = defaultPrint, infoMessage, errorMessage, errorCode = -3, errorStatus = 400, throwable = true } = options
     if (from in dataFrom && valid in validator) {
         let keys = Array.isArray(key) ? key : [key]
         if (print) {
@@ -34,6 +34,7 @@ function requestValidate(request, options) {
             }
         }
         if (errKeys.length > 0) {
+            if (!throwable) return false
             __throwMessage(`${errorMessage}: ${errKeys.join(',')}`, errorCode, errorStatus);
         }
     } else {

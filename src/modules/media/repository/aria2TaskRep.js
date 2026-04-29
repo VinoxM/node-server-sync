@@ -11,7 +11,7 @@ export default {
         return __sqliteDB.insert(sql, params, null, dbName)
     },
     updateStatusById: (status, id) => {
-        let sql = `UPDATE aria2_task SET status=? WHERE id=?`        
+        let sql = `UPDATE aria2_task SET status=? WHERE id=?`
         const params = [status, id]
         if (status === MEDIA_ARIA2_TASK_STATUS.DOWNLOADING) {
             sql += ' AND status=?'
@@ -33,6 +33,9 @@ export default {
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
     selectByIds: ids => {
+        if (__isEmptyArray(ids)) {
+            return { rows: 0, data: [] }
+        }
         const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE id IN(`
             + ids.map(() => '?').join(',') + ')'
         return __sqliteDB.selectAll(sql, ids, null, dbName)
@@ -40,6 +43,13 @@ export default {
     selectByMinioId: minioId => {
         let sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id=?`
         return __sqliteDB.selectAll(sql, [minioId], null, dbName)
+    },
+    selectByMinioIds: minioIds => {
+        if (__isEmptyArray(minioIds)) {
+            return { rows: 0, data: [] }
+        }
+        const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (${minioIds.map(() => '?').join(',')})`
+        return __sqliteDB.selectAll(sql, minioIds, null, dbName)
     },
     selectExistsByMinioId: minioId => {
         const sql = `SELECT EXISTS(SELECT 1 FROM aria2_task WHERE minio_id = ? LIMIT 1) AS [exists]`

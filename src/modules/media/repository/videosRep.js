@@ -87,7 +87,7 @@ export default {
         const params = [title, videoId]
         return __sqliteDB.update(sql, params, null, dbName)
     },
-    selectOne: (videoId, ignoreRemoved = false) => {
+    selectOne: async (videoId, ignoreRemoved = false) => {
         let sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
         if (ignoreRemoved) {
             sql += ` AND status!=${MEDIA_VIDEO_STATUS.REMOVED}`
