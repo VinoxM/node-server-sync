@@ -179,8 +179,9 @@ export default {
         preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
         callback: async req => {
             const { rssSubsId, episode } = req.body
-            const episodeData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
-            const result = { url: null, subtitles: [], unsupportedFonts: [], title: null }
+            const sourcesData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
+            const episodeData = sourcesData?.data?.find(r => r.episode === episode)
+            const result = { url: null, subtitles: [], unsupportedFonts: [], title: null, sources: sourcesData?.data.map(d => ({ episode: d.episode, title: `${d.title} - ${d.episode}` })) }
             if (!episodeData?.minioLink) return result
             result.url = generateMinioSourceSafely(episodeData.minioLink)
             result.title = __isBlank(episodeData.title) ? null : `${episodeData.title} - ${episode}`
