@@ -6,7 +6,19 @@ import { GetterContextSubscribe } from '../../core/context/subscribe.js';
 
 const authOptionsGetter = new GetterContextSubscribe('AuthorizationStoreOption', () => __env.get('auth', {}))
 
-const userMaxTokenStore = () => authOptionsGetter.getValue()?.maxTokenStore ?? 3
+const userMaxTokenStore = (label = '') => {
+    const authOption = authOptionsGetter.getValue()
+    const defaultMaxTokenStore = authOption?.maxTokenStore ?? 3
+    if (__isNotBlank(label)) {
+        const clientOptions = authOption?.allowedClients ?? []
+        for (const clientOpt of clientOptions) {
+            if (label === clientOpt?.id) {
+                return clientOpt?.maxTokenStore ?? defaultMaxTokenStore
+            }
+        }
+    }
+    return defaultMaxTokenStore
+}
 
 const defaultTokenExpire = () => authOptionsGetter.getValue()?.defaultTokenExpire ?? '30d'
 
@@ -69,7 +81,7 @@ export class AuthorizationStore {
         }
         userTokens.push(hash);
 
-        const max = userMaxTokenStore();
+        const max = userMaxTokenStore(clientId);
         if (userTokens.length > max) {
             const expiredHash = userTokens.shift();
             this.#hashStore.delete(expiredHash);
@@ -107,7 +119,7 @@ export class AuthorizationStore {
         if (token) {
             const decode = decodeJWT(token) || {};
             const { id: uid, clientId } = decode;
-            
+
             const clientMap = this.#store.get(uid);
             if (clientMap && clientMap.has(clientId)) {
                 const tokenArr = clientMap.get(clientId);
@@ -201,7 +213,7 @@ export class RedisAuthorizationStore extends AuthorizationStore {
     }
 
     async #applyToRedis(uid, hash, token, clientId) {
-        const max = userMaxTokenStore();
+        const max = userMaxTokenStore(clientId);
         const redisKey = `user_tokens:${uid}:${clientId}`;
         return await this.#redis.eval(
             authorizationSyncScript,
@@ -275,7 +287,7 @@ export class RedisAuthorizationStore extends AuthorizationStore {
         if (this.#isOnline) {
             try {
                 const pattern = `user_tokens:${uid}:*`;
-                
+
                 const res = await this.#redis.eval(
                     deleteUserTokensScript,
                     [pattern],
@@ -289,6 +301,6 @@ export class RedisAuthorizationStore extends AuthorizationStore {
                 __log.error(`[RedisAuth] Lua delete failed for uid ${uid}: ${e.message}`);
             }
         }
-        return super.deleteTokenByUid(uid); 
+        return super.deleteTokenByUid(uid);
     }
 }
