@@ -230,6 +230,7 @@ sqlite:
           CREATE TABLE categories (
             `id` integer PRIMARY KEY NOT NULL,
             `name` varchar(100) NOT NULL,
+            `type` integer NOT NULL DEFAULT 0,
             CONSTRAINT `idx_category_name` UNIQUE (`name`)
           )
       - tableName: authors
@@ -279,7 +280,6 @@ sqlite:
             `video_id` integer NOT NULL,
             `type` integer NOT NULL,
             `origin_uri` text NOT NULL,
-            `file_path` text DEFAULT NULL,
             `link` text NOT NULL,
             `title` text DEFAULT NULL,
             `status` integer NOT NULL,
