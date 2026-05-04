@@ -379,7 +379,7 @@ async function removeCompleteTask(task) {
     }
 }
 
-async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
+export async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
     const executor = getSSHExecutor('storage')
     if (!executor) {
         return -2
@@ -394,7 +394,7 @@ async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
 }
 
 
-async function deleteRemoteFiles(files) {
+export async function deleteRemoteFiles(files) {
     __log.info(`Ready to delete files: `, files)
     const executor = getSSHExecutor('storage')
     if (!executor) {

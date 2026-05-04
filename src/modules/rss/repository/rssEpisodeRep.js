@@ -97,6 +97,10 @@ export default {
         params.push(id)
         return __sqliteDB.update(sql, params, null, dbName)
     },
+    updateFailedEpisodeFileNameById: (fileName, id) => {
+        const sql = `UPDATE rss_episode_failed SET file_name=? WHERE id=?`
+        return __sqliteDB.update(sql, [fileName, id], null, dbName)
+    },
     updateFailedEpisodeById: (data) => {
         const sql = 'UPDATE rss_episode_failed SET episode=?, minio_link=?, root_path=?, file_name=? WHERE id=? AND reason != 3'
         return __sqliteDB.update(sql, [

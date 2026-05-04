@@ -7,6 +7,7 @@ import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { SSH_CMD_MINIO_MOVE_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { pushNotification } from "../../../api/sockets/notification.js";
+import { convertMkvToMp4, deleteRemoteFiles } from "./rssTaskService.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
 
@@ -84,10 +85,11 @@ export async function retryFailedEpisode(failedEpisodeId) {
     let episode = failed.episode
     const rssTaskId = failed.rssTaskId
     const rssSubsId = failed.rssSubsId
-    const file = failed.fileName
+    const fileName = failed.fileName
+    const simpleFileName = path.basename(fileName)
     const rootPath = failed.rootPath
-    const ext = path.extname(file)
-    const filePath = join(rootPath, file)
+    const ext = path.extname(simpleFileName)
+    const filePath = join(rootPath, fileName)
 
     if (!isFileExtAnime(ext)) {
         __throwMessage('Not a video file.')
@@ -98,10 +100,28 @@ export async function retryFailedEpisode(failedEpisodeId) {
         __throwMessage('Rss subscribe not found.')
     }
 
+    if (ext === '.mkv') {
+        const mp4FileName = fileName.substring(fileName.length - 4) + '.mp4'
+        const mp4FilePath = join(rootPath, mp4FileName)
+        __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
+        const convertResult = await convertMkvToMp4(filePath, mp4FilePath)
+        if (convertResult === 1) {
+            failed.fileName = mp4FileName;
+            const originFilePath = filePath;
+            filePath = mp4FilePath;
+            ext = '.mp4';
+            __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file convert to mp4 success. Remove origin mkv file: ${originFilePath}`)
+            await rssEpisodeRep.updateFailedEpisodeFileNameById(mp4FileName, failedEpisodeId)
+            await deleteRemoteFiles([originFilePath])
+        } else {
+            __throwMessage('Convert file mkv to mp4 failed.')
+        }
+    }
+
     const animeName = rssSubs.name
 
     // generate episode and validate
-    episode ??= getAnimeEpisode(file)
+    episode ??= getAnimeEpisode(simpleFileName)
     if (!episode) {
         __log.error(`[RssEpisode] Resolve failedEpisode[${failedEpisodeId}] failed: ${filePath}`)
         await rssEpisodeRep.updateFailedReasonById(failedEpisodeId, EPISODE_FAILED_REASON.RESOLVE_FAILED)
