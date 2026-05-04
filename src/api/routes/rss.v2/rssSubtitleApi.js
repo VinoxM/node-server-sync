@@ -20,8 +20,8 @@ export default {
         method: POST,
         needAuth: true,
         needSecret,
-        preCheck: req => checkBodyKeysNotBlank(req, ['id']) && checkBodyKeysExists(req, ['episode', 'title', 'fonts']),
-        callback: req => updateEpisodeSubtitle(req.body.id, req.body['episode'], req.body['title'], req.body['fonts'])
+        preCheck: req => checkBodyKeysNotBlank(req, ['id']) && checkBodyKeysExists(req, ['episode', 'title', 'fonts', 'rootPath', 'fileName', 'minioLink']),
+        callback: req => updateEpisodeSubtitle(req.body)
     },
     '/retryUploadEpisodeSubtitle': {
         method: POST,

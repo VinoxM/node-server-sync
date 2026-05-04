@@ -62,6 +62,18 @@ export default {
         const sql = `UPDATE rss_episode_subtitle SET episode=? WHERE id=?`
         return __sqliteDB.update(sql, [episode, id], null, dbName);
     },
+    updateSubtitleById: (data) => {
+        const sql = `UPDATE rss_episode_subtitle SET episode=?,title=?,fonts=?,minio_link=?,root_path=?,file_name=? WHERE id=?`
+        return __sqliteDB.update(sql, [
+            data.episode ?? null,
+            data.title ?? null,
+            data.fonts ?? null,
+            data.minioLink ?? null,
+            data.rootPath,
+            data.fileName,
+            data.id
+        ], null, dbName)
+    },
     selectOneById: id => {
         const sql = `SELECT ${FULL_COLUMN.join(',')} FROM rss_episode_subtitle WHERE id=?`
         return __sqliteDB.selectOne(sql, [id], null, dbName);

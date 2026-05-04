@@ -115,13 +115,18 @@ export async function retryUploadEpisodeSubtitle(id) {
     }
 }
 
-export async function updateEpisodeSubtitle(id, episode, title, fonts) {
+export async function updateEpisodeSubtitle(body) {
+    const { id, episode, title, fonts, rootPath, fileName, minioLink } = body
     // get episode subtitle from repository
     const subtitle = await rssSubtitleRep.selectOneById(id)
     subtitle || __throwMessage('Rss episode subtitle not exists.')
-    await rssSubtitleRep.updateSubtitleEpisodeById(id, episode)
-    await rssSubtitleRep.updateSubtitleTitleById(id, title)
-    __isNotEmptyArray(fonts) && await rssSubtitleRep.updateSubtitleFontsById(id, fonts?.join(',') || null)
+    const data = {
+        id, episode, title, rootPath, fileName, minioLink, fonts: null
+    }
+    if (__isNotEmptyArray(fonts)) {
+        data.fonts = fonts.join(',')
+    }
+    await rssSubtitleRep.updateSubtitleById(data)
 }
 
 export async function deleteEpisodeSubtitle(subtitleId) {
