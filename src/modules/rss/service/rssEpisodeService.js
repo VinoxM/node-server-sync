@@ -89,7 +89,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
     const simpleFileName = path.basename(fileName)
     const rootPath = failed.rootPath
     const ext = path.extname(simpleFileName)
-    const filePath = join(rootPath, fileName)
+    let filePath = join(rootPath, fileName)
 
     if (!isFileExtAnime(ext)) {
         __throwMessage('Not a video file.')
