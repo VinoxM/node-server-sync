@@ -88,7 +88,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
     const fileName = failed.fileName
     const simpleFileName = path.basename(fileName)
     const rootPath = failed.rootPath
-    const ext = path.extname(simpleFileName)
+    let ext = path.extname(simpleFileName)
     let filePath = join(rootPath, fileName)
 
     if (!isFileExtAnime(ext)) {
