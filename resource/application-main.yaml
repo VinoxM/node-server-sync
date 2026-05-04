@@ -99,6 +99,7 @@ rss:
   subtitleExtRegex: ^\.(srt|vtt|ass)$
   subtitleMatchers:
     - .*?(cht|chs).*
+    - .*?(tc|sc).*
 clash:
   path:
     deployment: /mnt/data/.config/mihomo/conf
