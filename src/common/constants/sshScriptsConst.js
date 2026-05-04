@@ -60,7 +60,7 @@ done
 
 export const SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 = `bash -c '
 set +H
-if ffmpeg -loglevel error -i "$1" -c:v copy -c:a aac -b:a 320k -movflags +faststart "$2"; then
+if ffmpeg -y -loglevel error -i "$1" -c:v copy -c:a aac -b:a 320k -movflags +faststart "$2"; then
     echo "Convert Success"
     exit 1
 else
