@@ -91,12 +91,16 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
     return result;
 }
 
+const CAN_RETRY_EPISODE_SUBTITLE_STATUS = [
+    RSS_SUBTITLE_STATUS.FAILED,
+    RSS_SUBTITLE_STATUS.PREPARED
+]
 export async function retryUploadEpisodeSubtitle(id) {
     // get episode subtitle from repository
     const subtitle = await rssSubtitleRep.selectOneById(id)
     subtitle || __throwMessage('Rss episode subtitle not exists.')
     const { rootPath, fileName, minioLink, status, fileStatus } = subtitle
-    status === RSS_SUBTITLE_STATUS.FAILED || __throwMessage('Cannot retry subtitle upload.')
+    CAN_RETRY_EPISODE_SUBTITLE_STATUS.includes(status) || __throwMessage('Cannot retry subtitle upload.')
     fileStatus === RSS_SUBTITLE_FILE_STATUS.REMOVED && __throwMessage('Subtitle file removed.')
     const filePath = path.join(rootPath, fileName)
     __isBlank(minioLink) && __throwMessage('Minio link is blank.')
