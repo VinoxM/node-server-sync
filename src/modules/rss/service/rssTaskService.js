@@ -131,24 +131,25 @@ async function resolveTaskEpisode(rssTask) {
     let failedCount = 0
     let skippedCount = 0
     for (const fileInfo of files) {
-        let file = fileInfo.name
-        const index = file.lastIndexOf('/')
+        const fileName = fileInfo.name
+        let simpleFileName = fileInfo.name
+        const index = simpleFileName.lastIndexOf('/')
         if (index > -1) {
-            file = file.substring(index + 1)
+            simpleFileName = simpleFileName.substring(index + 1)
         }
-        let filePath = join(rootPath, file)
-        let ext = path.extname(file)
+        let filePath = join(rootPath, fileName)
+        let ext = path.extname(simpleFileName)
         const animeName = rssSubs.name
         const episodeFailed = {
             rssTaskId: id,
             rssSubsId,
             rootPath,
-            fileName: file
+            fileName
         }
 
         const isAnimeExt = isFileExtAnime(ext)
 
-        isAnimeExt || await resolveEpisodeSubtitle(id, rssSubsId, file, rootPath, rssSubs.season, animeName)
+        isAnimeExt || await resolveEpisodeSubtitle(id, rssSubsId, fileName, rootPath, rssSubs.season, animeName, simpleFileName)
 
         if (!isAnimeExt) {
             __log.error(`[RssTask] Resolve task[${rssTask.id}] file ext failed, cause it's not a video file: ${filePath}`)
@@ -157,7 +158,7 @@ async function resolveTaskEpisode(rssTask) {
         }
 
         // generate episode and validate
-        const episode = getAnimeEpisode(file)
+        const episode = getAnimeEpisode(simpleFileName)
         if (!episode) {
             __log.error(`[RssTask] Resolve task[${rssTask.id}] file episode failed: ${filePath}`)
             failedCount++
@@ -178,7 +179,7 @@ async function resolveTaskEpisode(rssTask) {
         }
 
         if (ext === '.mkv') {
-            const mp4FileName = file.substring(file.length - 4) + '.mp4'
+            const mp4FileName = fileName.substring(fileName.length - 4) + '.mp4'
             const mp4FilePath = join(rootPath, mp4FileName)
             __log.info(`[RssTask] Task[${rssTask.id}] file episode file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
             const convertResult = await convertMkvToMp4(filePath, mp4FilePath)

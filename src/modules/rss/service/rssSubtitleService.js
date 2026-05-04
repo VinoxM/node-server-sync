@@ -44,7 +44,7 @@ function generateSubtitleTitle(fileName) {
     return title
 }
 
-export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath, season, animeName) {
+export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath, season, animeName, simpleFileName) {
     let result = false
     const ext = path.extname(fileName)
     if (!isFileExtSubtitle(ext)) return result;
@@ -61,13 +61,13 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         fileName,
         rootPath
     }
-    const episode = getAnimeEpisode(fileName);
+    const episode = getAnimeEpisode(simpleFileName);
     if (episode !== null) {
         episodeSubtitle.episode = episode
-        episodeSubtitle.minioLink = generateSubtitleMinioLink(season, animeName, episode, fileName)
+        episodeSubtitle.minioLink = generateSubtitleMinioLink(season, animeName, episode, simpleFileName)
     }
     // generate episode subtitle's title
-    episodeSubtitle.title = generateSubtitleTitle(fileName)
+    episodeSubtitle.title = generateSubtitleTitle(simpleFileName)
     // insert episode subtitle
     const { lastId: subtitleId } = await rssSubtitleRep.insertOne(episodeSubtitle)
 
