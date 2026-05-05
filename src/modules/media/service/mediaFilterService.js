@@ -45,10 +45,10 @@ export async function checkVideoFilterRules(body) {
     for (const rule of rules) {
         const { author, uniqueId } = rule
         const result = { downloaded: null, blocked: false, allowed: false, canAdd: defaultAllowed }
-        if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
-            result.blocked = true
-        } else if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
+        if (whitelist?.uniqueId?.has(uniqueId) || whitelist?.author?.has(author)) {
             result.allowed = true
+        } else if (blacklist?.uniqueId?.has(uniqueId) || blacklist?.author?.has(author)) {
+            result.blocked = true
         }
         result.canAdd = result.blocked ? false : (result.allowed || defaultAllowed)
         if (__isNotBlank(uniqueId)) {
