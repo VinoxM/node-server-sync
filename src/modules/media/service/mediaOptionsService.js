@@ -1,4 +1,4 @@
-import { MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE, MEDIA_UPLOAD_TIMEOUT_LABEL } from "../constants/mediaConst.js";
+import { MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE, MEDIA_SAFELY_DELETE_STORAGE_LABEL, MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE, MEDIA_UPLOAD_TIMEOUT_LABEL } from "../constants/mediaConst.js";
 import optionsRep from "../repository/optionsRep.js";
 
 let CACHE_INITIALIZED = false;
@@ -50,4 +50,14 @@ export async function getMediaUploadTimeoutOption() {
     } catch (error) {
         return MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE
     }
+}
+
+export async function getMediaSafelyDeleteStorageOption() {
+    const value = await getOptionValue(MEDIA_SAFELY_DELETE_STORAGE_LABEL)
+    try {
+        const result = parseInt(value ?? MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE)
+        return isNaN(result) ? MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE : result
+    } catch (error) {
+        return MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE
+    }    
 }

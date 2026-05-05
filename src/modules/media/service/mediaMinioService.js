@@ -13,7 +13,7 @@ import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
-import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
+import { getMediaSafelyDeleteStorageOption, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -291,7 +291,8 @@ export async function deleteVideoMinio(minioId, safely = false) {
     const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
     if (__isNotEmptyArray(aria2Tasks)) {
-        safely && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
+        const safelyDeleteStorage = await getMediaSafelyDeleteStorageOption()
+        safelyDeleteStorage === 1 && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
         for (const { id } of aria2Tasks) {
             await removeTask(id);
         }
