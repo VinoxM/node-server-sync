@@ -117,11 +117,3 @@ export const MEDIA_POLICY_MODE = {
     DEFAULT_ALLOWED: '1',
 }
 export const MEDIA_POLICY_MODE_DEFAULT = MEDIA_POLICY_MODE.DEFAULT_ALLOWED
-
-/** Media upload timeout */
-export const MEDIA_UPLOAD_TIMEOUT_LABEL = 'MediaUploadTimeout'
-export const MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE = 5000
-
-/** Media safely delete storage */
-export const MEDIA_SAFELY_DELETE_STORAGE_LABEL = 'MediaSafelyDeleteStorage'
-export const MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE = 1

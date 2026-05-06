@@ -8,6 +8,7 @@ import path, { join } from 'path';
 import { SSH_CMD_MINIO_MOVE_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { pushNotification } from "../../../api/sockets/notification.js";
 import { convertMkvToMp4, deleteRemoteFiles } from "./rssTaskService.js";
+import { Tracer } from "../../../core/infra/tracer.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
 
@@ -104,8 +105,10 @@ export async function retryFailedEpisode(failedEpisodeId) {
         const mp4FileName = fileName.substring(0, fileName.length - 4) + '.mp4'
         const mp4FilePath = join(rootPath, mp4FileName)
         __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
+        Tracer.tryStreamMessage('Try to convert mkv file to mp4.')
         const convertResult = await convertMkvToMp4(filePath, mp4FilePath)
         if (convertResult === 1) {
+            Tracer.tryStreamMessage('Convert mkv file to mp4 success.')
             failed.fileName = mp4FileName;
             const originFilePath = filePath;
             filePath = mp4FilePath;

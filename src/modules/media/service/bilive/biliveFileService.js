@@ -13,6 +13,7 @@ import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import biliveStreamRep from "../../repository/bilive/biliveStreamRep.js"
 import videoMinioRep from "../../repository/videoMinioRep.js"
 import { createMinioManually, validateVideoStatusCanNotCreateMinio } from "../mediaMinioService.js"
+import { getMediaAutoDeleteStreamFile } from "../mediaOptionsService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 import { generateVideoStorageFilePath } from "./biliveStreamService.js"
 
@@ -88,20 +89,38 @@ export async function uploadFileToMediaByFileId(id) {
     try {
         // upload cover if not exists
         const coverExists = await videoMinioRep.selectMinioExistsByVideoIdAndType(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER)
+        const uploadCallback = await initUploadStorageCallback(coverExists ? 2 : 3, id);
         if (!coverExists) {
             const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
-            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover)
+            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover, null, uploadCallback)
         }
         const title = generateStorageTitle(startTime)
         // upload barrage
         const barrage = generateVideoStorageFilePath(filePath, '.xml')
-        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title)
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback)
         // upload source
         const source = generateVideoStorageFilePath(filePath, '.flv')
-        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title)
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title, uploadCallback)
     } finally {
         // setup file uploaded
         await biliveFileRep.updateFileUploaded(id)
+    }
+}
+
+async function initUploadStorageCallback(triggerSuccessCount, fileId) {
+    const flag = await getMediaAutoDeleteStreamFile()
+    if (!flag) return null
+    let successCount = 0;
+    let triggered = false;
+    return async (uploadComplete) => {
+        if (!triggered && uploadComplete) {
+            successCount++;
+            if (successCount >= triggerSuccessCount) {
+                triggered = true;
+                __log.info('All files upload complete, ready to remove files.')
+                await removeFileByFileId(fileId);
+            }
+        }
     }
 }
 
@@ -115,8 +134,8 @@ function generateStorageTitle(startTime) {
     }
 }
 
-async function uploadVideoStorage(videoId, type, uri, title) {
-    const code = await createMinioManually({ videoId, type, uri, title })
+async function uploadVideoStorage(videoId, type, uri, title, uploadCallback) {
+    const code = await createMinioManually({ videoId, type, uri, title }, uploadCallback)
     const desc = MEDIA_TYPE_DESCRIPTION[type]
     const message = `Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`
     const messageType = code ? 'info' : 'warning'

@@ -13,7 +13,7 @@ import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
-import { getMediaSafelyDeleteStorageOption, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
+import { getMediaSafelyDeleteStorage, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -44,7 +44,7 @@ const CAN_NOT_CREATE_MINIO_VIDEO_STATUS = [
 export function validateVideoStatusCanNotCreateMinio(status) {
     CAN_NOT_CREATE_MINIO_VIDEO_STATUS.includes(status) && __throwMessage('Invalid video status, cannot create minio.')
 }
-export async function createMinioManually(minioObj) {
+export async function createMinioManually(minioObj, callback) {
     const { videoId, type, uri, sort, title } = minioObj
     // validate type
     SUPPORTED_MEDIA_MINIO_TYPE.includes(type) || __throwMessage('Invalid type.')
@@ -75,7 +75,12 @@ export async function createMinioManually(minioObj) {
     } else {
         const uploadTimeout = await getMediaUploadTimeoutOption()
         const { status } = await executeAsyncTaskChain([
-            task,
+            async () => {
+                const complete = await task();
+                if (typeof callback === 'function') {
+                    await callback(complete)
+                }
+            },
             async () => updateVideoStatusByVideoMinioStatus(videoId)
         ], uploadTimeout)
         return status === 'timeout' ? 0 : 1
@@ -121,6 +126,7 @@ async function resolveStorageUri(uri, videoId, minioLink, minioId, type) {
                     await addTask(uri, minioId, type)
                     await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.DOWNLOADING)
                 }
+                return complete
             }
         }
     } else {
@@ -291,8 +297,8 @@ export async function deleteVideoMinio(minioId, safely = false) {
     const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
     if (__isNotEmptyArray(aria2Tasks)) {
-        const safelyDeleteStorage = await getMediaSafelyDeleteStorageOption()
-        safelyDeleteStorage === 1 && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
+        const safelyDeleteStorage = await getMediaSafelyDeleteStorage()
+        safelyDeleteStorage && __throwMessage('Minio can not delete, cause aria2 task exists in this minio.')
         for (const { id } of aria2Tasks) {
             await removeTask(id);
         }

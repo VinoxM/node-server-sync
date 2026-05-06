@@ -60,6 +60,7 @@ export default {
         method: POST,
         needAuth: true,
         needSecret,
+        maybeStream: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
         callback: req => retryFailedEpisode(req.body.failedEpisodeId)
     },

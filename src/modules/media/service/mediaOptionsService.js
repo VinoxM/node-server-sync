@@ -1,10 +1,9 @@
-import { MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE, MEDIA_SAFELY_DELETE_STORAGE_LABEL, MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE, MEDIA_UPLOAD_TIMEOUT_LABEL } from "../constants/mediaConst.js";
 import optionsRep from "../repository/optionsRep.js";
 
 let CACHE_INITIALIZED = false;
 const cache = new Map();
 
-export async function getOption(label = '') {
+async function getOption(label = '') {
     if (__isBlank(label)) return null
     if (cache.has(label)) {
         return cache.get(label)
@@ -16,7 +15,7 @@ export async function getOption(label = '') {
     return option;
 }
 
-export async function getOptionValue(label = '') {
+async function getOptionValue(label = '') {
     const option = await getOption(label)
     return option?.value
 }
@@ -42,22 +41,46 @@ export async function getOptions() {
     return data
 }
 
-export async function getMediaUploadTimeoutOption() {
-    const value = await getOptionValue(MEDIA_UPLOAD_TIMEOUT_LABEL)
+function parseValueIntOr(value, defaultValue) {
     try {
-        const result = parseInt(value ?? MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
-        return isNaN(result) ? MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE : result
+        const result = parseInt(value ?? defaultValue)
+        return isNaN(result) ? defaultValue : result
     } catch (error) {
-        return MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE
+        return defaultValue
     }
 }
 
-export async function getMediaSafelyDeleteStorageOption() {
+/** Media policy default allowed */
+const MEDIA_POLICY_MODE_LABEL = 'MediaPolicyMode'
+const MEDIA_POLICY_MODE = { NOT_ALLOWED: 0, ALLOWED: 1 }
+const MEDIA_POLICY_MODE_DEFAULT_VALUE = MEDIA_POLICY_MODE.ALLOWED
+export async function getMediaPolicyDefaultAllowed() {
+    const value = await getOptionValue(MEDIA_POLICY_MODE_LABEL)
+    return parseValueIntOr(value, MEDIA_POLICY_MODE_DEFAULT_VALUE) === MEDIA_POLICY_MODE.ALLOWED
+}
+
+/** Media upload timeout */
+const MEDIA_UPLOAD_TIMEOUT_LABEL = 'MediaUploadTimeout'
+const MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE = 5000
+export async function getMediaUploadTimeoutOption() {
+    const value = await getOptionValue(MEDIA_UPLOAD_TIMEOUT_LABEL)
+    return parseValueIntOr(value, MEDIA_UPLOAD_TIMEOUT_DEFAULT_VALUE)
+}
+
+/** Media safely delete storage */
+const MEDIA_SAFELY_DELETE_STORAGE_LABEL = 'MediaSafelyDeleteStorage'
+const MEDIA_SAFELY_DELETE_STORAGE = { UNSAFELY: 0, SAFELY: 1 }
+const MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE = MEDIA_SAFELY_DELETE_STORAGE.SAFELY
+export async function getMediaSafelyDeleteStorage() {
     const value = await getOptionValue(MEDIA_SAFELY_DELETE_STORAGE_LABEL)
-    try {
-        const result = parseInt(value ?? MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE)
-        return isNaN(result) ? MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE : result
-    } catch (error) {
-        return MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE
-    }    
+    return parseValueIntOr(value, MEDIA_SAFELY_DELETE_STORAGE_DEFAULT_VALUE) === MEDIA_SAFELY_DELETE_STORAGE.SAFELY
+}
+
+/** Media auto delete the stream file after successful upload  */
+const MEDIA_AUTO_DELETE_STREAM_FILE_LABEL = "MediaAutoDeleteStreamFile"
+const MEDIA_AUTO_DELETE_STREAM_FILE = { DISABLE: 0, ENABLE: 1 }
+const MEDIA_AUTO_DELETE_STREAM_FILE_DEFAULT_VALUE = MEDIA_AUTO_DELETE_STREAM_FILE.DISABLE
+export async function getMediaAutoDeleteStreamFile() {
+    const value = await getOptionValue(MEDIA_AUTO_DELETE_STREAM_FILE_LABEL)
+    return parseValueIntOr(value, MEDIA_AUTO_DELETE_STREAM_FILE_DEFAULT_VALUE) === MEDIA_AUTO_DELETE_STREAM_FILE.ENABLE
 }
