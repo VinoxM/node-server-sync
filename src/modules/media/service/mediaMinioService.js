@@ -11,7 +11,7 @@ import categoriesRep from '../repository/categoriesRep.js';
 import authorsRep from '../repository/authorsRep.js';
 import { generateUUID } from '../../../common/utils/cryptoUtil.js';
 import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.js';
-import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
+import { ASYNC_SEQUENCE_EXECUTE_STATUS, executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { getMediaSafelyDeleteStorage, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 
@@ -83,7 +83,7 @@ export async function createMinioManually(minioObj, callback) {
             },
             async () => updateVideoStatusByVideoMinioStatus(videoId)
         ], uploadTimeout)
-        return status === 'timeout' ? 0 : 1
+        return status === ASYNC_SEQUENCE_EXECUTE_STATUS.TIMEOUT ? 0 : 1
     }
 }
 
@@ -274,7 +274,7 @@ export async function retryMinio(minioId) {
             task,
             async () => updateVideoStatusByVideoMinioStatus(videoId)
         ], uploadTimeout)
-        return status === 'timeout' ? 0 : 1
+        return status === ASYNC_SEQUENCE_EXECUTE_STATUS.TIMEOUT ? 0 : 1
     }
 }
 

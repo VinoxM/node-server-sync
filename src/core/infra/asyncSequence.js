@@ -1,4 +1,9 @@
-const defaultTimeoutMs = 1000
+const defaultTimeoutMs = 1000;
+
+export const ASYNC_SEQUENCE_EXECUTE_STATUS = {
+    SUCCESS: 'success',
+    TIMEOUT: 'timeout'
+}
 
 class AsyncSequence {
     static #globalCounter = 0;
@@ -74,7 +79,7 @@ class AsyncSequence {
                 const process = `${this.#completedTasks}/${this.#totalTasks}`;
                 __log.warn(this.#logPrefix() + `Execution timeout! The main process will leave first. Current progress: [${process}]`);
                 resolve({
-                    status: "timeout",
+                    status: ASYNC_SEQUENCE_EXECUTE_STATUS.TIMEOUT,
                     message: "Timeout has occurred. Main process continues; task moved to background.",
                     process
                 });
@@ -85,7 +90,7 @@ class AsyncSequence {
                 if (!this.#hasTimeout) {
                     __log.info(this.#logPrefix() + `All tasks have been completed sequentially before timing out.`)
                     clearTimeout(timer);
-                    resolve({ status: "success", message: "All tasks have been completed in sequence." });
+                    resolve({ status: ASYNC_SEQUENCE_EXECUTE_STATUS.SUCCESS, message: "All tasks have been completed in sequence." });
                 } else {
                     __log.info(this.#logPrefix() + `All tasks execution completed.`)
                 }
