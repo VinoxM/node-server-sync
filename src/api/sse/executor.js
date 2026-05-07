@@ -15,6 +15,9 @@ export default {
             return;
         }
         const snapshot = getExecutorSnapshot(label) || {}
+
+        __log.info(snapshot)
+        
         const { ready = false, pendingCount = 0, taskSnapshot = {} } = snapshot
 
         client.emitEvent(ready ? SSE_EVENT.READY : SSE_EVENT.DESTROY);
