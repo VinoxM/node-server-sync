@@ -15,7 +15,7 @@ export const SSE_EVENT = {
     EXEC_END: 'exec-end'
 }
 
-const emit = (message, event) => broadcastSSE(SSE_LABEL, event, message)
+const emit = (event, message) => broadcastSSE(SSE_LABEL, event, message)
 
 function logMessage(message) {
     __log.info(message)
