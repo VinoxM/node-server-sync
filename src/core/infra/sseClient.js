@@ -21,7 +21,7 @@ export class SSEClient extends ContextSubscribe {
             onDisconnected = null,
             canWrite
         } = options
-        super('SSE:' + channel, () => onConfigurationRefreshed?.(this))
+        super(`SSE-${channel}`, () => onConfigurationRefreshed?.(this))
         if (typeof canWrite === 'function') this.#canWrite = canWrite
         this.#request = request
         this.#response = response

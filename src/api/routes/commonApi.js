@@ -46,6 +46,15 @@ export default {
             return ipBlocker.unblock(realIp);
         }
     },
+    "/getSupportedSshExecutors": {
+        method: GET,
+        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        needSecret,
+        callback: () => {
+            const opts = __env.get('ssh', {})
+            return Array.from(Object.keys(opts))
+        }
+    },
     "/doNothing": {
         method: GET,
         needSecret: () => 'mAou5820.doNothing',
