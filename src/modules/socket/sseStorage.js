@@ -45,11 +45,11 @@ class SSEStore {
         }
     }
 
-    broadcast(channel, event, message) {
+    broadcast(channel, event, message, opts) {
         const channels = this.#clients[channel]
         if (channels) {
             Array.from(channels).forEach(client => {
-                client?.emitEvent?.(event, message)
+                client?.emitEvent?.(event, message, opts)
             })
         }
     }
@@ -59,8 +59,8 @@ export function storeSSE(req, res) {
     SSEStore.instance.store(req, res)
 }
 
-export function broadcastSSE(channel, event, message) {
-    SSEStore.instance.broadcast(channel, event, message)
+export function broadcastSSE(channel, event, message, opts) {
+    SSEStore.instance.broadcast(channel, event, message, opts)
 }
 
 export async function sseInitialize() {

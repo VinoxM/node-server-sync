@@ -16,8 +16,6 @@ export default {
         }
         const snapshot = getExecutorSnapshot(label) || {}
 
-        __log.info(snapshot)
-        
         const { ready = false, pendingCount = 0, taskSnapshot = {} } = snapshot
 
         client.emitEvent(ready ? SSE_EVENT.READY : SSE_EVENT.DESTROY);
@@ -31,6 +29,14 @@ export default {
         for (const { chunk, isError } of std) {
             client.emitEvent(isError ? SSE_EVENT.STDERR : SSE_EVENT.STDOUT, chunk);
         }
+        if (taskSnapshot?.ended) {
+            client.emitEvent(SSE_EVENT.EXEC_END, desc);
+        }
+    },
+    canWrite: (query, opts, client) => {
+        const label = query.label
+        if (__isBlank(label)) return false;
+        return opts?.label === label
     },
     onDisconnected: () => {
     }

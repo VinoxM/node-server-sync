@@ -11,14 +11,18 @@ export class SSEClient extends ContextSubscribe {
     #onConnected = null
     #onDisconnected = null
 
+    #canWrite = () => true
+
     constructor(request, response, options = {}) {
         const {
             channel,
             onConnected = null,
             onConfigurationRefreshed = null,
-            onDisconnected = null
+            onDisconnected = null,
+            canWrite
         } = options
         super('SSE:' + channel, () => onConfigurationRefreshed?.(this))
+        if (typeof canWrite === 'function') this.#canWrite = canWrite
         this.#request = request
         this.#response = response
         this.#onConnected = onConnected
@@ -33,6 +37,8 @@ export class SSEClient extends ContextSubscribe {
         this.#response?.setHeader('Cache-Control', 'no-cache')
         this.#response?.setHeader('Connection', 'keep-alive')
         this.#response?.setHeader('Access-Control-Allow-Origin', '*')
+        this.#response?.setHeader('X-Accel-Buffering', 'no');
+        this.#response?.flushHeaders?.();
         this.#setupKeepalive()
         this.#request?.on?.('close', () => {
             this.close()
@@ -76,7 +82,10 @@ export class SSEClient extends ContextSubscribe {
         }
     }
 
-    emitEvent(event, message) {
+    emitEvent(event, message, opts) {
+        if (opts !== undefined && (!this.#canWrite || !this.#canWrite(this.#request.query, opts, this))) {
+            return;
+        }
         this.#response?.write(`event: ${event}\n`)
         const msgArr = resolveStreamMessage(message)
         for (const msg of msgArr) {
