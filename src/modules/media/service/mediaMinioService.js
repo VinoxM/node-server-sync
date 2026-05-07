@@ -237,7 +237,8 @@ async function executeSshScript(resourcePath, minioLink, script) {
     const executor = getSSHExecutor('storage')
     if (!executor) return -2
     try {
-        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink]);
+        const desc = `Upload file to minio: ${resourcePath} -> ${suitableMinioLink}`;
+        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink], { desc });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e)

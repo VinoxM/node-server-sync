@@ -39,7 +39,7 @@ export class SSEClient extends ContextSubscribe {
         })
         this.emitEvent('connect', '')
         if (__isFunction(this.#onConnected)) {
-            this.#onConnected(this)
+            this.#onConnected(this, this.#request.query)
         }
     }
 

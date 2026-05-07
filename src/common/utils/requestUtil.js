@@ -38,6 +38,8 @@ export function resolveStreamMessage(message) {
         str = message
     } else if (typeof message === 'object') {
         str = JSON.stringify(message)
+    } else if (typeof message === 'number') {
+        str = message + ''
     }
     if (str === '') {
         return ['data: \n\n']

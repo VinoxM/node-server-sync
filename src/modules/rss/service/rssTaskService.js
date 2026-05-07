@@ -385,7 +385,8 @@ export async function convertMkvToMp4(mkvFilePath, mp4FilePath) {
         return -2
     }
     try {
-        const { code } = await executor.exec(SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4, [mkvFilePath, mp4FilePath]);
+        const desc = `Convert file mkv to mp4: ${mkvFilePath} -> ${mp4FilePath}`;
+        const { code } = await executor.exec(SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4, [mkvFilePath, mp4FilePath], { desc });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ffmpeg convert ssh script failed.', e.message ?? e)
@@ -402,7 +403,8 @@ export async function deleteRemoteFiles(files) {
         return -2
     }
     try {
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files);
+        const desc = `Delete remote files: ${files.join(', ')}`
+        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e)

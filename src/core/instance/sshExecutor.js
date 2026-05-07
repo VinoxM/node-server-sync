@@ -1,5 +1,31 @@
 import { Client } from 'ssh2';
 import { Tracer } from '../infra/tracer.js';
+import { broadcastSSE } from '../../modules/socket/sseStorage.js';
+
+const SSE_LABEL = 'executor';
+export const SSE_EVENT = {
+    MESSAGE: 'message',
+    ERROR: 'error',
+    STDOUT: 'stdout',
+    STDERR: 'stderr',
+    READY: 'ready',
+    DESTROY: 'destroy',
+    PENDING_UPDATE: 'pending-update',
+    EXEC_START: 'exec-start',
+    EXEC_END: 'exec-end'
+}
+
+const emit = (message, event) => broadcastSSE(SSE_LABEL, event, message)
+
+function logMessage(message) {
+    logMessage(message)
+    emit(SSE_EVENT.MESSAGE, message)
+}
+
+function errorMessage(message) {
+    errorMessage(message)
+    emit(SSE_EVENT.ERROR, message)
+}
 
 class SSHExecutor {
     #config;
@@ -14,6 +40,11 @@ class SSHExecutor {
     // 串行队列管理
     #queue = Promise.resolve();
     #pendingCount = 0;
+
+    #taskSnapshot = {
+        desc: 'Unknown',
+        std: []
+    };
 
     constructor(config, label = 'Unknown', options = {}) {
         this.#config = {
@@ -37,19 +68,35 @@ class SSHExecutor {
 
         this.#conn.on('ready', () => {
             this.#isReady = true;
-            __log.log(`[${this.#label}] SSH Connection Established.`);
+            emit(SSE_EVENT.READY);
+            logMessage(`[${this.#label}] SSH Connection Established.`);
         });
 
         this.#conn.on('close', () => {
             this.#isReady = false;
-            __log.log(`[${this.#label}] SSH Connection Closed.`);
+            logMessage(`[${this.#label}] SSH Connection Closed.`);
             // 如果不是主动断开，且队列中还有任务，下个任务执行时会自动重连
         });
 
         this.#conn.on('error', (err) => {
             this.#isReady = false;
-            __log.error(`[${this.#label}] SSH Error:`, err.message);
+            errorMessage(`[${this.#label}] SSH Error:`, err.message);
         });
+    }
+
+    #initTaskSnapshot(options = {}) {
+        this.#taskSnapshot = {
+            desc: options.desc || 'Unknown',
+            std: []
+        }
+    }
+
+    getCurrentTaskSnapshot() {
+        return {
+            ready: this.#isReady,
+            pendingCount: this.#pendingCount,
+            taskSnapshot: this.#taskSnapshot
+        }
     }
 
     #resetIdleTimer() {
@@ -58,12 +105,12 @@ class SSHExecutor {
 
         Tracer.runClearly(() => {
             this.#idleTimer = setTimeout(async () => {
-                __log.log(`[${this.#label}] Idle timeout reached (${this.#idleTimeout}ms). Cleaning up...`);
+                logMessage(`[${this.#label}] Idle timeout reached (${this.#idleTimeout}ms). Cleaning up...`);
                 try {
                     await this.disconnect();
                     this.#onDestroy?.(this.#label);
                 } catch (err) {
-                    __log.error(`[${this.#label}] Error during idle disconnect:`, err);
+                    errorMessage(`[${this.#label}] Error during idle disconnect: ${err.message}`,);
                 }
             }, this.#idleTimeout);
         })
@@ -81,7 +128,7 @@ class SSHExecutor {
             this.#conn.once('ready', resolve);
             this.#conn.once('error', reject);
 
-            __log.log(`[${this.#label}] Connecting to host...`);
+            logMessage(`[${this.#label}] Connecting to host...`);
             this.#conn.connect(this.#config);
         });
     }
@@ -90,23 +137,26 @@ class SSHExecutor {
      * 公开执行接口：串行化任务
      */
     async exec(scriptPath, args = [], options = {}) {
-        this.#pendingCount++;
-        __log.log(`[${this.#label}] Task queued. Queue size: ${this.#pendingCount}`);
+        emit(SSE_EVENT.PENDING_UPDATE, ++this.#pendingCount);
+        logMessage(`[${this.#label}] Task queued. Queue size: ${this.#pendingCount}`);
 
         // 核心逻辑：通过不断的 .then 形成 Promise 链条
         this.#queue = this.#queue.then(async () => {
-            __log.log(`[${this.#label}] Execution started. Queue depth: ${this.#pendingCount}`);
+            this.#initTaskSnapshot(options)
+            emit(SSE_EVENT.EXEC_START, options.desc || 'Unknown')
+            logMessage(`[${this.#label}] Execution started. Queue depth: ${this.#pendingCount}`);
 
             try {
                 return await this.#internalExec(scriptPath, args, options);
             } finally {
-                this.#pendingCount--;
-                __log.log(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
+                emit(SSE_EVENT.EXEC_END, options.desc || 'Unknown')
+                emit(SSE_EVENT.PENDING_UPDATE, --this.#pendingCount);
+                logMessage(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
                 this.#resetIdleTimer();
             }
         }).catch(err => {
             // 捕获任务错误，防止中断整个 Promise 链
-            __log.error(`[${this.#label}] Execution failed:`, err.message);
+            errorMessage(`[${this.#label}] Execution failed: ${err.message}`);
             throw err;
         });
 
@@ -133,6 +183,10 @@ class SSHExecutor {
                 this.#conn.removeListener('close', onConnClose);
             };
 
+            const snapshotStd = (chunk, isError = false) => {
+                this.#taskSnapshot.std.push({ chunk, isError })
+            };
+
             const onConnClose = () => reject(new Error('Connection lost during execution'));
             this.#conn.once('close', onConnClose);
 
@@ -149,12 +203,16 @@ class SSHExecutor {
                     const chunk = data.toString();
                     stdout += chunk;
                     onData?.(chunk);
+                    snapshotStd(chunk);
+                    emit(SSE_EVENT.STDOUT, chunk);
                 });
 
                 stream.stderr.on('data', (data) => {
                     const chunk = data.toString();
                     stderr += chunk;
                     onData?.(`[STDERR] ${chunk}`);
+                    snapshotStd(chunk, true);
+                    emit(SSE_EVENT.STDERR, chunk);
                 });
 
                 stream.on('close', (code) => {
@@ -184,6 +242,7 @@ class SSHExecutor {
             this.#conn.once('close', () => {
                 this.#isReady = false;
                 this.#isDisconnecting = false;
+                this.#taskSnapshot = null;
                 resolve();
             });
 
@@ -207,10 +266,15 @@ export function getSSHExecutor(label = '') {
         onDestroy: (lbl) => {
             if (sshExecutorPool.has(lbl)) {
                 sshExecutorPool.delete(lbl);
-                __log.log(`[${lbl}] Pool auto-cleanup: entry removed.`);
+                logMessage(`[${lbl}] Pool auto-cleanup: entry removed.`);
+                emit(SSE_EVENT.DESTROY)
             }
         }
     })
     sshExecutorPool.set(label, executor)
     return executor
+}
+
+export function getExecutorSnapshot(label = '') {
+    return sshExecutorPool.get(label)?.getCurrentTaskSnapshot?.() || { ready: false }
 }

@@ -190,7 +190,8 @@ async function executeRetryFailedEpisodeResolveCommand(filePath, minioLink) {
         return -2
     }
     try {
-        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [filePath, suitableMinioLink]);
+        const desc = `Upload file to minio: ${filePath} -> ${suitableMinioLink}`;
+        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [filePath, suitableMinioLink], { desc });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e.message ?? e)

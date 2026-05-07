@@ -163,7 +163,8 @@ async function deleteRemoteFiles(files) {
         return -2
     }
     try {
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files);
+        const desc = `Delete remote files: ${files.join(', ')}`
+        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute ssh script failed.', e)
