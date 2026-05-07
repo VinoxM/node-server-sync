@@ -90,7 +90,8 @@ class MinioClient extends ContextSubscribe {
 
     generateSuitableMinioLink(minioLink) {
         const label = this.#getSuitableMinioLabel(minioLink)
-        return `${label}/${minioLink}`
+        const separator = String(minioLink).startsWith('/') ? '' : '/'
+        return `${label}${separator}${minioLink}`
     }
 
     async generateShareLink(minioLink, errorCallback) {
