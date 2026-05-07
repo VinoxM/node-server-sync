@@ -149,8 +149,9 @@ class SSHExecutor {
             try {
                 return await this.#internalExec(scriptPath, args, options);
             } finally {
-                emit(SSE_EVENT.EXEC_END, options.desc || 'Unknown')
+                emit(SSE_EVENT.EXEC_END, options.desc || 'Unknown');
                 emit(SSE_EVENT.PENDING_UPDATE, --this.#pendingCount);
+                this.#initTaskSnapshot();
                 logMessage(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
                 this.#resetIdleTimer();
             }
