@@ -18,12 +18,12 @@ export const SSE_EVENT = {
 const emit = (message, event) => broadcastSSE(SSE_LABEL, event, message)
 
 function logMessage(message) {
-    logMessage(message)
+    __log.info(message)
     emit(SSE_EVENT.MESSAGE, message)
 }
 
 function errorMessage(message) {
-    errorMessage(message)
+    __log.error(message)
     emit(SSE_EVENT.ERROR, message)
 }
 
