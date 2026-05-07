@@ -71,7 +71,7 @@ export async function sseInitialize() {
         const channelConf = module.default
         const { channel, validator, ...ops } = channelConf
         if (__isNotBlank(channel) && __isFunction(validator) && !(channel in configs)) {
-            configs[channel] = { validator, ...ops }
+            configs[channel] = { channel, validator, ...ops }
             __log.info(`[SSE] Loaded sse configuration: ${channel}`)
         }
     }).then(() => SSEStore.instance.initialize(configs))

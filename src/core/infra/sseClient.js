@@ -18,7 +18,7 @@ export class SSEClient extends ContextSubscribe {
             onConfigurationRefreshed = null,
             onDisconnected = null
         } = options
-        super(channel, () => onConfigurationRefreshed?.(this))
+        super('SSE:' + channel, () => onConfigurationRefreshed?.(this))
         this.#request = request
         this.#response = response
         this.#onConnected = onConnected
