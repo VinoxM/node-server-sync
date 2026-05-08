@@ -49,8 +49,9 @@ class SSHExecutor {
         this.#initClient();
     }
 
-    #emit(event, message) {
-        broadcastSSE(SSE_LABEL, event, message, { label: this.#label })
+    #emit(event, message = '') {
+        const messageObj = { message, timestamp: Date.now() }
+        broadcastSSE(SSE_LABEL, event, messageObj, { label: this.#label })
     }
 
     #logMessage(message) {
