@@ -274,8 +274,8 @@ export function getSSHExecutor(label = '') {
                 sshExecutorPool.delete(lbl);
                 const message = `[${lbl}] Pool auto-cleanup: entry removed.`
                 __log.info(message);
-                broadcastSSE(SSE_LABEL, SSE_EVENT.MESSAGE, message, { label })
-                broadcastSSE(SSE_LABEL, SSE_EVENT.DESTROY, null, { label })
+                broadcastSSE(SSE_LABEL, SSE_EVENT.MESSAGE, { message, timestamp: Date.now() }, { label })
+                broadcastSSE(SSE_LABEL, SSE_EVENT.DESTROY, { timestamp: Date.now() }, { label })
             }
         }
     })
