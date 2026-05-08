@@ -117,7 +117,7 @@ async function resolveTaskEpisode(rssTask) {
         __throwMessage(`Task not ready.`)
     }
     hash ??= info.hash
-    const rootPath = info['root_path'] || info['save_path']
+    const rootPath = info['save_path'] || info['root_path']
     const fileInfo = await torrentFiles(hash)
     if (!fileInfo) {
         __log.error(`[RssTask] Resolve task[${rssTask.id}] episode failed. Cause task files not found.`)
