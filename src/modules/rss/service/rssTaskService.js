@@ -136,10 +136,12 @@ async function resolveTaskEpisode(rssTask) {
         const progress = parseFloat(fileInfo.progress)
         if (priority === 0) {
             __log.warn(`[RssTask] Skip resolve low priority file: ${fileName}`)
+            skippedCount++
             continue;
         }
         if (progress < 1) {
             __log.warn(`[RssTask] Skip resolve file not fully downloaded: ${fileName}`)
+            skippedCount++
             continue;
         }
         const index = simpleFileName.lastIndexOf('/')
@@ -202,6 +204,7 @@ async function resolveTaskEpisode(rssTask) {
             } else {
                 episodeFailed.reason = EPISODE_FAILED_REASON.UNKNOWN
                 await rssEpisodeRep.insertOneFailed(episodeFailed)
+                failedCount++
                 continue
             }
         }
