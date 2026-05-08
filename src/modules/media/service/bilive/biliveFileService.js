@@ -1,8 +1,7 @@
 import { pushNotification } from "../../../../api/sockets/notification.js"
-import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../../common/constants/sshScriptsConst.js"
 import { dateFormat } from "../../../../common/utils/dateUtil.js"
 import { Tracer } from "../../../../core/infra/tracer.js"
-import { getSSHExecutor } from "../../../../core/instance/sshExecutor.js"
+import { removeRemoteFiles } from "../../../ssh/sshExecutorService.js"
 import {
     MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY,
     MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS,
@@ -151,25 +150,8 @@ export async function removeFileByFileId(id) {
     const cover = generateVideoStorageFilePath(filePath, '.cover.jpg', false)
     const source = generateVideoStorageFilePath(filePath, '.flv', false)
     const barrage = generateVideoStorageFilePath(filePath, '.xml', false)
-    await deleteRemoteFiles([cover, source, barrage])
+    await removeRemoteFiles([cover, source, barrage])
     await biliveFileRep.updateFileRemoved(id)
-}
-
-async function deleteRemoteFiles(files) {
-    __log.info(`Ready to delete files: `, files)
-    const executor = getSSHExecutor('storage')
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Delete remote files: ${files.join(', ')}`
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
-    }
 }
 
 export async function deleteFile(id) {

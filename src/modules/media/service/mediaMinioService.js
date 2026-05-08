@@ -2,8 +2,6 @@ import path from 'path';
 import videoMinioRep from "../repository/videoMinioRep.js";
 import { MEDIA_MINIO_STATUS, MEDIA_MINIO_TYPE_MAIN, MEDIA_TYPE_DESCRIPTION, MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
 import videosRep from "../repository/videosRep.js";
-import { SSH_CMD_MINIO_COPY_SCRIPT, SSH_CMD_MINIO_DOWNLOAD_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
-import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
 import { getMinioClient } from "../../../core/instance/minioClient.js";
 import { addTask, removeTask } from "./mediaTaskService.js";
 import aria2TaskRep from "../repository/aria2TaskRep.js";
@@ -14,6 +12,7 @@ import { urlContentLengthLargeThanOneMB } from '../../../common/utils/httpUtil.j
 import { ASYNC_SEQUENCE_EXECUTE_STATUS, executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { getMediaSafelyDeleteStorage, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
+import { copyRemoteFileToMinio, downloadFileToMinio } from '../../ssh/sshExecutorService.js';
 
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
@@ -207,8 +206,8 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
  */
 async function uploadFileToMinio(filePath, minioLink, lastId) {
     await videoMinioRep.updateStatusById(lastId, MEDIA_MINIO_STATUS.UPLOADING)
-    const result = await executeSshScript(filePath, minioLink, SSH_CMD_MINIO_COPY_SCRIPT)
-    const complete = result === 1
+    const result = await executeSshScript(filePath, minioLink, true)
+    const complete = result === 0
     const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     await videoMinioRep.updateStatusById(lastId, minioStatus)
     return complete
@@ -220,29 +219,24 @@ async function uploadFileToMinio(filePath, minioLink, lastId) {
  * COMPLETE/FAILED
  */
 async function uploadUrlToMinio(url, minioLink, lastId) {
-    const result = await executeSshScript(url, minioLink, SSH_CMD_MINIO_DOWNLOAD_SCRIPT)
-    const complete = result === 1
+    const result = await executeSshScript(url, minioLink, false)
+    const complete = result === 0
     const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     await videoMinioRep.updateStatusById(lastId, minioStatus)
     return complete
 }
 
-async function executeSshScript(resourcePath, minioLink, script) {
+async function executeSshScript(resourcePath, minioLink, isFileResource = false) {
     const client = getMinioClient()
     if (!client?.ready()) {
         logAndPushNotification(`Upload minio object failed. Cause client not ready.`)
         return -1
     }
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
-    const executor = getSSHExecutor('storage')
-    if (!executor) return -2
-    try {
-        const desc = `Upload file to minio: ${resourcePath} -> ${suitableMinioLink}`;
-        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
+    if (isFileResource) {
+        return await copyRemoteFileToMinio(resourcePath, suitableMinioLink)
+    } else {
+        return await downloadFileToMinio(resourcePath, suitableMinioLink)
     }
 }
 

@@ -2,9 +2,8 @@ import aria2Service from "../../download/aria2Service.js";
 import { MEDIA_ARIA2_TASK_STATUS, MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js";
 import aria2TaskRep from "../repository/aria2TaskRep.js";
 import videoMinioRep from "../repository/videoMinioRep.js";
-import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
-import { SSH_CMD_BATCH_DELETE_SIMPLE } from "../../../common/constants/sshScriptsConst.js";
 import { pushNotification } from "../../../api/sockets/notification.js";
+import { removeRemoteFiles } from "../../ssh/sshExecutorService.js";
 
 const MEDIA_ARIA2_SAVE_DIR = "./media";
 
@@ -43,7 +42,7 @@ export async function removeTask(taskId) {
     const { minioId, gid, filePath } = task
     await aria2TaskRep.deleteById(taskId)
     await aria2Service.removeTask(gid)
-    __isNotBlank(filePath) && await deleteRemoteFiles([filePath])
+    __isNotBlank(filePath) && await removeRemoteFiles([filePath])
     const { exists } = await aria2TaskRep.selectExistsByMinioId(minioId)
     exists || await videoMinioRep.setupFailedByIdWhenNotComplete(minioId)
 }
@@ -68,23 +67,6 @@ export async function getTaskInfoAndDownloadStatus(ids) {
         })
     }
     return result
-}
-
-async function deleteRemoteFiles(files) {
-    __log.info(`Ready to delete files: `, files)
-    const executor = getSSHExecutor('storage')
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Delete remote files: ${files.join(', ')}`
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
-    }
 }
 
 /**

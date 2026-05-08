@@ -4,9 +4,8 @@ import { getMinioClient } from '../../../core/instance/minioClient.js';
 import { GetterContextSubscribe } from '../../../core/context/subscribe.js';
 import rssSubtitleRep from '../repository/rssSubtitleRep.js';
 import { RSS_SUBTITLE_FILE_STATUS, RSS_SUBTITLE_STATUS } from '../constants/rssSubtitleStatusConst.js';
-import { SSH_CMD_BATCH_DELETE_SIMPLE, SSH_CMD_MINIO_COPY_SCRIPT } from '../../../common/constants/sshScriptsConst.js';
-import { getSSHExecutor } from '../../../core/instance/sshExecutor.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
+import { copyRemoteFileToMinio, removeRemoteFiles } from '../../ssh/sshExecutorService.js';
 
 const rssSubtitleMatchers = new GetterContextSubscribe('RssSubtitleMatchers', () => __env.get('rss.subtitleMatchers', []))
 export function getRssSubtitleMatchers() {
@@ -79,8 +78,8 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         return result;
     }
 
-    const deleted = await removeRemoteServerFile([filePath])
-    deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    const deleted = await removeRemoteFiles([filePath])
+    deleted !== 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
     if (ext === '.srt') {
         const newMinioLink = await convertMinioSrtToVtt(episodeSubtitle.minioLink)
         newMinioLink && await rssSubtitleRep.updateSubtitleMinioLinkById(subtitleId, newMinioLink)
@@ -107,8 +106,8 @@ export async function retryUploadEpisodeSubtitle(id) {
     const complete = await uploadSubtitleToMinio(filePath, minioLink, id)
 
     complete || __throwMessage('Upload to minio failed.')
-    const deleted = await removeRemoteServerFile([filePath])
-    deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(id, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    const deleted = await removeRemoteFiles([filePath])
+    deleted !== 0 || await rssSubtitleRep.updateSubtitleFileStatusById(id, RSS_SUBTITLE_FILE_STATUS.REMOVED)
     const ext = path.extname(fileName)
     if (ext === '.srt') {
         const newMinioLink = await convertMinioSrtToVtt(minioLink)
@@ -145,7 +144,7 @@ export async function deleteEpisodeSubtitle(subtitleId) {
     }
     const deleted = await deleteEpisodeSubtitleFileInternal(subtitle)
     // delete episode subtitle from repository
-    deleted < 0 || await rssSubtitleRep.deleteOneById(subtitle.id)
+    deleted !== 0 || await rssSubtitleRep.deleteOneById(subtitle.id)
 }
 
 export async function deleteEpisodeSubtitleFile(subtitleId) {
@@ -153,7 +152,7 @@ export async function deleteEpisodeSubtitleFile(subtitleId) {
     const subtitle = await rssSubtitleRep.selectOneById(subtitleId)
     subtitle || __throwMessage('Episode subtitle not exists.')
     const deleted = await deleteEpisodeSubtitleFileInternal(subtitle)
-    deleted < 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    deleted !== 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
 }
 
 export async function recalculateEpisodeSubtitleFonts(subtitleId) {
@@ -177,52 +176,26 @@ async function deleteEpisodeSubtitleFileInternal(subtitle) {
     if (__isAnyBlank(rootPath, fileName)) return 1
     const filePath = path.join(rootPath, fileName)
     // delete episode subtitle file
-    return await removeRemoteServerFile([filePath])
-}
-
-async function removeRemoteServerFile(files) {
-    __log.info(`Ready to delete files: `, files)
-    const executor = getSSHExecutor('storage')
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Delete remote files: ${files.join(', ')}`
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
-    }
+    return await removeRemoteFiles([filePath])
 }
 
 async function uploadSubtitleToMinio(filePath, minioLink, subtitleId) {
     await rssSubtitleRep.updateSubtitleStatusById(subtitleId, RSS_SUBTITLE_STATUS.UPLOADING)
-    const result = await executeSshScript(filePath, minioLink, SSH_CMD_MINIO_COPY_SCRIPT)
-    const complete = result === 1
+    const result = await uploadFileToMinio(filePath, minioLink)
+    const complete = result === 0
     const status = complete ? RSS_SUBTITLE_STATUS.COMPLETE : RSS_SUBTITLE_STATUS.FAILED
     await rssSubtitleRep.updateSubtitleStatusById(subtitleId, status)
     return complete
 }
 
-async function executeSshScript(resourcePath, minioLink, script) {
+async function uploadFileToMinio(resourcePath, minioLink) {
     const client = getMinioClient()
     if (!client?.ready()) {
         logAndPushNotification(`Upload subtitle minio object failed. Cause client not ready.`)
         return -1
     }
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
-    const executor = getSSHExecutor('storage')
-    if (!executor) return -2
-    try {
-        const desc = `Upload file to minio: ${resourcePath} -> ${suitableMinioLink}`;
-        const { code } = await executor.exec(script, [resourcePath, suitableMinioLink], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e)
-        return -3
-    }
+    return await copyRemoteFileToMinio(resourcePath, suitableMinioLink)
 }
 
 async function convertMinioSrtToVtt(srtMinioLink = '') {

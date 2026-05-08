@@ -2,13 +2,11 @@ import { EPISODE_STATUS, EPISODE_FAILED_REASON } from "../constants/rssTaskStatu
 import { getMinioClient } from "../../../core/instance/minioClient.js";
 import rssEpisodeRep from "../repository/rssEpisodeRep.js";
 import rssRep from "../repository/rssRep.js";
-import { getSSHExecutor } from "../../../core/instance/sshExecutor.js";
 import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
-import { SSH_CMD_MINIO_MOVE_SCRIPT } from "../../../common/constants/sshScriptsConst.js";
 import { pushNotification } from "../../../api/sockets/notification.js";
-import { convertMkvToMp4, deleteRemoteFiles } from "./rssTaskService.js";
 import { Tracer } from "../../../core/infra/tracer.js";
+import { convertMkvToMp4, moveRemoteFileToMinio, removeRemoteFiles } from "../../ssh/sshExecutorService.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
 
@@ -107,7 +105,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
         __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
         Tracer.tryStreamMessage('Try to convert mkv file to mp4.')
         const convertResult = await convertMkvToMp4(filePath, mp4FilePath)
-        if (convertResult === 1) {
+        if (convertResult === 0) {
             Tracer.tryStreamMessage('Convert mkv file to mp4 success.')
             failed.fileName = mp4FileName;
             const originFilePath = filePath;
@@ -115,7 +113,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
             ext = '.mp4';
             __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file convert to mp4 success. Remove origin mkv file: ${originFilePath}`)
             await rssEpisodeRep.updateFailedEpisodeFileNameById(mp4FileName, failedEpisodeId)
-            await deleteRemoteFiles([originFilePath])
+            await removeRemoteFiles([originFilePath])
         } else {
             __throwMessage('Convert file mkv to mp4 failed.')
         }
@@ -164,12 +162,12 @@ export async function retryFailedEpisode(failedEpisodeId) {
     const statusMap = {
         [-2]: 'Generate executor failed.',
         [-1]: 'Minio client not ready.',
-        1: "SUCCESS",
-        2: "Execute script failed.",
+        0: "SUCCESS",
+        1: "Execute script failed.",
         255: "Script execution missing params."
     }
 
-    if (code === 1) {
+    if (code === 0) {
         await rssEpisodeRep.updateFailedReasonById(failedEpisodeId, EPISODE_FAILED_REASON.SUCCESS, episode)
         await rssEpisodeRep.updateStatusById(lastId, EPISODE_STATUS.COMPLETE)
     } else {
@@ -185,18 +183,7 @@ async function executeRetryFailedEpisodeResolveCommand(filePath, minioLink) {
         return -1;
     }
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
-    const executor = getSSHExecutor('storage')
-    if (!executor) {
-        return -2
-    }
-    try {
-        const desc = `Upload file to minio: ${filePath} -> ${suitableMinioLink}`;
-        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [filePath, suitableMinioLink], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ssh script failed.', e.message ?? e)
-        return 2
-    }
+    return await moveRemoteFileToMinio(filePath, suitableMinioLink)
 }
 
 export async function updateFailedEpisode(data) {

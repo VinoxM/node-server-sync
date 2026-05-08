@@ -8,10 +8,10 @@ exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     echo "Transfer Success"
-    exit 1
+    exit 0
 else
     echo "Transfer Failed with code $exit_code" >&2
-    exit 2
+    exit 1
 fi' --`;
 
 export const SSH_CMD_MINIO_COPY_SCRIPT = `bash -c '
@@ -24,10 +24,10 @@ exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     echo "Transfer Success"
-    exit 1
+    exit 0
 else
     echo "Transfer Failed with code $exit_code" >&2
-    exit 2
+    exit 1
 fi' --`;
 
 export const SSH_CMD_MINIO_DOWNLOAD_SCRIPT = `bash -c '
@@ -44,11 +44,11 @@ exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
     echo "Transfer Success"
-    exit 1
+    exit 0
 else
     echo "Transfer Failed with code $exit_code. Cleaning up..." >&2
     /usr/local/bin/mc rm "$target_path" > /dev/null 2>&1    
-    exit 2
+    exit 1
 fi' --`;
 
 export const SSH_CMD_BATCH_DELETE_SIMPLE = `bash -c '
@@ -62,9 +62,9 @@ export const SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 = `bash -c '
 set +H
 if ffmpeg -y -loglevel error -i "$1" -c:v copy -c:a aac -b:a 320k -movflags +faststart "$2"; then
     echo "Convert Success"
-    exit 1
+    exit 0
 else
     echo "Convert Failed"
-    exit 2
+    exit 1
 fi
 ' --`;
