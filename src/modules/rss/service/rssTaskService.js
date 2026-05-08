@@ -132,6 +132,16 @@ async function resolveTaskEpisode(rssTask) {
     for (const fileInfo of files) {
         const fileName = fileInfo.name
         let simpleFileName = fileInfo.name
+        const priority = parseInt(fileInfo.priority)
+        const progress = parseFloat(fileInfo.progress)
+        if (priority === 0) {
+            __log.warn(`[RssTask] Skip resolve low priority file: ${fileName}`)
+            continue;
+        }
+        if (progress < 1) {
+            __log.warn(`[RssTask] Skip resolve file not fully downloaded: ${fileName}`)
+            continue;
+        }
         const index = simpleFileName.lastIndexOf('/')
         if (index > -1) {
             simpleFileName = simpleFileName.substring(index + 1)

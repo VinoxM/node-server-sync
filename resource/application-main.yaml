@@ -98,6 +98,7 @@ rss:
   animeExtRegex: ^\.(mp4|avi|flv|mkv|mov|wmv|rmvb|3gp|mpeg|mpg)$
   subtitleExtRegex: ^\.(srt|vtt|ass)$
   subtitleMatchers:
+    - .*?(JPTC|JPSC).*
     - .*?(cht|chs).*
     - .*?(tc|sc).*
 clash:
