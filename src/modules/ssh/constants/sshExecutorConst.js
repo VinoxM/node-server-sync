@@ -20,7 +20,7 @@ const DOWNLOAD_FILE_TO_MINIO = {
 
 const REMOVE_REMOTE_FILE = {
     title: 'Remove Remote File',
-    descGenerator: (files) => `Remove remote files: ${files.join(', ')}`,
+    descGenerator: (...files) => `Remove remote files: ${files.join(', ')}`,
     script: sshScripts.SSH_CMD_BATCH_DELETE_SIMPLE
 }
 
