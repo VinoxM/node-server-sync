@@ -1,12 +1,5 @@
 import { getSSHExecutor } from "../../core/instance/sshExecutor.js"
 import sshExecutorConst from "./constants/sshExecutorConst.js"
-import {
-    SSH_CMD_BATCH_DELETE_SIMPLE,
-    SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4,
-    SSH_CMD_MINIO_COPY_SCRIPT,
-    SSH_CMD_MINIO_DOWNLOAD_SCRIPT,
-    SSH_CMD_MINIO_MOVE_SCRIPT
-} from "./constants/sshScriptsConst.js"
 
 const DEFAULT_SSH_EXECUTOR_LABEL = 'storage'
 
@@ -24,7 +17,7 @@ async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
     const { script, descGenerator, title } = executionOpt
     const desc = descGenerator(...sshArgs);
     try {
-        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [...sshArgs], { desc, title });
+        const { code } = await executor.exec(script, [...sshArgs], { desc, title });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute move file to minio ssh script failed.', e.message ?? e)
