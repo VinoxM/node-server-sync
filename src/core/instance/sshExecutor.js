@@ -2,6 +2,10 @@ import { Client } from 'ssh2';
 import { Tracer } from '../infra/tracer.js';
 import { broadcastSSE } from '../../modules/socket/sseStorage.js';
 
+const TASK_DESCRIPTION_DEFAULT_VALUE = {
+    title: 'Unknown Task',
+    desc: 'Unknown Task Description'
+}
 const SSE_LABEL = 'executor';
 export const SSE_EVENT = {
     MESSAGE: 'message',
@@ -29,6 +33,7 @@ class SSHExecutor {
     #queue = Promise.resolve();
     #pendingCount = 0;
 
+    #tasksDesc = [];
     #taskSnapshot = {
         desc: 'Unknown',
         std: [],
@@ -88,9 +93,20 @@ class SSHExecutor {
         });
     }
 
-    #initTaskSnapshot(options = {}) {
+    #putTaskDesc(options = {}) {
+        const title = options.title ?? TASK_DESCRIPTION_DEFAULT_VALUE.title;
+        const desc = options.desc ?? TASK_DESCRIPTION_DEFAULT_VALUE.desc;
+        this.#tasksDesc.push({ title, desc });
+    }
+
+    #popTaskDesc() {
+        return this.#tasksDesc.shift();
+    }
+
+    #initTaskSnapshot(taskDesc = {}) {
         this.#taskSnapshot = {
-            desc: options.desc || 'Unknown',
+            title: taskDesc.title || TASK_DESCRIPTION_DEFAULT_VALUE.title,
+            desc: taskDesc.desc || TASK_DESCRIPTION_DEFAULT_VALUE.desc,
             std: [],
             ended: false
         }
@@ -100,7 +116,8 @@ class SSHExecutor {
         return {
             ready: this.#isReady,
             pendingCount: this.#pendingCount,
-            taskSnapshot: this.#taskSnapshot
+            taskSnapshot: this.#taskSnapshot,
+            tasksDesc: this.#tasksDesc
         }
     }
 
@@ -142,22 +159,25 @@ class SSHExecutor {
      * 公开执行接口：串行化任务
      */
     async exec(scriptPath, args = [], options = {}) {
-        this.#emit(SSE_EVENT.PENDING_UPDATE, ++this.#pendingCount);
+        this.#pendingCount++;
+        this.#putTaskDesc(options);
+        this.#emit(SSE_EVENT.PENDING_UPDATE, this.#tasksDesc);
         this.#logMessage(`[${this.#label}] Task queued. Queue size: ${this.#pendingCount}`);
-
         // 核心逻辑：通过不断的 .then 形成 Promise 链条
         this.#queue = this.#queue.then(async () => {
-            this.#initTaskSnapshot(options)
+            const taskDesc = this.#popTaskDesc();
+            this.#initTaskSnapshot(taskDesc)
             this.#logMessage(`[${this.#label}] Execution started. Queue depth: ${this.#pendingCount}`);
-            this.#emit(SSE_EVENT.EXEC_START, options.desc || 'Unknown')
+            this.#emit(SSE_EVENT.EXEC_START, taskDesc?.desc || 'Unknown')
 
             try {
                 return await this.#internalExec(scriptPath, args, options);
             } finally {
-                this.#emit(SSE_EVENT.EXEC_END, options.desc || 'Unknown');
-                this.#emit(SSE_EVENT.PENDING_UPDATE, --this.#pendingCount);
-                this.#logMessage(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
+                this.#pendingCount--;
+                this.#emit(SSE_EVENT.EXEC_END, taskDesc?.desc || 'Unknown');
+                this.#emit(SSE_EVENT.PENDING_UPDATE, this.#tasksDesc);
                 this.#taskSnapshot.ended = true;
+                this.#logMessage(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
                 this.#resetIdleTimer();
             }
         }).catch(err => {

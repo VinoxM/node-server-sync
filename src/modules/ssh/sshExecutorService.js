@@ -1,4 +1,5 @@
 import { getSSHExecutor } from "../../core/instance/sshExecutor.js"
+import sshExecutorConst from "./constants/sshExecutorConst.js"
 import {
     SSH_CMD_BATCH_DELETE_SIMPLE,
     SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4,
@@ -14,15 +15,16 @@ function getSuitableSshExecutor(opts) {
     return getSSHExecutor(label)
 }
 
-export async function moveRemoteFileToMinio(sourceFile, minioLink, opts = {}) {
+async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
     const executor = getSuitableSshExecutor(opts)
     if (!executor) {
         __log.warn(`SSH executor not ready.`)
         return -2
     }
+    const { script, descGenerator, title } = executionOpt
+    const desc = descGenerator(...sshArgs);
     try {
-        const desc = `Move file to minio: ${sourceFile} -> ${minioLink}`;
-        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [sourceFile, minioLink], { desc });
+        const { code } = await executor.exec(SSH_CMD_MINIO_MOVE_SCRIPT, [...sshArgs], { desc, title });
         return parseInt(code)
     } catch (e) {
         __log.error('Execute move file to minio ssh script failed.', e.message ?? e)
@@ -30,67 +32,23 @@ export async function moveRemoteFileToMinio(sourceFile, minioLink, opts = {}) {
     }
 }
 
+export async function moveRemoteFileToMinio(sourceFile, minioLink, opts = {}) {
+    return executeSshScript(sshExecutorConst.MOVE_FILE_TO_MINIO, opts, sourceFile, minioLink)
+}
+
 export async function copyRemoteFileToMinio(sourceFile, minioLink, opts = {}) {
-    const executor = getSuitableSshExecutor(opts)
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Copy file to minio: ${sourceFile} -> ${minioLink}`;
-        const { code } = await executor.exec(SSH_CMD_MINIO_COPY_SCRIPT, [sourceFile, minioLink], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute copy file to minio ssh script failed.', e.message ?? e)
-        return 1
-    }
+    return executeSshScript(sshExecutorConst.COPY_FILE_TO_MINIO, opts, sourceFile, minioLink)
 }
 
 export async function downloadFileToMinio(sourceUrl, minioLink, opts = {}) {
-    const executor = getSuitableSshExecutor(opts)
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Download file to minio: ${sourceUrl} -> ${minioLink}`;
-        const { code } = await executor.exec(SSH_CMD_MINIO_DOWNLOAD_SCRIPT, [sourceUrl, minioLink], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute download file to minio ssh script failed.', e.message ?? e)
-        return 1
-    }
+    return executeSshScript(sshExecutorConst.DOWNLOAD_FILE_TO_MINIO, opts, sourceUrl, minioLink)
 }
 
 export async function removeRemoteFiles(files, opts = {}) {
     __log.info(`Ready to delete files: `, files)
-    const executor = getSuitableSshExecutor(opts)
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Remove remote files: ${files.join(', ')}`;
-        const { code } = await executor.exec(SSH_CMD_BATCH_DELETE_SIMPLE, files, { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute remove remote files ssh script failed.', e.message ?? e)
-        return 1
-    }
+    return executeSshScript(sshExecutorConst.REMOVE_REMOTE_FILE, opts, ...files)
 }
 
 export async function convertMkvToMp4(mkvFilePath, mp4FilePath, opts = {}) {
-    const executor = getSuitableSshExecutor(opts)
-    if (!executor) {
-        __log.warn(`SSH executor not ready.`)
-        return -2
-    }
-    try {
-        const desc = `Convert file mkv to mp4: ${mkvFilePath} -> ${mp4FilePath}`;
-        const { code } = await executor.exec(SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4, [mkvFilePath, mp4FilePath], { desc });
-        return parseInt(code)
-    } catch (e) {
-        __log.error('Execute ffmpeg convert ssh script failed.', e.message ?? e)
-        return 1
-    }
+    return executeSshScript(sshExecutorConst.CONVERT_MKV_TO_MP4, opts, mkvFilePath, mp4FilePath)
 }

@@ -16,11 +16,11 @@ export default {
         }
         const snapshot = getExecutorSnapshot(label) || {}
 
-        const { ready = false, pendingCount = 0, taskSnapshot = {} } = snapshot
+        const { ready = false, tasksDesc = [], taskSnapshot = {} } = snapshot
 
         client.emitEvent(ready ? SSE_EVENT.READY : SSE_EVENT.DESTROY);
 
-        client.emitEvent(SSE_EVENT.PENDING_UPDATE, pendingCount);
+        client.emitEvent(SSE_EVENT.PENDING_UPDATE, tasksDesc);
 
         const std = taskSnapshot?.std || [];
         if (!Array.isArray(std) || std.length === 0) return;
