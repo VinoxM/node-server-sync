@@ -217,7 +217,7 @@ sqlite:
       - tableName: videos
         DDL: |
           CREATE TABLE videos (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `unique_id` varchar(100) NOT NULL,
             `title` varchar(500) NOT NULL,
             `category_id` integer NOT NULL,
@@ -234,7 +234,7 @@ sqlite:
       - tableName: categories
         DDL: |
           CREATE TABLE categories (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `name` varchar(100) NOT NULL,
             `type` integer NOT NULL DEFAULT 0,
             CONSTRAINT `idx_category_name` UNIQUE (`name`)
@@ -242,7 +242,7 @@ sqlite:
       - tableName: authors
         DDL: |
           CREATE TABLE authors (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `category_id` integer NOT NULL,
             `name` varchar(100) NOT NULL,
             CONSTRAINT `idx_author_name` UNIQUE (`category_id`, `name`)
@@ -251,7 +251,7 @@ sqlite:
       - tableName: tags
         DDL: |
           CREATE TABLE tags (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `name` varchar(100) NOT NULL,
             CONSTRAINT `idx_tag_name` UNIQUE (`name`)   
           )
@@ -282,7 +282,7 @@ sqlite:
       - tableName: video_minio
         DDL: |
           CREATE TABLE video_minio (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `video_id` integer NOT NULL,
             `type` integer NOT NULL,
             `origin_uri` text NOT NULL,
@@ -296,7 +296,7 @@ sqlite:
       - tableName: aria2_task
         DDL: |
           CREATE TABLE aria2_task (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `minio_id` integer NOT NULL,
             `gid` varchar(100) NOT NULL,
             `file_path` varchar(500) DEFAULT NULL,
