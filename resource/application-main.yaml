@@ -17,7 +17,9 @@ api:
   requestBodyLimit: 2 * 1024 * 1024
   apiDisabled:
     - /common/doNothing
-  allowHosts: []
+  allowHosts:
+    - api: /summary/*
+      hosts: ["*-coder.vinoxm.cloud", "server.vinoxm.name"]
   filterDisabled: []
   needAuth:
     - /rss(/v2)?/[(?!get)|Matchers]*$
@@ -64,6 +66,9 @@ schedule:
   kuroGameSign:
     enable: true
     corn: 0 0 0 * * *
+  storageSummary:
+    enable: true
+    corn: 0 0 6 * * *
 rss:
   subscribeHandler:
     parallelNum: 3
@@ -142,4 +147,31 @@ clash:
       KR: ["韩"]
   backup:
     fileLimit: 10
-
+statistics:
+  scanOptions:
+    - dbName: rss
+      tables:
+        - tableName: rss_episode
+          linkColumn: minio_link
+          sizeColumn: object_size
+          matchers:
+            - status = 1
+        - tableName: rss_episode_subtitle
+          linkColumn: minio_link
+          sizeColumn: object_size
+          matchers:
+            - status = 2
+        - tableName: rss_fonts
+          linkColumn: minio_link
+          sizeColumn: object_size
+    - dbName: media
+      tables:
+        - tableName: video_minio
+          linkColumn: link
+          sizeColumn: object_size
+          matchers:
+            - status = 3
+  bucketUsage:
+    statQueryBatch: 10
+    backfillBatch: 100
+    scanBatchSize: 2000

@@ -112,6 +112,22 @@ class MinioClient extends ContextSubscribe {
         return result
     }
 
+    async getObjectStat(minioLink, errorCallback) {
+        const label = this.#getSuitableMinioLabel(minioLink)
+        try {
+            this.#clientReady(label) || __throwMessage(`Minio not ready.`)
+            const { bucket, objectName } = splitMinioLink(minioLink)
+            return await this.#client.get(label).statObject(bucket, objectName)
+        } catch (ex) {
+            if (__isFunction(errorCallback)) {
+                errorCallback(ex, label)
+            } else {
+                throw ex
+            }
+        }
+        return null
+    }
+
     async deleteObject(minioLink, errorCallback) {
         const label = this.#getSuitableMinioLabel(minioLink)
         try {
@@ -133,7 +149,7 @@ class MinioClient extends ContextSubscribe {
         const label = this.#getSuitableMinioLabel(minioLink)
         try {
             this.#clientReady(label) || __throwMessage(`Minio not ready.`)
-            const { bucket, objectName } = splitMinioLink(minioLink)            
+            const { bucket, objectName } = splitMinioLink(minioLink)
             return await this.#client.get(label).getObject(bucket, objectName);
         } catch (ex) {
             if (__isFunction(errorCallback)) {
@@ -151,7 +167,7 @@ class MinioClient extends ContextSubscribe {
         const label = this.#getSuitableMinioLabel(minioLink)
         try {
             this.#clientReady(label) || __throwMessage(`Minio not ready.`)
-            const { bucket, objectName } = splitMinioLink(minioLink)            
+            const { bucket, objectName } = splitMinioLink(minioLink)
             return await this.#client.get(label).putObject(bucket, objectName, bufferContent, bufferLength, metaData);
         } catch (ex) {
             if (__isFunction(errorCallback)) {
@@ -188,7 +204,7 @@ function tryMatch(matcher, text, label) {
     }
 }
 
-function splitMinioLink(minioLink) {
+export function splitMinioLink(minioLink) {
     let link = String(minioLink)
     if (link.startsWith('/')) {
         link = link.slice(1)

@@ -1,5 +1,6 @@
 import { pushNotification } from "../../../../api/sockets/notification.js"
 import { dateFormat } from "../../../../common/utils/dateUtil.js"
+import { formatFileSize } from "../../../../common/utils/humanUtil.js"
 import { Tracer } from "../../../../core/infra/tracer.js"
 import { removeRemoteFiles } from "../../../ssh/sshExecutorService.js"
 import {
@@ -57,7 +58,7 @@ export async function saveBiliveFile(recordId, event, eventTimestamp, eventData)
 export async function getFilesByStreamId(streamId) {
     const data = await biliveFileRep.selectFilesByStreamId(streamId).then(({ data }) => data)
     return data.map(file => {
-        const fileSize = resolveFileSize(file.fileSize)
+        const fileSize = formatFileSize(file.fileSize)
         return {
             ...file,
             fileSize
@@ -156,16 +157,6 @@ export async function removeFileByFileId(id) {
 
 export async function deleteFile(id) {
     await biliveFileRep.deleteFileById(id);
-}
-
-function resolveFileSize(bytes, decimals = 2) {
-    if (bytes === null || bytes === undefined) return '-'
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 function tryResolveTime(time) {

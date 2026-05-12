@@ -52,8 +52,8 @@ export async function checkVideoFilterRules(body) {
     }
     return results.map((r, i) => {
         if (r.downloaded === null) {
-            const { author, uniqueId } = rules[i]
-            r.downloaded = videos.some(v => (__isNotBlank(author) ? v.authorName === author : true) && v.uniqueId === uniqueId)
+            const { uniqueId } = rules[i]
+            r.downloaded = __isNotBlank(uniqueId) && videos.some(v => v.uniqueId === uniqueId)
         }
         return r
     })

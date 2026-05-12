@@ -20,7 +20,7 @@ async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
         const { code } = await executor.exec(script, [...sshArgs], { desc, title });
         return parseInt(code)
     } catch (e) {
-        __log.error('Execute move file to minio ssh script failed.', e.message ?? e)
+        __log.error(`Execute ssh script [${title}] failed.`, e.message ?? e)
         return 1
     }
 }

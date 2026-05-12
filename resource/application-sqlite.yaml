@@ -111,9 +111,11 @@ sqlite:
             `episode` varchar(10) NOT NULL,
             `minio_link` varchar(500) DEFAULT NULL,
             `status` varchar(1) NOT NULL,
+            `object_size` text DEFAULT NULL,
             CONSTRAINT `idx_rss_id_episode` UNIQUE (`rss_subs_id`, `episode`)
-          )
-          CREATE INDEX `idx_rss_ep_task_id` ON rss_episode_subtitle(`rss_task_id`);
+          );
+          CREATE INDEX `idx_rss_ep_task_id` ON rss_episode(`rss_task_id`);
+          CREATE INDEX `idx_rss_ep_object_size` ON rss_episode(`object_size`);
       - tableName: rss_episode_failed
         DDL: |
           CREATE TABLE rss_episode_failed (
@@ -126,9 +128,9 @@ sqlite:
             `file_name` varchar(500) NOT NULL,
             `reason` varchar(1) NOT NULL,
             `create_time` datetime NOT NULL
-          )
-          CREATE INDEX `idx_rss_epf_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
-          CREATE INDEX `idx_rss_epf_task_id` ON rss_episode_subtitle(`rss_task_id`);
+          );
+          CREATE INDEX `idx_rss_epf_subs_id` ON rss_episode_failed(`rss_subs_id`);
+          CREATE INDEX `idx_rss_epf_task_id` ON rss_episode_failed(`rss_task_id`);
       - tableName: rss_episode_subtitle
         DDL: |
           CREATE TABLE rss_episode_subtitle (
@@ -142,18 +144,22 @@ sqlite:
             `file_name` varchar(500) NOT NULL,
             `fonts` text DEFAULT NULL,
             `status` integer NOT NULL,
-            `file_status` integer NOT NULL
+            `file_status` integer NOT NULL,
+            `object_size` text DEFAULT NULL
           );
           CREATE INDEX `idx_rss_ep_st_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
           CREATE INDEX `idx_rss_ep_st_task_id` ON rss_episode_subtitle(`rss_task_id`);
+          CREATE INDEX `idx_rss_ep_st_object_size` ON rss_episode_subtitle(`object_size`);
       - tableName: rss_fonts
         DDL: |
           CREATE TABLE rss_fonts (
             `id` integer PRIMARY KEY NOT NULL,
             `title` text NOT NULL,
             `minio_link` text DEFAULT NULL,
+            `object_size` text DEFAULT NULL,
             CONSTRAINT `idx_rss_fonts_title` UNIQUE (`title`)
           );
+          CREATE INDEX `idx_rss_fonts_object_size` ON rss_fonts(`object_size`);
     kuro:
       - tableName: kuro_community_account
         DDL: |
@@ -283,7 +289,8 @@ sqlite:
             `link` text NOT NULL,
             `title` text DEFAULT NULL,
             `status` integer NOT NULL,
-            `sort` integer NOT NULL DEFAULT 0
+            `sort` integer NOT NULL DEFAULT 0,
+            `object_size` text DEFAULT NULL
           );
           CREATE UNIQUE INDEX idx_video_type1_unique ON video_minio(`video_id`) WHERE type = 1;
       - tableName: aria2_task
@@ -372,3 +379,14 @@ sqlite:
             `failed_reason` text,
             `backup_file` text
           );
+    statistics:
+      - tableName: storage_summary
+        DDL: |
+          CREATE TABLE storage_summary (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `summary_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `total_count` integer NOT NULL DEFAULT 0,
+            `total_size` text DEFAULT NULL,
+            `dimensions` json DEFAULT NULL
+          );
+          CREATE INDEX `idx_ss_summary_at` ON storage_summary(`summary_at`);
