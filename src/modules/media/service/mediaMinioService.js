@@ -352,6 +352,14 @@ export function getMinioClientMatchers() {
     return client.getMinioMatchers()
 }
 
+export function getMinioClientMatchersSafely() {
+    const client = getMinioClient()
+    if (client.ready()) {
+        return client.getMinioMatchers();
+    }
+    return null;
+}
+
 export function generateMinioSourceSafely(minioLink) {
     const client = getMinioClient()
     if (client?.ready?.()) {
