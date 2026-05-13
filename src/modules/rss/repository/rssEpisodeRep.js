@@ -1,4 +1,4 @@
-import { EPISODE_STATUS } from "../constants/rssTaskStatusConst.js"
+import { EPISODE_FAILED_REASON, EPISODE_STATUS } from "../constants/rssTaskStatusConst.js"
 
 const dbName = 'rss'
 const enablePrint = { print: true }
@@ -118,5 +118,9 @@ export default {
     selectFailedTaskExistsById: id => {
         const sql = 'SELECT ref.id, COUNT(rt.id) count FROM rss_episode_failed ref INNER JOIN rss_torrent_task rt ON ref.rss_task_id=rt.id WHERE ref.id=?'
         return __sqliteDB.selectOne(sql, [id], null, dbName).then(data => data.count > 0)
+    },
+    selectFailedCount: () => {
+        const sql = `SELECT COUNT(*) AS count FROM rss_episode_failed WHERE reason!=${EPISODE_FAILED_REASON.SUCCESS}`
+        return __sqliteDB.selectOne(sql, [], null, dbName).then(data => data?.count || 0)
     }
 }

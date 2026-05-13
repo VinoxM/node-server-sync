@@ -89,5 +89,9 @@ export default {
     selectBySubsIdAndEpisode: (rssSubsId, episode) => {
         const sql = `SELECT ${FULL_COLUMN.join(',')} FROM rss_episode_subtitle WHERE rss_subs_id=? AND episode=? AND status=?`
         return __sqliteDB.selectAll(sql, [rssSubsId, episode, RSS_SUBTITLE_STATUS.COMPLETE], null, dbName);
+    },
+    selectFailedCount: () => {
+        const sql = `SELECT COUNT(*) AS count FROM rss_episode_subtitle WHERE status=${RSS_SUBTITLE_STATUS.FAILED}`
+        return __sqliteDB.selectOne(sql, [], null, dbName).then(data => data?.count || 0)
     }
 }

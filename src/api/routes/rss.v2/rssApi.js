@@ -177,6 +177,19 @@ export default {
             return { record, total, pageNum, pageSize }
         }
     },
+    '/getRssCardFailedViews': {
+        method: GET,
+        needAuth: true,
+        needSecret: () => "mAou5820.subscribe",
+        callback: async () => {
+            const episodeFailedCount = await rssEpisodeRep.selectFailedCount();
+            const subtitleFailedCount = await rssSubtitleRep.selectFailedCount();
+            return {
+                episodeFailedCount,
+                subtitleFailedCount
+            }
+        }
+    },
     "/getRssEpisodeSource": {
         method: POST,
         needSecret: () => "mAou5820.subscribe",
