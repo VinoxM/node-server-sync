@@ -93,15 +93,15 @@ sqlite:
       - tableName: rss_torrent_task
         DDL: |
           CREATE TABLE rss_torrent_task (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `rss_subs_id` integer NOT NULL,
             `rss_result_id` integer NOT NULL,
             `torrent_uuid` varchar(12) DEFAULT NULL,
             `torrent_hash` varchar(256) DEFAULT NULL,
             `status` varchar(1) NOT NULL,
             CONSTRAINT `idx_rss_result_id` UNIQUE (`rss_result_id`)
-          )
-          CREATE INDEX `idx_rss_tt_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
+          );
+          CREATE INDEX `idx_rss_tt_subs_id` ON rss_torrent_task(`rss_subs_id`);
       - tableName: rss_episode
         DDL: |
           CREATE TABLE rss_episode (
