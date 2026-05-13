@@ -160,7 +160,7 @@ export default {
             const { videoId, taskIds = [], sourceIds = [] } = req.body
             await Promise.all([
                 videosRep.selectOne(videoId).then(video => { result.videoStatus = video?.status ?? null; result.videoTotalSize = video?.totalSize ?? null; }),
-                videoMinioRep.selectByMinioIds(sourceIds).then(({ data }) => data?.forEach(d => result.sources[d.id] = d.status)),
+                videoMinioRep.selectByMinioIds(sourceIds).then(({ data }) => data?.forEach(d => result.sources[d.id] = { status: d.status, size: d.objectSize })),
                 getTaskInfoAndDownloadStatus(taskIds).then(r => result.tasks = r)
             ])
             return result

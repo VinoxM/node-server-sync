@@ -60,7 +60,7 @@ export default {
         if (__isEmptyArray(minioIds)) {
             return { rows: 0, data: [] }
         }
-        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE id IN (${minioIds.map(() => '?').join(',')})`
+        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort, object_size FROM video_minio WHERE id IN (${minioIds.map(() => '?').join(',')})`
         return __sqliteDB.selectAll(sql, minioIds, null, dbName)
     },
     selectSourceByVideoId: videoId => {
