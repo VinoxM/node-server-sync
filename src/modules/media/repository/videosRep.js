@@ -88,7 +88,7 @@ export default {
         return __sqliteDB.update(sql, params, null, dbName)
     },
     selectOne: async (videoId, ignoreRemoved = false) => {
-        let sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time FROM videos WHERE id=?'
+        let sql = 'SELECT id, unique_id, title, author_id, category_id, upload_time, status, create_time, total_size FROM videos WHERE id=?'
         if (ignoreRemoved) {
             sql += ` AND status!=${MEDIA_VIDEO_STATUS.REMOVED}`
         }
@@ -105,6 +105,12 @@ export default {
         }
         return result
     },
+    /** Object Size */
+    updateTotalSize: (videoId, totalSize) => {
+        const sql = `UPDATE videos SET total_size=? WHERE id=?`
+        return __sqliteDB.update(sql, [totalSize, videoId], null, dbName)
+    },
+    /** Search */
     selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false) => {
         let sqlConcat = [];
         let params = [];
@@ -154,13 +160,13 @@ export default {
         let sql = 'SELECT '
             + 'v.id, v.unique_id, v.title, v.author_id, v.category_id, '
             + 'v.upload_time, v.status, v.create_time, '
-            + 'tc.name AS category, '
+        if (needTotalSize) {
+            sql += 'v.total_size, '
+        }
+        sql += 'tc.name AS category, '
             + 'ta.name AS author, '
             + '(SELECT link FROM video_minio WHERE video_id = v.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover '
-        if (needTotalSize) {
-            sql += ', CAST( (SELECT IFNULL(SUM(CAST(object_size AS INTEGER)), 0) FROM video_minio WHERE video_id = v.id) AS TEXT) AS total_video_size '
-        }
-        sql += 'FROM ('
+            + 'FROM ('
             + 'SELECT tv.id '
             + 'FROM videos tv '
             + categoryJoin

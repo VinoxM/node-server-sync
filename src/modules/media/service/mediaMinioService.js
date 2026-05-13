@@ -19,7 +19,7 @@ const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 export async function searchMinio(videoId) {
     const videoInfo = await videosRep.selectOne(videoId)
     if (!videoInfo) return null
-    const result = { videoStatus: videoInfo.status, storages: [] }
+    const result = { videoStatus: videoInfo.status, videoTotalSize: videoInfo.totalSize, storages: [] }
     const minioList = await videoMinioRep.selectByVideoId(videoId).then(({ data }) => data)
     if (Array.isArray(minioList)) {
         const minioIdMapping = new Map();
@@ -201,7 +201,17 @@ export async function updateVideoStatusByVideoMinioStatus(videoId) {
     } else if (videoStatus === MEDIA_VIDEO_STATUS.COMPLETE) {
         __log.info(`[${videoId}] Video minio all resolved, setup video status to complete.`)
     }
+    await tryUpdateVideoTotalSize(videoId)
     return videoStatus
+}
+
+async function tryUpdateVideoTotalSize(videoId) {
+    try {
+        const totalSize = await videoMinioRep.selectTotalSizeByVideoId(videoId)
+        totalSize && await videosRep.updateTotalSize(videoId, totalSize);
+    } catch (err) {
+        __log.error(`[${videoId}] Update video total size failed. Cause: ${err.message ?? 'Unknown error'}`)
+    }
 }
 
 /**
@@ -310,7 +320,7 @@ const CANT_NOT_DELETE_MINIO_STATUS = [
 export async function deleteVideoMinio(minioId, safely = false) {
     const minioInfo = await videoMinioRep.selectOneById(minioId)
     if (!minioInfo) return;
-    const { id, link, status } = minioInfo
+    const { id, link, status, videoId } = minioInfo
     safely && CANT_NOT_DELETE_MINIO_STATUS.includes(status) && __throwMessage('Minio can not delete.')
     const { rows } = await videoMinioRep.updateStatusById(id, MEDIA_MINIO_STATUS.REMOVED)
     const aria2Tasks = await aria2TaskRep.selectByMinioId(minioId).then(({ data }) => data)
@@ -329,6 +339,7 @@ export async function deleteVideoMinio(minioId, safely = false) {
         }
     }
     await videoMinioRep.deleteByMinioId(id)
+    await tryUpdateVideoTotalSize(videoId)
 }
 
 async function deleteMinioAndObject(minioLink, minioId) {

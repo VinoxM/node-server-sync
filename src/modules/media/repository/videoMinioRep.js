@@ -75,5 +75,9 @@ export default {
     updateObjectSizeById: (objectSize, id) => {
         const sql = `UPDATE video_minio SET object_size=? WHERE id=?`
         return __sqliteDB.update(sql, [objectSize, id], null, dbName)
+    },
+    selectTotalSizeByVideoId: videoId => {
+        const sql = `SELECT CAST(IFNULL(SUM(CAST(object_size AS INTEGER)), 0) AS TEXT) AS videoTotalSize FROM video_minio WHERE video_id = ? AND status = ?`
+        return __sqliteDB.selectOne(sql, [videoId, MEDIA_MINIO_STATUS.COMPLETE], null, dbName).then(data => data?.videoTotalSize)
     }
 }
