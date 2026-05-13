@@ -293,6 +293,7 @@ sqlite:
             `object_size` text DEFAULT NULL
           );
           CREATE UNIQUE INDEX idx_video_type1_unique ON video_minio(`video_id`) WHERE type = 1;
+          CREATE INDEX idx_minio_vid_size ON video_minio (video_id, object_size);
       - tableName: aria2_task
         DDL: |
           CREATE TABLE aria2_task (

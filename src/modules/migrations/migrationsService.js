@@ -71,6 +71,7 @@ export async function doMigrations() {
         __log.info(`[Migrations] Ready to execute database ${dbName} sql scripts, backup database: ${backup.file}.`)
         const executionResult = [];
         let anyFailed = false;
+        let anyFailedReason = [];
         await __sqliteDB.getTransactionDB(async db => {
             for (const { file, fileName } of scripts) {
                 let failedReason = null;
@@ -81,22 +82,28 @@ export async function doMigrations() {
                     await db.execute(sqlContent);
                     __log.info(`[Migrations] Execute sql script: ${fileName} success.`)
                 } catch (err) {
-                    failedReason = err?.stack ?? err?.message ?? 'Unknown failed.'
+                    failedReason = err?.stack ?? err?.message ?? 'Unknown failed'
                     anyFailed = true;
-                    __log.error(`[Migrations] Execute sql script: ${fileName} failed. Cause: ${err?.message ?? 'Unknown failed.'}`)
+                    const failedMessage = `Execute sql script: ${fileName} failed. Cause: ${err?.message ?? 'Unknown failed'}`;
+                    anyFailedReason.push(failedMessage);
+                    __log.error(`[Migrations] ${failedMessage}`)
                 } finally {
                     executionResult.push({ failedReason, file, fileName, fileContent: sqlContent })
                 }
             }
         }, err => {
             anyFailed = true;
-            __log.error(`[Migrations] Execute database ${dbName} sql scripts failed.`, err?.message ?? err)
+            const failedMessage = `Execute database ${dbName} sql scripts failed. Cause: ${err?.message ?? 'Unknown failed'}`
+            anyFailedReason.push(failedMessage)
+            __log.error(`[Migrations] ${failedMessage}`)
         }, dbName)
         const isSelfDb = dbName === migrationsDbName
         try {
             isSelfDb && await __sqliteDB.reconnect(migrationsDbName);
+            const anyFailedReasonStr = anyFailedReason.join(';\n')
             for (const { failedReason, fileName, fileContent } of executionResult) {
-                await migrationsRep.insertOne(fileName, fileContent, failedReason, backup.fileName)
+                const reason = anyFailed ? (failedReason ?? anyFailedReasonStr) : null
+                await migrationsRep.insertOne(fileName, fileContent, reason, backup.fileName)
             }
             isSelfDb && await __sqliteDB.close(migrationsDbName);
         } catch (ex) {

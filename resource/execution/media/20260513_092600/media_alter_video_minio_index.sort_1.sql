@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_minio_vid_size ON video_minio (video_id, object_size);

@@ -13,7 +13,7 @@ export default {
         return __sqliteDB.selectOne(sql, [videoId, type], null, dbName).then(({ exists }) => exists)
     },
     selectOneById: id => {
-        const sql = 'SELECT id,video_id,type,origin_uri,link,status FROM video_minio WHERE id=?'
+        const sql = 'SELECT id,video_id,type,origin_uri,link,status,object_size FROM video_minio WHERE id=?'
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
     selectMaxSortOfType: (videoId, type) => {
@@ -53,7 +53,7 @@ export default {
         return __sqliteDB.delete(sql, [minioId], null, dbName)
     },
     selectByVideoId: videoId => {
-        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort FROM video_minio WHERE video_id=?`
+        const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort, object_size FROM video_minio WHERE video_id=?`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)
     },
     selectByMinioIds: async minioIds => {
@@ -70,5 +70,10 @@ export default {
     selectBarrageByVideoId: videoId => {
         const sql = `SELECT id, link, title, sort FROM video_minio WHERE video_id=? AND type=${MEDIA_VIDEO_MINIO_TYPE.BARRAGE} AND status=${MEDIA_MINIO_STATUS.COMPLETE} ORDER BY sort`
         return __sqliteDB.selectAll(sql, [videoId], null, dbName)
+    },
+    /** Object Size */
+    updateObjectSizeById: (objectSize, id) => {
+        const sql = `UPDATE video_minio SET object_size=? WHERE id=?`
+        return __sqliteDB.update(sql, [objectSize, id], null, dbName)
     }
 }

@@ -17,6 +17,9 @@ import { copyRemoteFileToMinio, downloadFileToMinio } from '../../ssh/sshExecuto
 const SUPPORTED_MEDIA_MINIO_TYPE = Object.values(MEDIA_VIDEO_MINIO_TYPE)
 
 export async function searchMinio(videoId) {
+    const videoInfo = await videosRep.selectOne(videoId)
+    if (!videoInfo) return null
+    const result = { videoStatus: videoInfo.status, storages: [] }
     const minioList = await videoMinioRep.selectByVideoId(videoId).then(({ data }) => data)
     if (Array.isArray(minioList)) {
         const minioIdMapping = new Map();
@@ -33,7 +36,8 @@ export async function searchMinio(videoId) {
             minioIdMapping.clear()
         }
     }
-    return minioList;
+    result.storages = minioList
+    return result;
 }
 
 const CAN_NOT_CREATE_MINIO_VIDEO_STATUS = [
@@ -178,6 +182,7 @@ export async function updateMinioStatus(id, status) {
     // save minio
     const { rows } = await videoMinioRep.updateStatusById(id, minioStatus)
     rows > 0 || notifyUpdateMediaMinioStatusFailed('Save media minio status failed.', id)
+    minioStatus === MEDIA_MINIO_STATUS.COMPLETE && await tryBackfillObjectSize(id)
     // update video status
     await updateVideoStatusByVideoMinioStatus(videoId)
 }
@@ -210,6 +215,7 @@ async function uploadFileToMinio(filePath, minioLink, lastId) {
     const complete = result === 0
     const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     await videoMinioRep.updateStatusById(lastId, minioStatus)
+    complete && await tryBackfillObjectSize(lastId)
     return complete
 }
 
@@ -223,6 +229,7 @@ async function uploadUrlToMinio(url, minioLink, lastId) {
     const complete = result === 0
     const minioStatus = complete ? MEDIA_MINIO_STATUS.COMPLETE : MEDIA_MINIO_STATUS.FAILED
     await videoMinioRep.updateStatusById(lastId, minioStatus)
+    complete && await tryBackfillObjectSize(lastId)
     return complete
 }
 
@@ -237,6 +244,22 @@ async function executeSshScript(resourcePath, minioLink, isFileResource = false)
         return await copyRemoteFileToMinio(resourcePath, suitableMinioLink)
     } else {
         return await downloadFileToMinio(resourcePath, suitableMinioLink)
+    }
+}
+
+async function tryBackfillObjectSize(minioId) {
+    const minioInfo = await videoMinioRep.selectOneById(minioId)
+    if (!minioInfo) return;
+    const { link, status } = minioInfo
+    if (MEDIA_MINIO_STATUS.COMPLETE !== status) return;
+    const client = getMinioClient()
+    if (!client?.ready()) return;
+    try {
+        const stat = await client.getObjectStat(link)
+        const size = stat.size
+        await videoMinioRep.updateObjectSizeById(size, minioId)
+    } catch (err) {
+        __log.error(`Back fill minio object size failed. Cause: ${err?.message ?? 'Unknown error'}`)
     }
 }
 

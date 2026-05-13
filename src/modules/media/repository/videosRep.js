@@ -105,7 +105,7 @@ export default {
         }
         return result
     },
-    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize) => {
+    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false) => {
         let sqlConcat = [];
         let params = [];
         let categoryJoin = '';
@@ -157,7 +157,10 @@ export default {
             + 'tc.name AS category, '
             + 'ta.name AS author, '
             + '(SELECT link FROM video_minio WHERE video_id = v.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover '
-            + 'FROM ('
+        if (needTotalSize) {
+            sql += ', CAST( (SELECT IFNULL(SUM(CAST(object_size AS INTEGER)), 0) FROM video_minio WHERE video_id = v.id) AS TEXT) AS total_video_size '
+        }
+        sql += 'FROM ('
             + 'SELECT tv.id '
             + 'FROM videos tv '
             + categoryJoin
