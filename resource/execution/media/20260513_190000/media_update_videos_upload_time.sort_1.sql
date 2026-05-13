@@ -1,0 +1,1 @@
+UPDATE videos SET upload_time=CAST((julianday(upload_time) - 2440587.5) * 86400000 AS INTEGER) WHERE category_id IN (1,2);

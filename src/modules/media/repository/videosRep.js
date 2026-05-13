@@ -20,6 +20,14 @@ function clearExistsCache(categoryId, authorId, uniqueId) {
     existsCache.delete(generateExistsKey(categoryId, null, null))
 }
 
+function tryResolveTime(time) {
+    try {
+        return new Date(time)
+    } catch (ignored) {
+        return new Date()
+    }
+}
+
 export default {
     selectForExists: async (categoryId, authorId, uniqueId) => {
         const existsKey = generateExistsKey(categoryId, authorId, uniqueId)
@@ -49,7 +57,7 @@ export default {
     },
     insertOne: async video => {
         const sql = 'INSERT INTO videos(unique_id, title, category_id, author_id, upload_time, status, create_time) VALUES(?,?,?,?,?,?,?)'
-        const params = [video.uniqueId, video.title, video.categoryId, video.authorId, video.uploadTime, video.status, new Date()]
+        const params = [video.uniqueId, video.title, video.categoryId, video.authorId, tryResolveTime(video.uploadTime), video.status, new Date()]
         const res = await __sqliteDB.insert(sql, params, null, dbName)
         res.rows > 0 && clearExistsCache(video.categoryId, video.authorId, video.uniqueId)
         return res
@@ -229,7 +237,7 @@ export default {
         const sql = `SELECT COUNT(tv.id) AS count FROM videos tv `
             + `INNER JOIN categories tc ON tc.id = tv.category_id `
             + 'AND tc.type = ' + (isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL) + ' '
-            + `WHERE tv.upload_time BETWEEN datetime('now', '-24 hours') AND datetime('now')`
+            + `WHERE tv.upload_time >= (unixepoch('now', '-1 day') * 1000)`
         return __sqliteDB.selectOne(sql, [], null, dbName).then(d => d?.count || 0)
     }
 }
