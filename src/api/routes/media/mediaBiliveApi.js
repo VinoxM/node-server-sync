@@ -23,6 +23,7 @@ export default {
         method: POST,
         needSecret,
         allowHosts,
+        ignoreReturnPrint: true,
         callback: () => biliveRecordApi.getAllRooms()
     },
     "/record/api/file": {

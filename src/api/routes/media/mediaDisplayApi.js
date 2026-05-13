@@ -11,8 +11,9 @@ import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilte
 import { checkCategoryExistsByInside, searchVideos } from "../../../modules/media/service/mediaVideoService.js"
 import { getMinioClientMatchers } from "../../../modules/media/service/mediaMinioService.js"
 import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
+import videosRep from "../../../modules/media/repository/videosRep.js"
 
-const { POST } = apiMethodConst
+const { GET, POST } = apiMethodConst
 
 const needSecret = () => "mAou5820.media.display"
 const insideDisplaySecret = "mAou5820.media.display-inside"
@@ -33,6 +34,12 @@ function isInsideRequest(req) {
 
 export default {
     basePath: "/media/display",
+    "/getNewestCount": {
+        method: GET,
+        ignoreSecret: true,
+        allowHosts,
+        callback: req => videosRep.countForCardView(isInsideRequest(req))
+    },
     "/searchVideos": {
         method: POST,
         ignoreSecret: true,

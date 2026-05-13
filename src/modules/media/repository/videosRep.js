@@ -224,5 +224,12 @@ export default {
             sql += ' WHERE ' + sqlConcat.join(' AND ');
         }
         return __sqliteDB.selectOne(sql, params, null, dbName).then(res => res?.total || 0);
+    },
+    countForCardView: (isInside) => {
+        const sql = `SELECT COUNT(tv.id) AS count FROM videos tv `
+            + `INNER JOIN categories tc ON tc.id = tv.category_id `
+            + 'AND tc.type = ' + (isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL) + ' '
+            + `WHERE tv.upload_time BETWEEN datetime('now', '-24 hours') AND datetime('now')`
+        return __sqliteDB.selectOne(sql, [], null, dbName).then(d => d?.count || 0)
     }
 }

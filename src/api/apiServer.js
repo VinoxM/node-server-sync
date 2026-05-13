@@ -69,7 +69,7 @@ class ApiServer {
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
-            const { method: m, callback, disabled } = config;
+            const { method: m, callback, disabled, ignoreAccessPrint = false } = config;
             if (disabled) {
                 continue;
             }
@@ -80,7 +80,7 @@ class ApiServer {
             const tracePrefix = generateRequestTracePrefix(method, key)
             server[method](key, (req, res) => {
                 const doRequest = () => {
-                    __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
+                    ignoreAccessPrint || __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
                     const requestData = { req, res, config };
                     this.#doRequestFilters(async () => {
                         try {
@@ -172,7 +172,7 @@ function resolve(obj, { req, res, config }) {
     if (config?.printResponse) {
         printParams.push(`==>`, result)
     }
-    __log.info(...printParams);
+    config?.ignoreReturnPrint || __log.info(...printParams);
 }
 
 function reject(ex, { req, res }) {
@@ -195,7 +195,7 @@ function reject(ex, { req, res }) {
     } else {
         res.status(status);
         res.send(resultObj);
-        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
+        config?.ignoreReturnPrint || __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
     }
 }
 
