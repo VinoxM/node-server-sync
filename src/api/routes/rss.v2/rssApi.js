@@ -170,8 +170,12 @@ export default {
         method: POST,
         needAuth: true,
         needSecret: () => "mAou5820.subscribe",
-        preCheck: (req) => checkBodyKeyMatch(req, SEASON, [/^2[0-9]{3}-(01|04|07|10)$/]),
-        callback: req => rssSubscribeRep.selectEpisodesExistsSubs(req.body.season).then(({ data }) => data)
+        callback: async req => {
+            const { season, title, pageNum = 1, pageSize = 20 } = req.body
+            const record = await rssSubscribeRep.selectEpisodesExistsSubsForSearch(season, title, pageSize, pageNum).then(({ data }) => data)
+            const total = await rssSubscribeRep.selectEpisodesExistsSubsForCount(season, title)
+            return { record, total, pageNum, pageSize }
+        }
     },
     "/getRssEpisodeSource": {
         method: POST,

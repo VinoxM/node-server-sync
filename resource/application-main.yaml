@@ -68,7 +68,7 @@ schedule:
     corn: 0 0 0 * * *
   storageSummary:
     enable: true
-    corn: 0 0 6 * * *
+    corn: 0 0 0/2 * * *
 rss:
   subscribeHandler:
     parallelNum: 3

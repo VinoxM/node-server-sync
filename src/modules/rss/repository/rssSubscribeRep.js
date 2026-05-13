@@ -94,15 +94,63 @@ export default {
         parameters.push(id);
         return (transactionDB || __sqliteDB).update(sql, parameters, enablePrint, dbName);
     },
-    selectEpisodesExistsSubs: (season) => {
-        const sql = `SELECT rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, `
-            + `(SELECT COUNT(*) FROM rss_torrent_task WHERE rss_subs_id = rs.id) as taskCount, `
-            + `(SELECT COUNT(*) FROM rss_episode WHERE rss_subs_id = rs.id) as episodeCount, `
-            + `(SELECT COUNT(*) FROM rss_episode_failed WHERE rss_subs_id = rs.id) as episodeFailedCount, `
-            + `(SELECT COUNT(*) FROM rss_episode_subtitle WHERE rss_subs_id = rs.id) as subtitleCount `
+    selectEpisodesExistsSubsForSearch: (season, title, pageSize, pageNum) => {
+        const params = []
+        const whereCondition = []
+        if (__isNotBlank(season)) {
+            whereCondition.push(`rs.season = ?`)
+            params.push(season)
+        }
+        if (__isNotBlank(title)) {
+            whereCondition.push(`rs.name LIKE ?`)
+            params.push(`%${title}%`)
+        }
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        let limitOffset = '';
+        if (pageNum !== undefined && pageSize !== undefined) {
+            const offset = (pageNum - 1) * pageSize;
+            limitOffset = ` LIMIT ${pageSize} OFFSET ${offset}`;
+        }
+        const sql = `SELECT `
+            + `rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, `
+            + `COUNT(DISTINCT t.id) as taskCount, `
+            + `COUNT(DISTINCT e.id) as episodeCount, `
+            + `COUNT(DISTINCT ef.id) as episodeFailedCount, `
+            + `COUNT(DISTINCT es.id) as subtitleCount `
             + `FROM rss_subscribe rs `
-            + `WHERE rs.season=? `
-            + `AND (taskCount + episodeCount + episodeFailedCount + subtitleCount) > 0`
-        return __sqliteDB.selectAll(sql, [season], null, dbName)
+            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
+            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
+            + `${whereClause} `
+            + `GROUP BY rs.id `
+            + `HAVING (taskCount + episodeCount + episodeFailedCount + subtitleCount) > 0 `
+            + `ORDER BY rs.season DESC `
+            + `${limitOffset}`
+        return __sqliteDB.selectAll(sql, params, null, dbName);
+    },
+    selectEpisodesExistsSubsForCount: (season, title) => {
+        const params = []
+        const whereCondition = []
+        if (__isNotBlank(season)) {
+            whereCondition.push(`rs.season = ?`)
+            params.push(season)
+        }
+        if (__isNotBlank(title)) {
+            whereCondition.push(`rs.name LIKE ?`)
+            params.push(`%${title}%`)
+        }
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        const sql = `SELECT COUNT(*) as total FROM (`
+            + `SELECT rs.id `
+            + `FROM rss_subscribe rs `
+            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
+            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
+            + `${whereClause} `
+            + `GROUP BY rs.id `
+            + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
+        return __sqliteDB.selectOne(sql, params, null, dbName).then(res => res?.total || 0)
     }
 }
