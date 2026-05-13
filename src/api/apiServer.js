@@ -195,7 +195,7 @@ function reject(ex, { req, res }) {
     } else {
         res.status(status);
         res.send(resultObj);
-        config?.ignoreReturnPrint || __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
+        __log.info(`[Request Return] [${methodFormat(req.method)}] ${req.url} ==x ${status}:`, resultObj);
     }
 }
 
