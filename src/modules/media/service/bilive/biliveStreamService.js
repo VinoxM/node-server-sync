@@ -8,9 +8,11 @@ import path from 'path'
 import videosRep from "../../repository/videosRep.js"
 import categoriesRep from "../../repository/categoriesRep.js"
 import videoTagMapRep from "../../repository/videoTagMapRep.js"
+import { getPushNotificationWhenBiliveStreamChanged } from "../mediaOptionsService.js"
+import { dateFormat } from "../../../../common/utils/dateUtil.js"
 
 export function getBiliveRecordFileSavePath() {
-    return __env.get('bilive.record.savePath', '/mnt/storage/bilive/recording')
+    return __env.get('bilive.record.savePath', '/mnt/storage-0/bilive/recording')
 }
 
 async function tryGetRoomInfo(roomId) {
@@ -109,9 +111,11 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
     const areaNameChild = eventData['AreaNameChild']
     const timestamp = tryResolveTime(eventTimestamp)
     if (MEDIA_BILIVE_STREAM_EVENT.StreamStarted === event) {
+        await tryNotifyBiliveStreamChanged(hostName, title, timestamp, 1)
         const latestStream = await biliveStreamRep.insertStartStream(roomId, hostName, title, areaNameParent, areaNameChild, timestamp)
         __log.info(`[Bilive Stream Started] Setup latest stream[${latestStream.lastId}] started.`)
     } else if (MEDIA_BILIVE_STREAM_EVENT.StreamEnded === event) {
+        await tryNotifyBiliveStreamChanged(hostName, title, timestamp, 0)
         const latestStream = await biliveStreamRep.selectLatestStreamingByRoomId(roomId)
         if (latestStream) {
             if (latestStream.streaming === MEDIA_BILIVE_STREAM_STATUS.STREAMING) {
@@ -126,6 +130,15 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
             await biliveStreamRep.updateStreamEndedById(lastId, timestamp, recordId, 'Latest stream info not found.')
             __log.warn(`[Bilive Stream Ended] Latest stream info not found. Create a non start time stream record.`)
         }
+    }
+}
+
+async function tryNotifyBiliveStreamChanged(hostName, title, timestamp, isStarted) {
+    try {
+        const f = await getPushNotificationWhenBiliveStreamChanged()
+        f && pushNotification(`[${dateFormat(tryResolveTime(timestamp))}] [Bilive Stream ${isStarted ? 'Started' : 'Ended'}] ${hostName}: ${title}`)
+    } catch (ex) {
+        __log.error(`Try notify bilive stream changed failed. Cause: `, ex.message)
     }
 }
 
