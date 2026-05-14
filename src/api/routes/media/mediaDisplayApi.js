@@ -1,5 +1,4 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
-import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
 import categoriesRep from "../../../modules/media/repository/categoriesRep.js"
 import authorsRep from "../../../modules/media/repository/authorsRep.js"
 import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
@@ -12,6 +11,7 @@ import { checkCategoryExistsByInside, searchVideos } from "../../../modules/medi
 import { getMinioClientMatchers } from "../../../modules/media/service/mediaMinioService.js"
 import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
 import videosRep from "../../../modules/media/repository/videosRep.js"
+import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
 
 const { GET, POST } = apiMethodConst
 
@@ -37,27 +37,29 @@ export default {
     "/getNewestCount": {
         method: GET,
         ignoreSecret: true,
-        allowHosts,
+        allowHosts: allowLanHosts,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         callback: req => videosRep.countForCardView(isInsideRequest(req))
     },
     "/searchVideos": {
         method: POST,
         ignoreSecret: true,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkInsideHeader(req),
         callback: req => searchVideos(req.body, isInsideRequest(req))
     },
     "/getCategories": {
         method: POST,
         ignoreSecret: true,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkInsideHeader(req),
         callback: req => categoriesRep.selectByInside(isInsideRequest(req)).then(({ data }) => data)
     },
     "/getAuthors": {
         method: POST,
         ignoreSecret: true,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async req => {
             const categoryId = req.body['categoryId']
@@ -69,7 +71,7 @@ export default {
     "/getTags": {
         method: POST,
         ignoreSecret: true,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async req => {
             const { videoId, categoryId } = req.body
@@ -81,28 +83,28 @@ export default {
     "/getSources": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async req => videoMinioRep.selectSourceByVideoId(req.body['videoId']).then(({ data }) => data)
     },
     "/getBarrage": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async req => videoMinioRep.selectBarrageByVideoId(req.body['videoId']).then(({ data }) => data)
     },
     "/videos/checkPolicy": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: req => checkVideoFilterRules(req.body)
     },
     "/getClientMatchers": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         callback: req => getMinioClientMatchers(req.body)
     },
 }

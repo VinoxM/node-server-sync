@@ -1,3 +1,4 @@
+import { allowLanHosts } from "../../common/constants/allowHostsConst.js";
 import apiMethodConst from "../../common/constants/apiMethodConst.js";
 import { getRequestRealIp } from "../../common/utils/requestUtil.js";
 import { ipBlocker } from "../../core/instance/ipBlocker.js";
@@ -48,7 +49,7 @@ export default {
     },
     "/getSupportedSshExecutors": {
         method: GET,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        allowHosts: allowLanHosts,
         needSecret,
         callback: () => {
             const opts = __env.get('ssh', {})

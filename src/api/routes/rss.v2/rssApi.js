@@ -1,3 +1,4 @@
+import { allowLanHosts } from "../../../common/constants/allowHostsConst.js";
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import apiQueryConst from "../../../common/constants/apiQueryConst.js";
 import { checkBodyKeyMatch, checkBodyKeysNotBlank, checkQueryKeyMatchIfPresent, checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
@@ -180,6 +181,9 @@ export default {
     '/getRssCardFailedViews': {
         method: GET,
         needAuth: true,
+        allowHosts: allowLanHosts,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         needSecret: () => "mAou5820.subscribe",
         callback: async () => {
             const episodeFailedCount = await rssEpisodeRep.selectFailedCount();
@@ -192,6 +196,7 @@ export default {
     },
     "/getRssEpisodeSource": {
         method: POST,
+        allowHosts: allowLanHosts,
         needSecret: () => "mAou5820.subscribe",
         preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
         callback: async req => {

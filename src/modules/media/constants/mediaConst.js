@@ -49,17 +49,6 @@ export const MEDIA_CATEGORY_TYPE = {
     INSIDE: 1
 }
 
-export const MEDIA_ALLOW_CIDR = [
-    '192.168.31.0/24',
-    '172.17.0.0/24',
-    '127.0.0.1'
-]
-
-export const MEDIA_ALLOW_HOSTS = [
-    'server.vinoxm.name',
-    '28000--main--code-server--maou864--coder.vinoxm.cloud'
-]
-
 export const MEDIA_BILIVE_RECORD_EVENT_ARRAY = [
     'SessionStarted',
     'FileOpening',

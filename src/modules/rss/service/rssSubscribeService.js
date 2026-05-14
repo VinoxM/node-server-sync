@@ -109,3 +109,7 @@ export async function analysisRssSubscribe(obj, resolve, reject) {
         reject(err);
     });
 }
+
+export async function canDeleteSubscribe(id) {
+    return (await rssSubscribeRep.selectEpisodesExistsSubsBySubsId(id)) === 0
+}

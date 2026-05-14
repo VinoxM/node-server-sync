@@ -16,10 +16,10 @@ import {
     createVideo, deleteAuthor, deleteCategory,
     removeVideo, updateVideoTags, updateVideoTitle
 } from "../../../modules/media/service/mediaVideoService.js"
-import { MEDIA_ALLOW_HOSTS as allowHosts } from "../../../modules/media/constants/mediaConst.js"
 import { getOptions, updateOption } from "../../../modules/media/service/mediaOptionsService.js"
 import videosRep from "../../../modules/media/repository/videosRep.js"
 import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
+import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
 
 const { POST } = apiMethodConst
 
@@ -31,42 +31,42 @@ export default {
     "/videos/preCheck": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'author']),
         callback: req => checkVideoCanAdd(req.body)
     },
     "/videos/create": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotNull(req, ['title', 'author', 'category', 'uploadTime']),
         callback: req => createVideo(req.body)
     },
     "/videos/updateTitle": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'title']),
         callback: req => updateVideoTitle(req.body['id'], req.body['title'])
     },
     "/videos/updateTags": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'operator']) && checkBodyKeyNotEmptyArray(req, ['tags']),
         callback: req => updateVideoTags(req.body['id'], req.body['tags'], req.body['operator'])
     },
     "/videos/delete": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => removeVideo(req.body['id'])
     },
     "/videos/retryCalculation": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => updateVideoStatusByVideoMinioStatus(req.body['id'])
     },
@@ -74,14 +74,14 @@ export default {
     "/category/create": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'inside']) && checkBodyKeyMatch(req, 'inside', ['[0|1]']),
         callback: req => addCategory(req.body['category'], req.body['inside'])
     },
     "/category/delete": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteCategory(req.body['id'])
     },
@@ -89,14 +89,14 @@ export default {
     "/author/create": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['categoryId', 'name']),
         callback: req => addAuthor(req.body['name'], req.body['categoryId'])
     },
     "/author/delete": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteAuthor(req.body['id'])
     },
@@ -104,49 +104,49 @@ export default {
     "/storage/getInfo": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
         callback: req => searchMinio(req.body['videoId'])
     },
     "/storage/create": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['videoId', 'type', 'uri']),
         callback: req => createMinioManually(req.body)
     },
     "/storage/updateOriginUri": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'uri']),
         callback: req => updateMinioOriginUri(req.body['id'], req.body['uri'])
     },
     "/storage/delete": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteVideoMinio(req.body['id'])
     },
     "/storage/retryIngest": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => retryMinio(req.body['id']),
     },
     "/storage/updateTitleOrSort": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => updateMinioTitleAndSort(req.body),
     },
     "/storage/multiStatus": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => {
             checkBodyKeyNotBlank(req, 'videoId')
             try {
@@ -170,7 +170,7 @@ export default {
     "/storage/deleteTask": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => removeTask(req.body['taskId']),
     },
@@ -178,21 +178,21 @@ export default {
     "/policy/getRules": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'category'),
         callback: req => getFilterRulesByCategory(req.body['category'])
     },
     "/policy/addRule": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'operator']),
         callback: req => handleFilterRule(req.body)
     },
     "/policy/removeRule": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'type', 'value', 'operator']),
         callback: req => handleFilterRule(req.body, false)
     },
@@ -200,7 +200,7 @@ export default {
     "/videosTagMapping/clean": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         callback: async () => {
             const deletedVideoIds = await videoTagMapRep.deleteDirtyVideoTagMapping()
             __log.info("[Video Tags Mapping] Cleaned mappings: ", deletedVideoIds)
@@ -211,13 +211,13 @@ export default {
     "/options/getAllOptions": {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         callback: req => getOptions()
     },
     '/options/updateOne': {
         method: POST,
         needSecret,
-        allowHosts,
+        allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'value', 'description']),
         callback: req => updateOption(req.body.id, req.body.description, req.body.value)
     }

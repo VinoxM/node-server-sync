@@ -1,3 +1,4 @@
+import { allowLanHosts } from "../../../common/constants/allowHostsConst.js";
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js";
 import rssResultRep from "../../../modules/rss/repository/rssResultRep.js";
@@ -33,7 +34,7 @@ export default {
     },
     "/updateTaskStatus": {
         method: POST,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        allowHosts: allowLanHosts,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['uuid', 'status']),
         callback: req => updateTaskStatus(req.body.uuid, req.body.status)

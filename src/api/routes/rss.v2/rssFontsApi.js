@@ -1,3 +1,4 @@
+import { allowLanHosts } from '../../../common/constants/allowHostsConst.js';
 import apiMethodConst from '../../../common/constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
 import rssFontsRep from '../../../modules/rss/repository/rssFontsRep.js';
@@ -10,13 +11,13 @@ export default {
     basePath: "/rss/fonts",
     '/getAll': {
         method: POST,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        allowHosts: allowLanHosts,
         needSecret,
         callback: () => rssFontsRep.selectAll()
     },
     '/getFonts': {
         method: POST,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        allowHosts: allowLanHosts,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'fonts'),
         callback: req => rssFontsRep.selectByTitles(req.body['fonts'])

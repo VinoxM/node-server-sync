@@ -7,7 +7,7 @@ import rssCopyrightRep from '../../../modules/rss/repository/rssCopyrightRep.js'
 import { AsyncExecutor } from '../../../core/infra/asyncExecutor.js';
 import rssSubscribeRep from '../../../modules/rss/repository/rssSubscribeRep.js';
 import rssResultRep from '../../../modules/rss/repository/rssResultRep.js';
-import { analysisRssSubscribe, updateRssSubscribe } from '../../../modules/rss/service/rssSubscribeService.js';
+import { analysisRssSubscribe, canDeleteSubscribe, updateRssSubscribe } from '../../../modules/rss/service/rssSubscribeService.js';
 
 const { POST } = apiMethodConst;
 const { URL, REGEX, ID, FIN, IDS } = bodyConst;
@@ -229,9 +229,11 @@ export default {
         method: POST,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, ID),
-        callback: (req) => {
+        callback: async (req) => {
+            const id = req.body[ID];
+            const canDelete = await canDeleteSubscribe(id);
+            canDelete || __throwMessage('Cannot delete episodes exists subscribe.')
             return __sqliteDB.getTransactionDB(async (db) => {
-                const id = req.body[ID];
                 const { rows } = await rssSubscribeRep.deleteById(id, db);
                 if (rows !== 0) {
                     await rssResultRep.deleteByPid(id, db);
@@ -246,14 +248,22 @@ export default {
         method: POST,
         needSecret,
         preCheck: (req) => checkBodyKeyNotEmptyArray(req, IDS),
-        callback: (req) => {
+        callback: async (req) => {
+            const ids = req.body[IDS];
+            const canDelIds = [];
+            for (const id of ids) {
+                const canDelete = await canDeleteSubscribe(id);
+                canDelete && canDelIds.push(id);
+            }
+            if (canDelIds.length === 0) {
+                return { rows: 0 }
+            }
             return __sqliteDB.getTransactionDB(async (db) => {
-                const ids = req.body[IDS];
-                const { rows } = await rssSubscribeRep.deleteByIds(ids, db);
+                const { rows } = await rssSubscribeRep.deleteByIds(canDelIds, db);
                 if (rows !== 0) {
-                    await rssResultRep.deleteByPids(ids, db);
-                    await rssLinkRep.deleteManyByPids(ids, db);
-                    await rssCopyrightRep.deleteManyByPids(ids, db);
+                    await rssResultRep.deleteByPids(canDelIds, db);
+                    await rssLinkRep.deleteManyByPids(canDelIds, db);
+                    await rssCopyrightRep.deleteManyByPids(canDelIds, db);
                 }
                 return { rows };
             }, err => { throw err })

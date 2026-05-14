@@ -6,6 +6,7 @@ import {
     deleteOneEpisode, deleteOneFailedEpisode, generateMinioSharedLink,
     retryFailedEpisode, updateFailedEpisode
 } from '../../../modules/rss/service/rssEpisodeService.js';
+import { allowLanHosts } from '../../../common/constants/allowHostsConst.js';
 
 const { POST } = apiMethodConst;
 
@@ -15,7 +16,7 @@ export default {
     basePath: "/rss/episode",
     '/updateEpisodeStatus': {
         method: POST,
-        allowHosts: ['server.vinoxm.name', '28000--main--code-server--maou864--coder.vinoxm.cloud'],
+        allowHosts: allowLanHosts,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => {

@@ -1,6 +1,7 @@
 import { getLatestStorageSummary, storageSummaryDimensions } from "../../../modules/statistics/service/storageSummaryService.js";
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import { getMinioClientMatchersSafely } from "../../../modules/media/service/mediaMinioService.js";
+import { allowLanHosts } from "../../../common/constants/allowHostsConst.js";
 
 const { POST, GET } = apiMethodConst;
 
@@ -16,6 +17,9 @@ export default {
     },
     '/storage/getLatestDimensions': {
         method: GET,
+        allowHosts: allowLanHosts,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         needSecret,
         callback: async () => {
             const summary = await getLatestStorageSummary()

@@ -152,5 +152,18 @@ export default {
             + `GROUP BY rs.id `
             + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
         return __sqliteDB.selectOne(sql, params, null, dbName).then(res => res?.total || 0)
+    },
+    selectEpisodesExistsSubsBySubsId: subsId => {
+        const sql = `SELECT COUNT(*) as total FROM (`
+            + `SELECT rs.id `
+            + `FROM rss_subscribe rs `
+            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
+            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
+            + `WHERE rs.id=? `
+            + `GROUP BY rs.id `
+            + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
+        return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(res => res?.total || 0)
     }
 }
