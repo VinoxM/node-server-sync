@@ -173,10 +173,10 @@ export async function removeFileByFileId(id) {
     const { filePath, fileStatus } = file
     MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED === fileStatus && __throwMessage('File has been removed.')
     const cover = generateVideoStorageFilePath(filePath, '.cover.jpg', false)
-    const source = generateVideoStorageFilePath(filePath, '.flv', false)
     const barrage = generateVideoStorageFilePath(filePath, '.xml', false)
-    const barrage = generateVideoStorageFilePath(filePath, '.mp4', false)
-    await removeRemoteFiles([cover, source, barrage])
+    const source = generateVideoStorageFilePath(filePath, '.flv', false)
+    const mp4Source = generateVideoStorageFilePath(filePath, '.mp4', false)
+    await removeRemoteFiles([cover, source, barrage, mp4Source])
     await biliveFileRep.updateFileRemoved(id)
 }
 
