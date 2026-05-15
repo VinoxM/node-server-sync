@@ -50,6 +50,7 @@ api:
       - /rss/regex/*
       - /rss/task/*
       - /media/*
+      - /rss/v2/getRssCardFailedViews
 sse:
   disabled:
     - barrage
