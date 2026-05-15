@@ -3,7 +3,7 @@ import { pushNotification } from "../../../../api/sockets/notification.js"
 import { dateFormat } from "../../../../common/utils/dateUtil.js"
 import { formatFileSize } from "../../../../common/utils/humanUtil.js"
 import { Tracer } from "../../../../core/infra/tracer.js"
-import { removeRemoteFiles } from "../../../ssh/sshExecutorService.js"
+import { convertFlvToMp4, removeRemoteFiles } from "../../../ssh/sshExecutorService.js"
 import {
     MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY,
     MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS,
@@ -101,6 +101,7 @@ export async function uploadFileToMediaByFileId(id) {
         await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback)
         // upload source
         const source = generateVideoStorageFilePath(filePath, '.flv')
+        const convertedSource = await tryConvertFlvToMp4(source)
         await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
     } finally {
         // setup file uploaded
@@ -135,6 +136,28 @@ function generateStorageTitle(startTime) {
     }
 }
 
+async function tryConvertFlvToMp4(fileUri) {
+    const FILE_PROTOCOL = 'file://'
+    let fullFilePath = fileUri
+    if (fileUri.startsWith(FILE_PROTOCOL)) {
+        fullFilePath = fileUri.substring(FILE_PROTOCOL.length)
+    }
+    const ext = path.extname(fullFilePath)
+    if (ext === '.flv') {
+        const mp4FilePath = fullFilePath.substring(0, fullFilePath.length - 4) + '.mp4'
+        __log.info(`[BiliveFile] Ready to convert flv file to mp4: ${fullFilePath} -> ${mp4FilePath}`)
+        const convertResult = await convertFlvToMp4(fullFilePath, mp4FilePath)
+        if (convertResult === 0) {
+            __log.info(`[BiliveFile] Convert flv file to mp4 success: ${mp4FilePath}.`)
+            return FILE_PROTOCOL + mp4FilePath
+        } else {
+            __log.error(`[BiliveFile] Convert flv file to mp4 failed.`)
+            __throwMessage(`Convert flv file to mp4 failed.`)
+        }
+    }
+    return fileUri;
+}
+
 async function uploadVideoStorage(videoId, type, uri, title, uploadCallback) {
     const code = await createMinioManually({ videoId, type, uri, title }, uploadCallback)
     const desc = MEDIA_TYPE_DESCRIPTION[type]
@@ -152,6 +175,7 @@ export async function removeFileByFileId(id) {
     const cover = generateVideoStorageFilePath(filePath, '.cover.jpg', false)
     const source = generateVideoStorageFilePath(filePath, '.flv', false)
     const barrage = generateVideoStorageFilePath(filePath, '.xml', false)
+    const barrage = generateVideoStorageFilePath(filePath, '.mp4', false)
     await removeRemoteFiles([cover, source, barrage])
     await biliveFileRep.updateFileRemoved(id)
 }
