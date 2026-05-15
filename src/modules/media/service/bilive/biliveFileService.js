@@ -14,9 +14,10 @@ import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import biliveStreamRep from "../../repository/bilive/biliveStreamRep.js"
 import videoMinioRep from "../../repository/videoMinioRep.js"
 import { createMinioManually, validateVideoStatusCanNotCreateMinio } from "../mediaMinioService.js"
-import { getMediaAutoDeleteStreamFile } from "../mediaOptionsService.js"
+import { getMediaAutoDeleteStreamFile, getMediaUploadTimeoutOption } from "../mediaOptionsService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 import { generateVideoStorageFilePath } from "./biliveStreamService.js"
+import { executeAsyncTaskChain } from "../../../../core/infra/asyncSequence.js"
 
 export async function saveBiliveFile(recordId, event, eventTimestamp, eventData) {
     const sessionId = eventData['SessionId']
@@ -101,8 +102,13 @@ export async function uploadFileToMediaByFileId(id) {
         await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback)
         // upload source
         const source = generateVideoStorageFilePath(filePath, '.flv')
-        const convertedSource = await tryConvertFlvToMp4(source)
-        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
+        const uploadTimeout = await getMediaUploadTimeoutOption()
+        await executeAsyncTaskChain([
+            async () => {
+                const convertedSource = await tryConvertFlvToMp4(source)
+                await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
+            }
+        ], uploadTimeout)
     } finally {
         // setup file uploaded
         await biliveFileRep.updateFileUploaded(id)
