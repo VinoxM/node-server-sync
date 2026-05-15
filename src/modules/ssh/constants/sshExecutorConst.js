@@ -30,10 +30,17 @@ const CONVERT_MKV_TO_MP4 = {
     script: sshScripts.SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4
 }
 
+const CONVERT_FLV_TO_MP4 = {
+    title: 'Convert File Flv To Mp4',
+    descGenerator: (flvFilePath, mp4FilePath) => `Convert file mkv to mp4: ${flvFilePath} -> ${mp4FilePath}`,
+    script: sshScripts.SSH_CMD_FFMPEG_CONVERT_FLV_TO_MP4
+}
+
 export default {
     MOVE_FILE_TO_MINIO,
     COPY_FILE_TO_MINIO,
     DOWNLOAD_FILE_TO_MINIO,
     REMOVE_REMOTE_FILE,
-    CONVERT_MKV_TO_MP4
+    CONVERT_MKV_TO_MP4,
+    CONVERT_FLV_TO_MP4
 }

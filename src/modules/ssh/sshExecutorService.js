@@ -45,3 +45,7 @@ export async function removeRemoteFiles(files, opts = {}) {
 export async function convertMkvToMp4(mkvFilePath, mp4FilePath, opts = {}) {
     return executeSshScript(sshExecutorConst.CONVERT_MKV_TO_MP4, opts, mkvFilePath, mp4FilePath)
 }
+
+export async function convertFlvToMp4(flvFilePath, mp4FilePath, opts = {}) {
+    return executeSshScript(sshExecutorConst.CONVERT_FLV_TO_MP4, opts, flvFilePath, mp4FilePath)
+}
