@@ -14,7 +14,7 @@ import biliveFileRep from "../../repository/bilive/biliveFileRep.js"
 import biliveStreamRep from "../../repository/bilive/biliveStreamRep.js"
 import videoMinioRep from "../../repository/videoMinioRep.js"
 import { createMinioManually, validateVideoStatusCanNotCreateMinio } from "../mediaMinioService.js"
-import { getMediaAutoDeleteStreamFile, getMediaUploadTimeoutOption } from "../mediaOptionsService.js"
+import { getConvertBiliveStreamFileFlvToMp4Option, getMediaAutoDeleteStreamFile, getMediaUploadTimeoutOption } from "../mediaOptionsService.js"
 import { getBiliveLatestStreamIdBySessionId } from "./biliveSessionService.js"
 import { generateVideoStorageFilePath } from "./biliveStreamService.js"
 import { executeAsyncTaskChain } from "../../../../core/infra/asyncSequence.js"
@@ -102,13 +102,18 @@ export async function uploadFileToMediaByFileId(id) {
         await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback)
         // upload source
         const source = generateVideoStorageFilePath(filePath, '.flv')
-        const uploadTimeout = await getMediaUploadTimeoutOption()
-        await executeAsyncTaskChain([
-            async () => {
-                const convertedSource = await tryConvertFlvToMp4(source)
-                await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
-            }
-        ], uploadTimeout)
+        const convertBiliveStreamFileFlvToMp4 = await getConvertBiliveStreamFileFlvToMp4Option();
+        if (convertBiliveStreamFileFlvToMp4) {
+            const uploadTimeout = await getMediaUploadTimeoutOption()
+            await executeAsyncTaskChain([
+                async () => {
+                    const convertedSource = await tryConvertFlvToMp4(source)
+                    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
+                }
+            ], uploadTimeout)
+        } else {
+            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title, uploadCallback)
+        }
     } finally {
         // setup file uploaded
         await biliveFileRep.updateFileUploaded(id)
