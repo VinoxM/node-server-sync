@@ -136,7 +136,7 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
 async function tryNotifyBiliveStreamChanged(hostName, title, timestamp, isStarted) {
     try {
         const f = await getPushNotificationWhenBiliveStreamChanged()
-        f && pushNotification(`[${dateFormat(tryResolveTime(timestamp))}] [Bilive Stream ${isStarted ? 'Started' : 'Ended'}] ${hostName}: ${title}`)
+        f && pushNotification(`[Bilive Stream ${isStarted ? 'Started' : 'Ended'}] [${dateFormat(tryResolveTime(timestamp))}] ${hostName}: ${title}`)
     } catch (ex) {
         __log.error(`Try notify bilive stream changed failed. Cause: `, ex.message)
     }
