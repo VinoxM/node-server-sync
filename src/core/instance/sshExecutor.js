@@ -99,6 +99,10 @@ class SSHExecutor {
         this.#tasksDesc.push({ title, desc });
     }
 
+    #peekTaskDesc() {
+        return this.#tasksDesc[0]
+    }
+
     #popTaskDesc() {
         return this.#tasksDesc.shift();
     }
@@ -165,7 +169,7 @@ class SSHExecutor {
         this.#logMessage(`[${this.#label}] Task queued. Queue size: ${this.#pendingCount}`);
         // 核心逻辑：通过不断的 .then 形成 Promise 链条
         this.#queue = this.#queue.then(async () => {
-            const taskDesc = this.#popTaskDesc();
+            const taskDesc = this.#peekTaskDesc();
             this.#initTaskSnapshot(taskDesc)
             this.#logMessage(`[${this.#label}] Execution started. Queue depth: ${this.#pendingCount}`);
             this.#emit(SSE_EVENT.EXEC_START, taskDesc?.desc || 'Unknown')
@@ -174,6 +178,7 @@ class SSHExecutor {
                 return await this.#internalExec(scriptPath, args, options);
             } finally {
                 this.#pendingCount--;
+                this.#popTaskDesc();
                 this.#emit(SSE_EVENT.EXEC_END, taskDesc?.desc || 'Unknown');
                 this.#emit(SSE_EVENT.PENDING_UPDATE, this.#tasksDesc);
                 this.#taskSnapshot.ended = true;
