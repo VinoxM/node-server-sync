@@ -7,7 +7,7 @@ async function lookupExecutable() {
     const executionPath = __env.get('sqlite.executionPath')
     if (__isNotBlank(executionPath)) {
         const folder = __join(executionPath)
-        const files = fs.readdirSync(folder, { recursive: true })
+        const files = fs.existsSync(folder) ? fs.readdirSync(folder, { recursive: true }) : []
         for (const file of files) {
             const fullPath = path.join(folder, file)
             if (fs.lstatSync(fullPath).isFile() && path.extname(fullPath) === '.sql') {
