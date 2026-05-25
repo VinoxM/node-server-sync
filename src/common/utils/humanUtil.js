@@ -9,6 +9,12 @@ export function formatFileSize(bytes, decimals = 2) {
     if (bytes === 0 || bytes === '0') return '0 B';
 
     // 将输入转换为 BigInt 处理，防止溢出
+    if (typeof bytes === 'string') {
+        bytes = bytes.split('.')[0]
+    }
+    if (typeof bytes === 'number') {
+        bytes = Math.trunc(bytes)
+    }
     const b = BigInt(bytes);
     if (b < 0n) return 'Invalid Size';
 

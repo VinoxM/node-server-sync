@@ -1,1 +1,0 @@
-DELETE FROM bilive_record_stream WHERE start_time IS NULL;

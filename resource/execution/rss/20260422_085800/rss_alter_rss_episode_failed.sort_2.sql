@@ -1,1 +1,0 @@
-UPDATE rss_episode SET status=2 WHERE id=262;

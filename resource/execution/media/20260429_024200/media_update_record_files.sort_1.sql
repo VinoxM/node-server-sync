@@ -1,1 +1,0 @@
-UPDATE bilive_record_files SET sync_status=2 WHERE id IN (444, 445);
