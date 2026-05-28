@@ -72,8 +72,10 @@ async function calculateProcessedBucketUsage(option = {}, scanBatchSize) {
 }
 
 function sumSize(a, b) {
-    const num1 = BigInt(a || '0');
-    const num2 = BigInt(b || '0');
+    const numA = String(a || '0').split('.')[0]
+    const numB = String(b || '0').split('.')[0]
+    const num1 = BigInt(numA);
+    const num2 = BigInt(numB);
     return (num1 + num2).toString();
 }
 

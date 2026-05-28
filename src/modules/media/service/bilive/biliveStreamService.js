@@ -78,7 +78,7 @@ export async function getBiliveLatestStreamingId(recordId, roomId, hostName, tit
                 const endMessage = `Latest streaming start time not equals bilive start time, `
                     + `setup latest stream ended and create a non start time streaming record.`
                 __log.warn(`[Bilive Stream] ${endMessage}`)
-                const endReason = endMessage + `Bilive api origin data: ${JSON.stringify(roomInfo?.originData ?? {})}`
+                const endReason = endMessage + `Bilive api origin data: \n${JSON.stringify(roomInfo?.originData ?? {}, null, 4)}`
                 await biliveStreamRep.updateStreamEndedById(latestStream.id, null, recordId, endReason)
                 const res = await createStartStream(roomInfo, hostName)
                 return res.lastId
