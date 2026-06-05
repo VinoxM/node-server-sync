@@ -36,7 +36,7 @@ export default {
             + '(SELECT link FROM video_minio WHERE video_id = tv.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover, '
             + `tf.create_time `
             + `FROM favorites tf `
-            + `LEFT JOIN videos tv AND tv.id=tf.target_id `
+            + `LEFT JOIN videos tv ON tv.id=tf.target_id `
             + `LEFT JOIN categories tc ON tc.id=tv.category_id AND tc.type=? `
             + `LEFT JOIN authors ta ON ta.id=tv.author_id `
             + `WHERE tf.user_id=? AND tf.target_type=? `
