@@ -80,7 +80,7 @@ export default {
                 + `END `
                 + `FROM video_minio vm `
                 + `WHERE vm.video_id = videos.id`
-                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED}`
+                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED} `
                 + `RETURNING status`;
         return __sqliteDB.selectOne(sql, [videoId], null, dbName).then(data => data.status)
     },
