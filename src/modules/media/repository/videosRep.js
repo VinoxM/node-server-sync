@@ -69,8 +69,7 @@ export default {
         return __sqliteDB.update(sql, [minioId, videoId], null, dbName)
     },
     updateVideoStatus: (videoId) => {
-        return __sqliteDB.getTransactionDB(async db => {
-            const sql = `UPDATE videos `
+        const sql = `UPDATE videos `
                 + `SET status = (`
                 + `SELECT CASE `
                 + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 `
@@ -81,11 +80,9 @@ export default {
                 + `END `
                 + `FROM video_minio vm `
                 + `WHERE vm.video_id = videos.id`
-                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED}`;
-            await db.update(sql, [videoId]);
-            const video = await db.selectOne(`SELECT status FROM videos WHERE id=?`, [videoId])
-            return video?.status
-        }, null, dbName)
+                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED}`
+                + `RETURNING status`;
+        return __sqliteDB.selectOne(sql, [videoId], null, dbName).then(data => data.status)
     },
     updateVideoRemoved: videoId => {
         const sql = `UPDATE videos SET status=${MEDIA_VIDEO_STATUS.REMOVED} WHERE id=?`
