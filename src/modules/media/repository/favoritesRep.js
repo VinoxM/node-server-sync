@@ -29,7 +29,7 @@ export default {
     },
     selectAuthorFavorites: (userId, isInside) => {
         const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL
-        const sql = `SELECT tbf.id, tbc.id AS categoryId, tbc.name AS category, tba.id AS authorId, tba.name AS author, tbf.create_time `
+        const sql = `SELECT tbf.id, tbc.id AS categoryId, tbc.name AS category, tbf.target_id AS authorId, tba.name AS author, tbf.create_time `
             + `FROM favorites tbf `
             + `LEFT JOIN authors tba ON tba.id=tbf.target_id `
             + `LEFT JOIN categories tbc ON tbc.id=tba.category_id `
@@ -40,7 +40,7 @@ export default {
     },
     selectVideoFavorites: (userId, isInside) => {
         const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL
-        const sql = `SELECT tf.id, tv.id AS videoId, tv.title, tv.category_id, tc.name AS category, tv.author_id, ta.name AS author, `
+        const sql = `SELECT tf.id, tf.target_id AS videoId, tv.title, tv.category_id, tc.name AS category, tv.author_id, ta.name AS author, `
             + '(SELECT link FROM video_minio WHERE video_id = tv.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover, '
             + `tf.create_time `
             + `FROM favorites tf `
