@@ -10,6 +10,7 @@ import { checkVideoFilterRulesByCategoryId } from "./mediaFilterService.js";
 import { deleteVideoMinio, resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
+import favoritesRep from '../repository/favoritesRep.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -160,6 +161,7 @@ export async function removeVideo(videoId) {
     }
     await videosRep.deleteOne(videoId)
     await videoTagMapRep.deleteTags(videoId)
+    await favoritesRep.deleteByVideoId(videoId)
 }
 
 /**
@@ -202,6 +204,7 @@ export async function deleteAuthor(authorId) {
     const videosExists = await authorsRep.selectVideosExistsByAuthorId(authorId)
     videosExists && __throwMessage('Cannot delete author, cause videos exists in this author.')
     await authorsRep.deleteOne(authorId)
+    await favoritesRep.deleteByAuthorId(authorId)
 }
 
 /**

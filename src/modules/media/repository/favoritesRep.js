@@ -19,15 +19,23 @@ export default {
         const params = [userId, targetType, targetId]
         return __sqliteDB.delete(sql, params, null, dbName)
     },
+    deleteByVideoId: (videoId) => {
+        const sql =`DELETE FROM favorites WHERE target_type=? AND target_id=?`
+        return __sqliteDB.delete(sql, [FAVORITES_TARGET_TYPE.VIDEO, videoId])
+    },
+    deleteByAuthorId: (authorId) => {
+        const sql =`DELETE FROM favorites WHERE target_type=? AND target_id=?`
+        return __sqliteDB.delete(sql, [FAVORITES_TARGET_TYPE.AUTHOR, authorId])
+    },
     selectAuthorFavorites: (userId, isInside) => {
         const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL
         const sql = `SELECT tbf.id, tbc.id AS categoryId, tbc.name AS category, tba.id AS authorId, tba.name AS author, tbf.create_time `
             + `FROM favorites tbf `
             + `LEFT JOIN authors tba ON tba.id=tbf.target_id `
-            + `LEFT JOIN categories tbc ON tbc.id=tba.category_id AND tbc.type=? `
-            + `WHERE tbf.user_id=? AND tbf.target_type=? `
+            + `LEFT JOIN categories tbc ON tbc.id=tba.category_id `
+            + `WHERE tbf.user_id=? AND tbf.target_type=? AND tbc.type=? `
             + `ORDER BY tbf.id DESC`
-        const params = [categoryType, userId, FAVORITES_TARGET_TYPE.AUTHOR]
+        const params = [userId, FAVORITES_TARGET_TYPE.AUTHOR, categoryType]
         return __sqliteDB.selectAll(sql, params, null, dbName)
     },
     selectVideoFavorites: (userId, isInside) => {
@@ -37,12 +45,12 @@ export default {
             + `tf.create_time `
             + `FROM favorites tf `
             + `LEFT JOIN videos tv ON tv.id=tf.target_id `
-            + `LEFT JOIN categories tc ON tc.id=tv.category_id AND tc.type=? `
+            + `LEFT JOIN categories tc ON tc.id=tv.category_id `
             + `LEFT JOIN authors ta ON ta.id=tv.author_id `
-            + `WHERE tf.user_id=? AND tf.target_type=? `
+            + `WHERE tf.user_id=? AND tf.target_type=? AND tc.type=? `
             + `GROUP BY tf.id `
             + `ORDER BY tf.id DESC`
-        return __sqliteDB.selectAll(sql, [categoryType, userId, FAVORITES_TARGET_TYPE.VIDEO], null, dbName)
+        return __sqliteDB.selectAll(sql, [userId, FAVORITES_TARGET_TYPE.VIDEO, categoryType], null, dbName)
     },
     checkFavorites: (userId, targetType, targetId) => {
         const sql = `SELECT id FROM favorites WHERE user_id=? AND target_type=? AND target_id=?`
