@@ -3,7 +3,7 @@ import { checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
 import { decryptionBodyKeys } from '../../../common/utils/preHandleUtil.js';
 import { getRequestTokenHash } from '../../../common/utils/requestUtil.js';
 import { registerAccount, resetPassword, userLogin, userLogout } from '../../../modules/account/service/accountService.js';
-import { verifyClient } from '../../../modules/authorization/authorizationService.js';
+import { decodeAuthorization, verifyClient } from '../../../modules/authorization/authorizationService.js';
 
 const { POST } = apiMethodConst
 
@@ -51,6 +51,6 @@ export default {
         method: POST,
         needSecret,
         needAuth: true,
-        callback: () => "Ok"
+        callback: req => decodeAuthorization(req).then(userInfo => userInfo?.uname)
     }
 }

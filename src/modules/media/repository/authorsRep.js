@@ -1,3 +1,5 @@
+import { FAVORITES_TARGET_TYPE } from "../constants/favoritesConst.js";
+
 const dbName = 'media'
 const enablePrint = { print: true }
 
@@ -58,6 +60,22 @@ export default {
         }
         sql += `GROUP BY ta.id `
             + `ORDER BY last_time DESC`;
+        return __sqliteDB.selectAll(sql, params, null, dbName);
+    },
+    selectAuthorsByLatestUploadWithFavorites: (categoryId, authorName, userId) => {
+        let sql = `SELECT ta.id, ta.name, MAX(tv.upload_time) AS last_time,COUNT(tv.id) AS count, `
+            + `MAX(tf.create_time) AS favorites_time `
+            + `FROM authors ta `
+            + `LEFT JOIN videos tv ON ta.id = tv.author_id `
+            + `LEFT JOIN favorites tf ON tf.target_id = ta.id AND tf.target_type=? `
+            + `WHERE ta.category_id = ? `
+        const params = [FAVORITES_TARGET_TYPE.AUTHOR, categoryId]
+        if (__isNotBlank(authorName)) {
+            sql += `AND ta.name LIKE ? `
+            params.push(`%${authorName}%`)
+        }
+        sql += `GROUP BY ta.id `
+            + `ORDER BY favorites_time DESC, last_time DESC`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
     selectVideosExistsByAuthorId: authorId => {

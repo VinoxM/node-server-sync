@@ -4,6 +4,7 @@ import {
     MEDIA_VIDEO_STATUS
 } from "../constants/mediaConst.js"
 import { HybridLRUCache } from "../../../core/infra/extendMap.js"
+import { FAVORITES_TARGET_TYPE } from "../constants/favoritesConst.js";
 
 const dbName = 'media'
 const enablePrint = { print: true }
@@ -119,7 +120,7 @@ export default {
         return __sqliteDB.update(sql, [totalSize, videoId], null, dbName)
     },
     /** Search */
-    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false) => {
+    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false, userId) => {
         let sqlConcat = [];
         let params = [];
         let categoryJoin = '';
@@ -174,7 +175,10 @@ export default {
         sql += 'tc.name AS category, '
             + 'ta.name AS author, '
             + '(SELECT link FROM video_minio WHERE video_id = v.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover '
-            + 'FROM ('
+        if (userId) {
+            sql += ', CASE WHEN tf.id IS NULL THEN 0 ELSE 1 END AS favorites '
+        }
+        sql += 'FROM ('
             + 'SELECT tv.id '
             + 'FROM videos tv '
             + categoryJoin
@@ -185,7 +189,10 @@ export default {
             + 'JOIN videos v ON v.id = keys.id '
             + 'INNER JOIN categories tc ON tc.id = v.category_id '
             + 'LEFT JOIN authors ta ON ta.id = v.author_id AND ta.category_id = v.category_id '
-            + 'ORDER BY v.upload_time DESC, v.id DESC';
+        if (userId) {
+            sql += `LEFT JOIN favorites tf ON tf.target_id=v.id AND tf.target_type=${FAVORITES_TARGET_TYPE.VIDEO} `
+        }
+        sql += 'ORDER BY v.upload_time DESC, v.id DESC';
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
     countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {
@@ -239,5 +246,13 @@ export default {
             + 'AND tc.type = ' + (isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL) + ' '
             + `WHERE tv.upload_time >= (unixepoch('now', '-1 day') * 1000)`
         return __sqliteDB.selectOne(sql, [], null, dbName).then(d => d?.count || 0)
+    },
+    selectForPlay: id => {
+        const sql = `SELECT tv.id,tv.category_id,tv.author_id,tv.title,tv.upload_time,tc.name AS category,ta.name AS author `
+            + `FROM videos tv `
+            + `LEFT JOIN categories tc ON tv.category_id=tc.id `
+            + `LEFT JOIN authors ta ON tv.author_id=ta.id `
+            + `WHERE tv.id=?`;
+        return __sqliteDB.selectOne(sql, [id], null, dbName)
     }
 }

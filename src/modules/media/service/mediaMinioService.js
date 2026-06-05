@@ -266,7 +266,10 @@ async function tryBackfillObjectSize(minioId) {
     if (!client?.ready()) return;
     try {
         const stat = await client.getObjectStat(link)
-        const size = stat.size
+        let size = stat.size
+        if (__isNotBlank(size)) {
+            size = String(size).split('.')[0]
+        }
         await videoMinioRep.updateObjectSizeById(size, minioId)
     } catch (err) {
         __log.error(`Back fill minio object size failed. Cause: ${err?.message ?? 'Unknown error'}`)

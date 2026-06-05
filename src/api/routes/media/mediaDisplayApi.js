@@ -3,8 +3,10 @@ import categoriesRep from "../../../modules/media/repository/categoriesRep.js"
 import authorsRep from "../../../modules/media/repository/authorsRep.js"
 import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
 import {
+    checkBodyKeyMatch,
     checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray,
-    checkBodyKeysNotBlank, checkHeaderKeyMatchIfPresent, checkHeaderKeyNotBlank, checkHeaderKeyValue
+    checkBodyKeysNotBlank, checkHeaderKeyMatchIfPresent,
+    checkHeaderKeyNotBlank, checkHeaderKeyValue
 } from "../../../common/utils/preCheckUtil.js"
 import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilterService.js"
 import { checkCategoryExistsByInside, searchVideos } from "../../../modules/media/service/mediaVideoService.js"
@@ -12,6 +14,9 @@ import { getMinioClientMatchers } from "../../../modules/media/service/mediaMini
 import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
 import videosRep from "../../../modules/media/repository/videosRep.js"
 import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
+import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js"
+import { addUserFavorites, checkFavorites, getUserFavorites, removeUserFavorites } from "../../../modules/media/service/mediaFavoritesService.js"
+import { FAVORITES_TARGET_TYPE } from "../../../modules/media/constants/favoritesConst.js"
 
 const { GET, POST } = apiMethodConst
 
@@ -22,9 +27,9 @@ function checkInsideHeader(req) {
     checkHeaderKeyNotBlank(req, 'inside')
     checkHeaderKeyMatchIfPresent(req, 'inside', ['[0|1]'])
     if (parseInt(req.headers['inside']) === 0) {
-        checkHeaderKeyValue(req, 'secret', btoa(needSecret()))
+        return checkHeaderKeyValue(req, 'secret', btoa(needSecret()))
     } else {
-        checkHeaderKeyValue(req, 'secret', btoa(insideDisplaySecret))
+        return checkHeaderKeyValue(req, 'secret', btoa(insideDisplaySecret))
     }
 }
 
@@ -47,7 +52,10 @@ export default {
         ignoreSecret: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkInsideHeader(req),
-        callback: req => searchVideos(req.body, isInsideRequest(req))
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            return searchVideos(req.body, isInsideRequest(req), userInfo?.id)
+        }
     },
     "/getCategories": {
         method: POST,
@@ -65,6 +73,10 @@ export default {
             const categoryId = req.body['categoryId']
             const inside = parseInt(req.headers['inside'])
             await checkCategoryExistsByInside(categoryId, inside);
+            const userInfo = await decodeAuthorization(req);
+            if (userInfo) {
+                return authorsRep.selectAuthorsByLatestUploadWithFavorites(categoryId, req.body['authorName'], userInfo.id).then(({ data }) => data)
+            }
             return authorsRep.selectAuthorsByLatestUpload(categoryId, req.body['authorName']).then(({ data }) => data)
         }
     },
@@ -79,6 +91,13 @@ export default {
             await checkCategoryExistsByInside(categoryId, inside);
             return videoTagMapRep.selectTagsWithCount(categoryId, videoId).then(({ data }) => data)
         }
+    },
+    "/getVideoDetail": {
+        method: POST,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeyNotBlank(req, 'videoId'),
+        callback: req => videosRep.selectForPlay(req.body.videoId)
     },
     "/getSources": {
         method: POST,
@@ -107,4 +126,65 @@ export default {
         allowHosts: allowLanHosts,
         callback: req => getMinioClientMatchers(req.body)
     },
+    /** Favorites */
+    "/getFavoritesVideo": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        needAuth: true,
+        preCheck: req => checkInsideHeader(req),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            userInfo || __throwMessage('Permission denied.', -401, 401)
+            return getUserFavorites(userInfo.id, FAVORITES_TARGET_TYPE.VIDEO, isInsideRequest(req))
+        }
+    },
+    "/getFavoritesAuthor": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        needAuth: true,
+        preCheck: req => checkInsideHeader(req),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            userInfo || __throwMessage('Permission denied.', -401, 401)
+            return getUserFavorites(userInfo.id, FAVORITES_TARGET_TYPE.AUTHOR, isInsideRequest(req))
+        }
+    },
+    "/addFavorites": {
+        method: POST,
+        needSecret,
+        allowHosts: allowLanHosts,
+        needAuth: true,
+        preCheck: req => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            userInfo || __throwMessage('Permission denied.', -401, 401)
+            return addUserFavorites(userInfo.id, req.body.targetType, req.body.targetId)
+        }
+    },
+    "/removeFavorites": {
+        method: POST,
+        needSecret,
+        allowHosts: allowLanHosts,
+        needAuth: true,
+        preCheck: req => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            userInfo || __throwMessage('Permission denied.', -401, 401)
+            return removeUserFavorites(userInfo.id, req.body.targetType, req.body.targetId)
+        }
+    },
+    "/checkFavorites": {
+        method: POST,
+        needSecret,
+        allowHosts: allowLanHosts,
+        needAuth: true,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'payload'),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req)
+            userInfo || __throwMessage('Permission denied.', -401, 401)
+            return checkFavorites(userInfo.id, req.body.payload)
+        }
+    }
 }
