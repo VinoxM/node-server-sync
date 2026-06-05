@@ -23,11 +23,11 @@ export default {
         const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL
         const sql = `SELECT tbf.id, tbc.id AS categoryId, tbc.name AS category, tba.id AS authorId, tba.name AS author, tbf.create_time `
             + `FROM favorites tbf `
-            + `LEFT JOIN authors tba ON tbf.target_type=? AND tba.id=tbf.target_id `
-            + `LEFT JOIN categories tbc ON tbc.id=tba.category_id `
-            + `WHERE tbf.user_id=? AND tbc.type=? `
+            + `LEFT JOIN authors tba ON tba.id=tbf.target_id `
+            + `LEFT JOIN categories tbc ON tbc.id=tba.category_id AND tbc.type=? `
+            + `WHERE tbf.user_id=? AND tbf.target_type=? `
             + `ORDER BY tbf.id DESC`
-        const params = [FAVORITES_TARGET_TYPE.AUTHOR, userId, categoryType]
+        const params = [categoryType, userId, FAVORITES_TARGET_TYPE.AUTHOR]
         return __sqliteDB.selectAll(sql, params, null, dbName)
     },
     selectVideoFavorites: (userId, isInside) => {
@@ -36,13 +36,13 @@ export default {
             + '(SELECT link FROM video_minio WHERE video_id = tv.id AND type = ' + MEDIA_VIDEO_MINIO_TYPE.COVER + ' LIMIT 1) AS cover, '
             + `tf.create_time `
             + `FROM favorites tf `
-            + `LEFT JOIN videos tv ON tf.target_type=? AND tv.id=tf.target_id `
-            + `LEFT JOIN categories tc ON tc.id=tv.category_id `
+            + `LEFT JOIN videos tv AND tv.id=tf.target_id `
+            + `LEFT JOIN categories tc ON tc.id=tv.category_id AND tc.type=? `
             + `LEFT JOIN authors ta ON ta.id=tv.author_id `
-            + `WHERE tf.user_id=? AND tc.type=? `
+            + `WHERE tf.user_id=? AND tf.target_type=? `
             + `GROUP BY tf.id `
             + `ORDER BY tf.id DESC`
-        return __sqliteDB.selectAll(sql, [FAVORITES_TARGET_TYPE.VIDEO, userId, categoryType], null, dbName)
+        return __sqliteDB.selectAll(sql, [categoryType, userId, FAVORITES_TARGET_TYPE.VIDEO], null, dbName)
     },
     checkFavorites: (userId, targetType, targetId) => {
         const sql = `SELECT id FROM favorites WHERE user_id=? AND target_type=? AND target_id=?`
