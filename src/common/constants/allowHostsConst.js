@@ -1,5 +1,5 @@
 export const allowLanHosts = [    
-    'server.vinoxm.name',
+    'server.vinoxm.art',
     '*-coder.vinoxm.cloud'
 ]
 

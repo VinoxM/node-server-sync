@@ -11,7 +11,7 @@ server:
 axios:
   proxy:
     protocol: http
-    host: 192.168.31.100
+    host: gateway.vinoxm.lan
     port: 7890
 api:
   requestBodyLimit: 2 * 1024 * 1024
@@ -19,7 +19,7 @@ api:
     - /common/doNothing
   allowHosts:
     - api: /summary/*
-      hosts: ["*-coder.vinoxm.cloud", "server.vinoxm.name"]
+      hosts: ["*-coder.vinoxm.cloud", "server.vinoxm.art"]
   filterDisabled: []
   needAuth:
     - /rss(/v2)?/[(?!get)|Matchers]*$
