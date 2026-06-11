@@ -404,12 +404,12 @@ export function generateMinioSourceSafely(minioLink) {
         for (const label in clientMatchers) {
             const { matcher, hostname } = clientMatchers[label];
             try {
-                if (new RegExp(matcher).test(source)) {
-                    return `http://${hostname}${source}`
+                if (new RegExp(matcher).test(minioLink)) {
+                    return `http://${hostname}${minioLink}`
                 }
             } catch (ex) {
             }
         }
     }
-    return `https://minio-api-media.vinoxm.name${minioLink}`
+    return `https://minio-api-media.vinoxm.art${minioLink}`
 }
