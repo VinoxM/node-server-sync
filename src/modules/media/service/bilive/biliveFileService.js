@@ -183,12 +183,22 @@ export async function removeFileByFileId(id) {
     file || __throwMessage('File not found.')
     const { filePath, fileStatus } = file
     MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED === fileStatus && __throwMessage('File has been removed.')
+    await biliveFileRep.updateFileRemovedPending(id)
     const cover = generateVideoStorageFilePath(filePath, '.cover.jpg', false)
     const barrage = generateVideoStorageFilePath(filePath, '.xml', false)
     const source = generateVideoStorageFilePath(filePath, '.flv', false)
     const mp4Source = generateVideoStorageFilePath(filePath, '.mp4', false)
-    await removeRemoteFiles([cover, source, barrage, mp4Source])
-    await biliveFileRep.updateFileRemoved(id)
+    const toRemoveFiles = [cover, source, barrage, mp4Source]
+    const uploadTimeout = await getMediaUploadTimeoutOption()
+    await executeAsyncTaskChain([async () => {
+        const result = await removeRemoteFiles(toRemoveFiles)
+        if (result === 0) {
+            await biliveFileRep.updateFileRemoved(id)
+        } else {
+            __log.warn(`[BiliveFile] [${id}] Batch remove file failed, restore file status.`, toRemoveFiles)
+            await biliveFileRep.restoreFileRemoveFailed(id)
+        }
+    }], uploadTimeout)
 }
 
 export async function deleteFile(id) {

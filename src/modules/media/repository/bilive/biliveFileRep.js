@@ -43,9 +43,19 @@ export default {
         const params = [MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZED, id, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZING]
         return __sqliteDB.update(sql, params, null, dbName)
     },
+    updateFileRemovedPending: id => {
+        const sql = `UPDATE bilive_record_files SET file_status=file_status-10 WHERE id=?`
+        const params = [id]
+        return __sqliteDB.update(sql, params, null, dbName)
+    },
     updateFileRemoved: id => {
-        const sql = `UPDATE bilive_record_files SET file_status=? WHERE id=?`
-        const params = [MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED, id]
+        const sql = `UPDATE bilive_record_files SET file_status=? WHERE id=? and file_status<?`
+        const params = [MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED, id, MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED]
+        return __sqliteDB.update(sql, params, null, dbName)
+    },
+    restoreFileRemoveFailed: id => {
+        const sql = `UPDATE bilive_record_files SET file_status=file_status+10 WHERE id=? and file_status<?`
+        const params = [id, MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED]
         return __sqliteDB.update(sql, params, null, dbName)
     },
     deleteFileById: id => {

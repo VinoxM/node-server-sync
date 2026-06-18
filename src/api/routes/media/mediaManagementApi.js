@@ -63,6 +63,14 @@ export default {
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => removeVideo(req.body['id'])
     },
+    "/videos/deleteBatch": {
+        method: POST,
+        needSecret,
+        allowHosts: allowLanHosts,
+        maybeStream: true,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
+        callback: req => removeVideo(req.body['id'])
+    },
     "/videos/retryCalculation": {
         method: POST,
         needSecret,

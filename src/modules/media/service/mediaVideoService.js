@@ -11,6 +11,7 @@ import { deleteVideoMinio, resolveStorageUriWithCreate, updateVideoStatusByVideo
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 import favoritesRep from '../repository/favoritesRep.js';
+import { Tracer } from '../../../core/infra/tracer.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -162,6 +163,16 @@ export async function removeVideo(videoId) {
     await videosRep.deleteOne(videoId)
     await videoTagMapRep.deleteTags(videoId)
     await favoritesRep.deleteByVideoId(videoId)
+}
+
+export async function removeVideoBatch(videoIds) {
+    for (const videoId of videoIds) {
+        try {
+            await removeVideo(videoId)
+        } catch (error) {
+            Tracer.tryStreamMessage(error.message, 'message:error')
+        }
+    }
 }
 
 /**

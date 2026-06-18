@@ -53,9 +53,11 @@ fi' --`;
 
 export const SSH_CMD_BATCH_DELETE_SIMPLE = `bash -c '
 set +H;
+ERR_FLAG=0;
 for path in "$@"; do
-    rm -f "$path" "\${path}.aria2"
-done
+    rm -f "$path" "\${path}.aria2" || ERR_FLAG=1;
+done;
+exit $ERR_FLAG;
 ' --`;
 
 export const SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 = `bash -c '
