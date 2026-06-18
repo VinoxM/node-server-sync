@@ -14,7 +14,7 @@ import { getTaskInfoAndDownloadStatus, removeTask } from "../../../modules/media
 import {
     addAuthor, addCategory, checkVideoCanAdd,
     createVideo, deleteAuthor, deleteCategory,
-    removeVideo, updateVideoTags, updateVideoTitle
+    removeVideo, removeVideoBatch, updateVideoTags, updateVideoTitle
 } from "../../../modules/media/service/mediaVideoService.js"
 import { getOptions, updateOption } from "../../../modules/media/service/mediaOptionsService.js"
 import videosRep from "../../../modules/media/repository/videosRep.js"
@@ -69,7 +69,7 @@ export default {
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
-        callback: req => removeVideo(req.body['id'])
+        callback: req => removeVideoBatch(req.body['ids'])
     },
     "/videos/retryCalculation": {
         method: POST,
