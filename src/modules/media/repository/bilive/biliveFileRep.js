@@ -7,8 +7,10 @@ const FULL_QUERY_PARAMETERS = `id, session_id, stream_id, title, file_path, file
 
 export default {
     insertFile: (sessionId, streamId, title, filePath, startTime, endTime, fileSize = 0) => {
-        const sql = `INSERT INTO bilive_record_files(session_id, stream_id, title, file_path, file_size, start_time, end_time, file_status) VALUES(?,?,?,?,?,?,?,?)`
-        const params = [sessionId, streamId, title, filePath, fileSize, startTime, endTime, MEDIA_BILIVE_RECORD_FILE_STATUS.OPENING]
+        const sql = `INSERT INTO bilive_record_files(session_id, stream_id, title, file_path, file_size, start_time, end_time, file_status) `
+            + `SELECT ?,?,?,?,?,?,?,? `
+            + `WHERE NOT EXISTS (SELECT 1 FROM bilive_record_files WHERE file_path=?)`
+        const params = [sessionId, streamId, title, filePath, fileSize, startTime, endTime, MEDIA_BILIVE_RECORD_FILE_STATUS.OPENING, filePath]
         return __sqliteDB.insert(sql, params, null, dbName)
     },
     selectByFilePath: filePath => {

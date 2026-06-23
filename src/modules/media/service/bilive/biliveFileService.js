@@ -31,17 +31,17 @@ export async function saveBiliveFile(recordId, event, eventTimestamp, eventData)
     if (__isBlank(sessionId)) {
         printAndPushNotificationWarnMessage(`[Bilive File] Dropped empty sessionId event: ${MEDIA_BILIVE_RECORD_EVENT_ARRAY[event] ?? event}. `
             + `Event data: ${JSON.stringify(eventData)}`)
-        return
+        return;
     }
     const file = await biliveFileRep.selectByFilePath(filePath)
     if (MEDIA_BILIVE_FILE_EVENT.FileOpening === event) {
         const streamId = await getBiliveLatestStreamIdBySessionId(sessionId, recordId, roomId, hostName, title, areaNameParent, areaNameChild)
         if (!file) {
-            await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime ?? eventTimestamp))
-        } else {
-            __log.warn(`[Bilive File Opening] Found exists file[${file.id}] from repository, update file open time.`)
-            await biliveFileRep.updateFileOpenTime(tryResolveTime(fileOpenTime ?? eventTimestamp), file.id)
+            const { rows } = await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime ?? eventTimestamp))
+            if (rows > 0) return;
         }
+        __log.warn(`[Bilive File Opening] Found exists file[${file.id}] from repository, update file open time.`)
+        await biliveFileRep.updateFileOpenTime(tryResolveTime(fileOpenTime ?? eventTimestamp), file.id)
     } else if (MEDIA_BILIVE_FILE_EVENT.FileClosed === event) {
         const fileSize = eventData['FileSize'] ?? 0
         const fileCloseTime = eventData['FileCloseTime']
@@ -50,10 +50,10 @@ export async function saveBiliveFile(recordId, event, eventTimestamp, eventData)
                 + `Create a new file record. File path: ${filePath}. `
                 + `Event data: ${JSON.stringify(eventData)}`)
             const streamId = await getBiliveLatestStreamIdBySessionId(sessionId, recordId, roomId, hostName, title, areaNameParent, areaNameChild)
-            await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime), tryResolveTime(fileCloseTime ?? eventTimestamp), fileSize)
-        } else {
-            await biliveFileRep.updateFileClosed(tryResolveTime(fileCloseTime ?? eventTimestamp), fileSize, file.id)
+            const { rows } = await biliveFileRep.insertFile(sessionId, streamId, title, filePath, tryResolveTime(fileOpenTime), tryResolveTime(fileCloseTime ?? eventTimestamp), fileSize);
+            if (rows > 0) return;
         }
+        await biliveFileRep.updateFileClosed(tryResolveTime(fileCloseTime ?? eventTimestamp), fileSize, file.id)
     }
 }
 
