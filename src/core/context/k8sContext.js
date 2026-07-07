@@ -49,10 +49,10 @@ export class K8SApplicationContext extends ApplicationContext {
         const placeholder = this.logPlaceholder();
         this.#watcherWorker = new Worker(__join('@/src/jobs/watcher', 'k3sWatchWorker.js'), { workerData: { configMap: this.#configMap } });
         const this_ = this
-        this.#watcherWorker.on('message', (message) => {
+        this.#watcherWorker.on('message', async (message) => {
             if (message.event === 'CONFIG_UPDATED') {
                 __log.info(`[${placeholder}] Configuration changed.`);
-                this_.#superLoad()
+                await this_.#superLoad()
                 this_.#mergeConfiguration(message.data)
                 this_.refreshContext()
                 pushNotification(`[K3S Configuration Watcher] Configuration changed.`)
@@ -60,12 +60,12 @@ export class K8SApplicationContext extends ApplicationContext {
         });
     }
 
-    #superLoad() {
+    async #superLoad() {
         return super.load()
     }
 
     async load() {
-        const context = this.#superLoad()
+        const context = await this.#superLoad()
         return this.#loadConfiguration().then(() => context)
     }
 

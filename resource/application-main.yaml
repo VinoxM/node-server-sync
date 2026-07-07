@@ -50,6 +50,16 @@ api:
     - /media/manage/storage/deleteTask
     - /media/manage/videosTagMapping/clean
     - /media/manage/options/updateOne
+    # Playlist
+    - /media/manage/playlist/create
+    - /media/manage/playlist/updateTitle
+    - /media/manage/playlist/remove
+    - /media/manage/playlist/videos
+    - /media/manage/playlist/addVideo
+    - /media/manage/playlist/addVideoBatch
+    - /media/manage/playlist/updateVideoSort
+    - /media/manage/playlist/updateVideoSortBatch
+    - /media/manage/playlist/removeVideo
     # Media Task
     - /media/task/toggleAria2Task
   tokenBucket:

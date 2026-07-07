@@ -1,3 +1,4 @@
+import { tryClone } from "../../common/utils/objectUtil.js"
 import { Tracer } from "../infra/tracer.js"
 
 export class ContextSubscribe {
@@ -41,6 +42,7 @@ export class ContextSubscribe {
 
     destroy() {
         __env.unsubscribe?.(this)
+        this.#onRefreshCallback = null
     }
 }
 
@@ -48,10 +50,23 @@ export class GetterContextSubscribe extends ContextSubscribe {
     #value = null;
     #getter = null;
     #initialized = false;
+    #currentEpoch = 0;
 
     constructor(label, getter) {
         super(label, () => {
-            this.#value = getter?.()
+            const epoch = ++this.#currentEpoch;
+            const res = getter?.();
+            if (res instanceof Promise) {
+                res.then(val => {
+                    if (epoch === this.#currentEpoch) {
+                        this.#value = val;
+                    }
+                }).catch(err => {
+                    __log.error(`[GetterContextSubscribe:${label}] Async getter failed:`, err);
+                });
+            } else {
+                this.#value = res;
+            }
         }, true)
         this.#getter = getter;
     }
@@ -62,6 +77,12 @@ export class GetterContextSubscribe extends ContextSubscribe {
             this.#value = this.#getter?.();
             this.#initialized = true;
         }
-        return this.#value;
+        return tryClone(this.#value);
+    }
+
+    destroy() {
+        super.destroy();
+        this.#value = null;
+        this.#getter = null;
     }
 }

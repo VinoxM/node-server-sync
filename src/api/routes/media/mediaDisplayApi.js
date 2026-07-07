@@ -5,8 +5,9 @@ import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
 import {
     checkBodyKeyMatch,
     checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray,
-    checkBodyKeysNotBlank, checkHeaderKeyMatchIfPresent,
-    checkHeaderKeyNotBlank, checkHeaderKeyValue
+    checkBodyKeysNotBlank, checkHeaderInside, checkHeaderKeyMatchIfPresent,
+    checkHeaderKeyNotBlank, checkHeaderKeyValue,
+    checkQueryKeyNotBlank
 } from "../../../common/utils/preCheckUtil.js"
 import { checkVideoFilterRules } from "../../../modules/media/service/mediaFilterService.js"
 import { checkCategoryExistsByInside, searchVideos } from "../../../modules/media/service/mediaVideoService.js"
@@ -17,6 +18,7 @@ import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
 import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js"
 import { addUserFavorites, checkFavorites, getUserFavorites, removeUserFavorites } from "../../../modules/media/service/mediaFavoritesService.js"
 import { FAVORITES_TARGET_TYPE } from "../../../modules/media/constants/favoritesConst.js"
+import { getPlaylistByVideoId } from "../../../modules/media/service/mediaPlaylistService.js"
 
 const { GET, POST } = apiMethodConst
 
@@ -24,13 +26,7 @@ const needSecret = () => "mAou5820.media.display"
 const insideDisplaySecret = "mAou5820.media.display-inside"
 
 function checkInsideHeader(req) {
-    checkHeaderKeyNotBlank(req, 'inside')
-    checkHeaderKeyMatchIfPresent(req, 'inside', ['[0|1]'])
-    if (parseInt(req.headers['inside']) === 0) {
-        return checkHeaderKeyValue(req, 'secret', btoa(needSecret()))
-    } else {
-        return checkHeaderKeyValue(req, 'secret', btoa(insideDisplaySecret))
-    }
+    return checkHeaderInside(req, needSecret(), insideDisplaySecret)
 }
 
 function isInsideRequest(req) {
@@ -186,5 +182,13 @@ export default {
             userInfo || __throwMessage('Permission denied.', -401, 401)
             return checkFavorites(userInfo.id, req.body.payload)
         }
+    },
+    /** Playlists */
+    "/getVideoPlaylists": {
+        method: GET,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkQueryKeyNotBlank(req, 'videoId'),
+        callback: req => getPlaylistByVideoId(req.query.videoId)
     }
 }

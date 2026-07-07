@@ -12,6 +12,7 @@ import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 import favoritesRep from '../repository/favoritesRep.js';
 import { Tracer } from '../../../core/infra/tracer.js';
+import { removePlaylistByVideoId } from './mediaPlaylistService.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -163,6 +164,7 @@ export async function removeVideo(videoId) {
     await videosRep.deleteOne(videoId)
     await videoTagMapRep.deleteTags(videoId)
     await favoritesRep.deleteByVideoId(videoId)
+    await removePlaylistByVideoId(videoId)
 }
 
 export async function removeVideoBatch(videoIds) {

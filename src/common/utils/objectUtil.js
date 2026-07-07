@@ -73,3 +73,22 @@ export function mergeObject(target, source) {
         mergeObject(target[key], sourceValue);
     });
 }
+
+export function isPrimitive(obj) {
+    if (obj === null || obj === undefined) {
+        return true
+    }
+    return typeof obj !== 'object' && typeof obj !== 'function'
+}
+
+function canBeCloned(obj) {
+    if (obj === null || obj === undefined) {
+        return false
+    }
+    const tp = typeof obj
+    return !['function', 'object'].includes(tp)
+}
+
+export function tryClone(obj) {
+    return canBeCloned(obj) ? structuredClone(obj) : obj;
+}

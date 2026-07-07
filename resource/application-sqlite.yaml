@@ -319,6 +319,27 @@ sqlite:
             `status` integer NOT NULL,
             CONSTRAINT `idx_unique_gid` UNIQUE (`gid`)
           );
+      - tableName: playlists
+        DDL: |
+          CREATE TABLE playlists (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `category_id` integer NOT NULL,
+            `title` varchar(500) NOT NULL,
+            `create_time` datetime NOT NULL
+          );
+          CREATE INDEX `idx_playlist_category` ON playlists(`category_id`);
+          CREATE INDEX `idx_playlist_title` ON playlists(`title`);
+      - tableName: playlist_videos
+        DDL: |
+          CREATE TABLE playlist_videos (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `playlist_id` integer NOT NULL,
+            `video_id` integer NOT NULL,
+            `sort` integer NOT NULL DEFAULT 0,
+            UNIQUE(`playlist_id`, `video_id`)
+          );
+          CREATE INDEX `idx_pv_playlist_sort` ON playlist_videos(`playlist_id`, `sort`);
+          CREATE INDEX `idx_pv_video` ON playlist_videos(`video_id`);
       - tableName: bilive_record
         DDL: |
           CREATE TABLE bilive_record (

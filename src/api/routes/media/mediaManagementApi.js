@@ -2,7 +2,8 @@ import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import {
     checkBodyKeyMatch,
     checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank,
-    checkBodyKeysNotNull
+    checkBodyKeysNotNull,
+    checkHeaderInside
 } from "../../../common/utils/preCheckUtil.js"
 import videoTagMapRep from "../../../modules/media/repository/videoTagMapRep.js"
 import { getFilterRulesByCategory, handleFilterRule } from "../../../modules/media/service/mediaFilterService.js"
@@ -20,10 +21,25 @@ import { getOptions, updateOption } from "../../../modules/media/service/mediaOp
 import videosRep from "../../../modules/media/repository/videosRep.js"
 import videoMinioRep from "../../../modules/media/repository/videoMinioRep.js"
 import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
+import {
+    addPlaylistVideo, addPlaylistVideoBatch, createPlaylist,
+    getPlaylistById,
+    getPlaylistsByVideoId,
+    removePlaylist,
+    removePlaylistVideo, searchPlaylist,
+    updatePlaylistTitle,
+    updatePlaylistVideoSort,
+    updatePlaylistVideoSortBatch
+} from "../../../modules/media/service/mediaPlaylistService.js"
 
 const { POST } = apiMethodConst
 
 const needSecret = () => "mAou5820.media.management"
+const insideManagementSecret = "mAou5820.media.management-inside"
+
+function isInsideRequest(req) {
+    return parseInt(req.headers['inside']) === 1
+}
 
 export default {
     basePath: "/media/manage",
@@ -228,5 +244,93 @@ export default {
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'value', 'description']),
         callback: req => updateOption(req.body.id, req.body.description, req.body.value)
-    }
+    },
+    /** Playlist Management */
+    "/playlist/getByVideo": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotBlank(req, 'videoId'),
+        callback: async req => getPlaylistsByVideoId(req.body.videoId)
+    },
+    "/playlist/getSearch": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret),
+        callback: async req => searchPlaylist(req.body, isInsideRequest(req))
+    },
+    "/playlist/create": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeysNotBlank(req, ['categoryId', 'title']),
+        callback: async req => createPlaylist(req.body.categoryId, req.body.title)
+    },
+    "/playlist/updateTitle": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeysNotBlank(req, ['id', 'title']),
+        callback: async req => updatePlaylistTitle(req.body.id, req.body.title)
+    },
+    "/playlist/remove": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotBlank(req, 'id'),
+        callback: async req => removePlaylist(req.body.id)
+    },
+    "/playlist/videos": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotBlank(req, 'id'),
+        callback: async req => getPlaylistById(req.body.id)
+    },
+    "/playlist/addVideo": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeysNotBlank(req, ['id', 'videoId']),
+        callback: async req => addPlaylistVideo(req.body.id, req.body.videoId, req.body.sort)
+    },
+    "/playlist/addVideoBatch": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotEmptyArray(req, 'arr'),
+        callback: async req => addPlaylistVideoBatch(req.body.arr)
+    },
+    "/playlist/updateVideoSort": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeysNotBlank(req, ['id', 'videoId', 'sort']),
+        callback: async req => updatePlaylistVideoSort(req.body.id, req.body.videoId, req.body.sort)
+    },
+    "/playlist/updateVideoSortBatch": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotEmptyArray(req, "arr"),
+        callback: async req => updatePlaylistVideoSortBatch(req.body.arr)
+    },
+    "/playlist/removeVideo": {
+        method: POST,
+        ignoreSecret: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeysNotBlank(req, ['id', 'videoId']),
+        callback: async req => removePlaylistVideo(req.body.id, req.body.videoId)
+    },
 }

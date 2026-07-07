@@ -139,3 +139,13 @@ export const checkBodyFilesNotEmpty = (request, fileKeys, opts = {}) => requestV
     errorMessage: 'Request files not exists',
     ...opts
 })
+
+export const checkHeaderInside = (req, secret, insideSecret, opts = {}) => {
+    checkHeaderKeyNotBlank(req, 'inside')
+    checkHeaderKeyMatchIfPresent(req, 'inside', ['[0|1]'])
+    if (parseInt(req.headers['inside']) === 0) {
+        return checkHeaderKeyValue(req, 'secret', btoa(secret))
+    } else {
+        return checkHeaderKeyValue(req, 'secret', btoa(insideSecret))
+    }
+}

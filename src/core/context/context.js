@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import * as YAML from "yaml";
-import { getItem, mergeObject } from "../../common/utils/objectUtil.js";
+import { getItem, tryClone, mergeObject } from "../../common/utils/objectUtil.js";
 import { ContextSubscribe } from "./subscribe.js";
 import { LRUCache } from "../infra/extendMap.js";
 import { Tracer } from "../infra/tracer.js";
@@ -53,7 +53,7 @@ export class ApplicationContext {
                 Tracer.runClearly(() => __log.info(`[${placeholder}] Loaded configuration: application-${active}.${suffix}.`));
             })
         }
-        return JSON.parse(JSON.stringify(this.#context));
+        return tryClone(this.#context);
     }
 
     logPlaceholder() {
@@ -70,16 +70,17 @@ export class ApplicationContext {
             return this.#propertyCache.get(key)
         }
         const result = getItem(this.#context, key, defaultValue);
-        this.#propertyCache.set(key, result)
-        return result
+        this.#propertyCache.set(key, result);
+        return tryClone(result);
     }
 
     mergeContext(obj, label = 'Unknown') {
         if (obj && !Array.isArray(obj) && typeof obj === 'object') {
             mergeObject(this.#context, obj);
+            this.#propertyCache.clear();
             __log.info(`[${this.logPlaceholder()}] Merged configuration: ${label}.`);
         }
-        return JSON.parse(JSON.stringify(this.#context));
+        return tryClone(this.#context);
     }
 
     addListen(subscribe) {
