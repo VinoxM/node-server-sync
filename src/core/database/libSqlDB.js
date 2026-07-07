@@ -47,7 +47,7 @@ export class SqliteDB {
         return this.#schema[dbName];
     }
 
-    async #exec(sql, params, options = defaultOptions, dbName) {
+    async #exec(sql, parameters, options = defaultOptions, dbName) {
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
@@ -55,6 +55,7 @@ export class SqliteDB {
 
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
+        const params = tryResolveParams(parameters)
         if (params && params.length > 0) {
             printer(`===> Parameters: `, params.length < 10 ? params : params.length);
         }
@@ -75,7 +76,7 @@ export class SqliteDB {
         }
     }
 
-    async #query(sql, params, options = defaultOptions, dbName) {
+    async #query(sql, parameters, options = defaultOptions, dbName) {
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
@@ -84,6 +85,7 @@ export class SqliteDB {
 
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
+        const params = tryResolveParams(parameters)
         if (params && params.length > 0) {
             printer(`===> Parameters: `, params.length < 10 ? params : params.length);
         }
@@ -287,9 +289,10 @@ class TransactionLibSqlDB {
         this.#client = client;
     }
 
-    async #exec(sql, params, options = defaultOptions) {
+    async #exec(sql, parameters, options = defaultOptions) {
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
+        const params = tryResolveParams(parameters)
         if (params && params.length > 0) {
             printer(`===> Parameters: `, params.length < 10 ? params : params.length);
         }
@@ -308,10 +311,11 @@ class TransactionLibSqlDB {
         }
     }
 
-    async #query(sql, params, options = defaultOptions) {
+    async #query(sql, parameters, options = defaultOptions) {
         const { resultMap } = options ?? defaultOptions
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
+        const params = tryResolveParams(parameters)
         if (params && params.length > 0) {
             printer(`===> Parameters: `, params.length < 10 ? params : params.length);
         }
@@ -444,4 +448,9 @@ const generateColumnProperty = (column) => {
         isLastUnderline = false;
     }
     return result;
+}
+
+const tryResolveParams = (params) => {
+    const result = params || []
+    return result.map(o => o === undefined ? null : o)
 }
