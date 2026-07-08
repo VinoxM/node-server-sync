@@ -135,10 +135,13 @@ export default {
         return __sqliteDB.delete(sql, [videoId], null, dbName)
     },
     updateSortsByIds: (arr = []) => {
-        const params = []
-        const sql = arr.filter(data => data && data.id > 0 && Number.isInteger(data.sort))
-            .map(({ id, sort }) => (params.push(sort, id), `UPDATE playlist_videos SET sort=? WHERE id=?`))
-            .join(";")
-        return __sqliteDB.update(sql, params, null, dbName)
+        return __sqliteDB.getTransactionDB(async db => {
+            for (const data of arr) {
+                if (data && data.id > 0 && Number.isInteger(data.sort)) {
+                    const { id, sort } = data
+                    await db.update(`UPDATE playlist_videos SET sort=? WHERE id=?`, [sort, id])
+                }
+            }
+        }, null, dbName)
     }
 }
