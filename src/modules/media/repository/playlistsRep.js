@@ -51,9 +51,22 @@ export default {
         const sql = `SELECT id, category_id, title FROM playlists WHERE id=?`
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
+    selectOneByTitleAndCategory: (title, categoryId) => {
+        const sql = `SELECT id, category_id, title FROM playlists WHERE title=? AND category_id=?`
+        return __sqliteDB.selectOne(sql, [title, categoryId], null, dbName)
+    },
     insertOne: (categoryId, title) => {
         const sql = `INSERT INTO playlists(category_id, title, create_time) VALUES(?,?,?)`
         const params = [categoryId, title, new Date()]
+        return __sqliteDB.insert(sql, params, null, dbName)
+    },
+    insertOneNotIgnoreByTitle: (categoryId, title) => {
+        const sql = `INSERT INTO playlists (category_id, title, create_time) `
+            + `SELECT ?, ?, ? `
+            + `WHERE NOT EXISTS (`
+            + `SELECT 1 FROM playlists WHERE title = ? AND category_id = ?`
+            + `)`;
+        const params = [categoryId, title, new Date(), title, categoryId]
         return __sqliteDB.insert(sql, params, null, dbName)
     },
     updateTitle: (id, title) => {

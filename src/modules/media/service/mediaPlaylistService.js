@@ -39,6 +39,20 @@ export async function getPlaylistByVideoId(videoId) {
     return result
 }
 
+export async function addPlaylistVideoByTitle(videoId, title) {
+    const video = await videosRep.selectOne(videoId);
+    video || __throwMessage('Video not exists');
+    const categoryId = video.categoryId
+    await playlistsRep.insertOneNotIgnoreByTitle(categoryId, title);
+    const playList = await playlistsRep.selectOneByTitleAndCategory(title, categoryId);
+    playList || __throwMessage('Playlist not exists');
+    playList.categoryId === categoryId || __throwMessage("Video's category not equals playlist");
+    const id = playList.id
+    const maxSort = await playlistsRep.selectMaxSortedByPlaylistId(id);
+    const toSort = maxSort + 1
+    return playlistsRep.insertVideo(id, videoId, toSort);
+}
+
 export async function addPlaylistVideo(id, videoId, sort) {
     const playList = await playlistsRep.selectOneById(id);
     playList || __throwMessage('Playlist not exists');

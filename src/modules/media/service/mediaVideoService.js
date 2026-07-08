@@ -12,7 +12,7 @@ import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
 import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 import favoritesRep from '../repository/favoritesRep.js';
 import { Tracer } from '../../../core/infra/tracer.js';
-import { removePlaylistByVideoId } from './mediaPlaylistService.js';
+import { addPlaylistVideoByTitle, removePlaylistByVideoId } from './mediaPlaylistService.js';
 
 const VIDEO_TAG_OPERATOR = ['UPDATE', 'ADD', 'REMOVE']
 
@@ -51,7 +51,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId = null }) {
  * PREPARED -> PREPARED/COMPLETE/FAILED
  */
 export async function createVideo(videoObj) {
-    const { title, author, category, uploadTime } = videoObj
+    const { title, author, category, uploadTime, playlistTitle } = videoObj
     // validate category
     const categoryExists = await categoriesRep.selectOneByName(category)
     categoryExists || __throwMessage('Category not exists.')
@@ -91,6 +91,13 @@ export async function createVideo(videoObj) {
         const uploadTimeout = await getMediaUploadTimeoutOption()
         tasks.push(async () => updateVideoStatusByVideoMinioStatus(videoId))
         await executeAsyncTaskChain(tasks, uploadTimeout)
+    }
+    if (__isNotBlank(playlistTitle)) {
+        try {
+            await addPlaylistVideoByTitle(videoId, playlistTitle)
+        } catch (ex) {
+            __log.warn(`Add video to playlist failed. Cause: `, ex.message ?? ex)
+        }
     }
     return { id: videoId };
 }
