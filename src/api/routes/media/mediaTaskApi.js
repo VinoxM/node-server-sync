@@ -35,6 +35,7 @@ export default {
     "/toggleAria2Task": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['gid', 'operator']),
         callback: req => pauseOrResumeTask(req.body['gid'], req.body['operator'])

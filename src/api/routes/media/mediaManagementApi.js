@@ -14,6 +14,7 @@ import {
 import { getTaskInfoAndDownloadStatus, removeTask } from "../../../modules/media/service/mediaTaskService.js"
 import {
     addAuthor, addCategory, checkVideoCanAdd,
+    cleanEmptyAuthor,
     createVideo, deleteAuthor, deleteCategory,
     removeVideo, removeVideoBatch, updateVideoTags, updateVideoTitle
 } from "../../../modules/media/service/mediaVideoService.js"
@@ -61,6 +62,7 @@ export default {
     "/videos/updateTitle": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'title']),
         callback: req => updateVideoTitle(req.body['id'], req.body['title'])
@@ -68,6 +70,7 @@ export default {
     "/videos/updateTags": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'operator']) && checkBodyKeyNotEmptyArray(req, ['tags']),
         callback: req => updateVideoTags(req.body['id'], req.body['tags'], req.body['operator'])
@@ -75,6 +78,7 @@ export default {
     "/videos/delete": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => removeVideo(req.body['id'])
@@ -82,6 +86,7 @@ export default {
     "/videos/deleteBatch": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
@@ -90,6 +95,7 @@ export default {
     "/videos/retryCalculation": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => updateVideoStatusByVideoMinioStatus(req.body['id'])
@@ -98,6 +104,7 @@ export default {
     "/category/create": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['category', 'inside']) && checkBodyKeyMatch(req, 'inside', ['[0|1]']),
         callback: req => addCategory(req.body['category'], req.body['inside'])
@@ -105,6 +112,7 @@ export default {
     "/category/delete": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteCategory(req.body['id'])
@@ -113,6 +121,7 @@ export default {
     "/author/create": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['categoryId', 'name']),
         callback: req => addAuthor(req.body['name'], req.body['categoryId'])
@@ -120,9 +129,18 @@ export default {
     "/author/delete": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteAuthor(req.body['id'])
+    },
+    "/author/clean": {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeysNotBlank(req, ['categoryId']),
+        callback: req => cleanEmptyAuthor(req.body['categoryId'])
     },
     /** Storage management: Minio */
     "/storage/getInfo": {
@@ -135,6 +153,7 @@ export default {
     "/storage/create": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['videoId', 'type', 'uri']),
         callback: req => createMinioManually(req.body)
@@ -142,6 +161,7 @@ export default {
     "/storage/updateOriginUri": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'uri']),
         callback: req => updateMinioOriginUri(req.body['id'], req.body['uri'])
@@ -149,6 +169,7 @@ export default {
     "/storage/delete": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteVideoMinio(req.body['id'])
@@ -156,6 +177,7 @@ export default {
     "/storage/retryIngest": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => retryMinio(req.body['id']),
@@ -163,6 +185,7 @@ export default {
     "/storage/updateTitleOrSort": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => updateMinioTitleAndSort(req.body),
@@ -194,6 +217,7 @@ export default {
     "/storage/deleteTask": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => removeTask(req.body['taskId']),
@@ -224,6 +248,7 @@ export default {
     "/videosTagMapping/clean": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         callback: async () => {
             const deletedVideoIds = await videoTagMapRep.deleteDirtyVideoTagMapping()
@@ -241,6 +266,7 @@ export default {
     '/options/updateOne': {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'value', 'description']),
         callback: req => updateOption(req.body.id, req.body.description, req.body.value)
@@ -264,6 +290,7 @@ export default {
     "/playlist/create": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['categoryId', 'title']),
@@ -272,6 +299,7 @@ export default {
     "/playlist/updateTitle": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'title']),
@@ -280,6 +308,7 @@ export default {
     "/playlist/remove": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotBlank(req, 'id'),
@@ -288,6 +317,7 @@ export default {
     "/playlist/videos": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotBlank(req, 'id'),
@@ -296,6 +326,7 @@ export default {
     "/playlist/addVideo": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId']),
@@ -304,6 +335,7 @@ export default {
     "/playlist/addVideoBatch": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotEmptyArray(req, 'arr'),
@@ -312,6 +344,7 @@ export default {
     "/playlist/updateVideoSort": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId', 'sort']),
@@ -320,6 +353,7 @@ export default {
     "/playlist/updateVideoSortBatch": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotEmptyArray(req, "arr"),
@@ -328,6 +362,7 @@ export default {
     "/playlist/removeVideo": {
         method: POST,
         ignoreSecret: true,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId']),

@@ -227,6 +227,18 @@ export async function deleteAuthor(authorId) {
     await favoritesRep.deleteByAuthorId(authorId)
 }
 
+export async function cleanEmptyAuthor(categoryId) {
+    await __sqliteDB.getTransactionDB(async db => {
+        const authorIds = await authorsRep.selectEmptyVideoAuthors(categoryId, db).then(res => res.data)
+        if (__isNotEmptyArray(authorIds)) {
+            for (const { id: authorId } of authorIds) {
+                await authorsRep.deleteOne(authorId, db)
+                await favoritesRep.deleteByAuthorId(authorId, db)
+            }
+        }
+    }, e => { throw e }, 'media')
+}
+
 /**
  * Tags
  */

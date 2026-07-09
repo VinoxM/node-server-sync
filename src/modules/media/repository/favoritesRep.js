@@ -23,9 +23,9 @@ export default {
         const sql =`DELETE FROM favorites WHERE target_type=? AND target_id=?`
         return __sqliteDB.delete(sql, [FAVORITES_TARGET_TYPE.VIDEO, videoId], null, dbName)
     },
-    deleteByAuthorId: (authorId) => {
+    deleteByAuthorId: (authorId, transactionDB) => {
         const sql =`DELETE FROM favorites WHERE target_type=? AND target_id=?`
-        return __sqliteDB.delete(sql, [FAVORITES_TARGET_TYPE.AUTHOR, authorId], null, dbName)
+        return (transactionDB || __sqliteDB).delete(sql, [FAVORITES_TARGET_TYPE.AUTHOR, authorId], null, dbName)
     },
     selectAuthorFavorites: (userId, isInside) => {
         const categoryType = isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL

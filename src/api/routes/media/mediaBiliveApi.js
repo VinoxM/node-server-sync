@@ -58,6 +58,7 @@ export default {
     "/record/initStreamVideo": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => initStreamVideo(req.body['streamId'], req.body['tags'])
@@ -65,6 +66,7 @@ export default {
     "/record/deleteStream": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
         callback: req => deleteStream(req.body['streamId'])
@@ -79,6 +81,7 @@ export default {
     "/record/uploadFileToMedia": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
@@ -87,6 +90,7 @@ export default {
     "/record/deletePhysicFile": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => removeFileByFileId(req.body['fileId'])
@@ -94,6 +98,7 @@ export default {
     "/record/deleteFile": {
         method: POST,
         needSecret,
+        needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => deleteFile(req.body['fileId'])

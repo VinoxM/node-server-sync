@@ -82,13 +82,14 @@ export default {
         const sql = `SELECT EXISTS(SELECT 1 FROM videos WHERE author_id = ? LIMIT 1) AS [exists]`
         return __sqliteDB.selectOne(sql, [authorId], null, dbName).then(({ exists }) => exists)
     },
-    deleteOne: async authorId => {
+    deleteOne: async (authorId, transactionDB) => {
+        const db = (transactionDB || __sqliteDB)
         const result = { rows: 0 }
-        const author = await __sqliteDB.selectOne('SELECT id, category_id, name FROM authors WHERE id=?', [authorId], null, dbName)
+        const author = await db.selectOne('SELECT id, category_id, name FROM authors WHERE id=?', [authorId], null, dbName)
         if (author) {
             const { categoryId, name } = author
             const sql = `DELETE FROM authors WHERE id=?`
-            const res = await __sqliteDB.delete(sql, [authorId], null, dbName)
+            const res = await db.delete(sql, [authorId], null, dbName)
             if (res?.rows > 0) {
                 const authors = authorCache.get(categoryId)
                 authors?.delete?.(name)
@@ -96,5 +97,15 @@ export default {
             }
         }
         return result
+    },
+    selectEmptyVideoAuthors: (categoryId, transactionDB) => {
+        const sql = `SELECT a.id FROM authors a `
+            + `WHERE a.category_id = ? `
+            + `AND NOT EXISTS (`
+            + `SELECT 1 FROM videos v `
+            + `WHERE v.author_id = a.id `
+            + `AND v.category_id = a.category_id`
+            + `)`
+        return (transactionDB || __sqliteDB).selectAll(sql, [categoryId], null, dbName)
     }
 }
