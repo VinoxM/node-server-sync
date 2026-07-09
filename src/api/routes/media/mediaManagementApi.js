@@ -131,6 +131,7 @@ export default {
         needSecret,
         needAuth: true,
         allowHosts: allowLanHosts,
+        maybeStream: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => deleteAuthor(req.body['id'])
     },

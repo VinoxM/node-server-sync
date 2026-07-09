@@ -9,7 +9,7 @@ import { MEDIA_VIDEO_MINIO_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaCo
 import { checkVideoFilterRulesByCategoryId } from "./mediaFilterService.js";
 import { deleteVideoMinio, resolveStorageUriWithCreate, updateVideoStatusByVideoMinioStatus } from './mediaMinioService.js';
 import { executeAsyncTaskChain } from '../../../core/infra/asyncSequence.js';
-import { getMediaUploadTimeoutOption } from './mediaOptionsService.js';
+import { getDeleteAuthorSafely, getMediaUploadTimeoutOption } from './mediaOptionsService.js';
 import favoritesRep from '../repository/favoritesRep.js';
 import { Tracer } from '../../../core/infra/tracer.js';
 import { addPlaylistVideoByTitle, removePlaylistByVideoId } from './mediaPlaylistService.js';
@@ -221,8 +221,14 @@ export async function addAuthor(author, categoryId) {
 }
 
 export async function deleteAuthor(authorId) {
-    const videosExists = await authorsRep.selectVideosExistsByAuthorId(authorId)
-    videosExists && __throwMessage('Cannot delete author, cause videos exists in this author.')
+    const safely = await getDeleteAuthorSafely()
+    if (safely) {
+        const videosExists = await authorsRep.selectVideosExistsByAuthorId(authorId)
+        videosExists && __throwMessage('Cannot delete author, cause videos exists in this author.')
+    } else {
+        const videoIds = await videosRep.selectAllByAuthor(authorId).then(res => (res.data || []).map(d => d.id))
+        await removeVideoBatch(videoIds)
+    }
     await authorsRep.deleteOne(authorId)
     await favoritesRep.deleteByAuthorId(authorId)
 }

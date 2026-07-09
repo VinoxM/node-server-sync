@@ -70,18 +70,18 @@ export default {
     },
     updateVideoStatus: (videoId) => {
         const sql = `UPDATE videos `
-                + `SET status = (`
-                + `SELECT CASE `
-                + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 `
-                + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 THEN 1 `
-                + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 `
-                + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 THEN 3 `
-                + `ELSE 2 `
-                + `END `
-                + `FROM video_minio vm `
-                + `WHERE vm.video_id = videos.id`
-                + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED} `
-                + `RETURNING status`;
+            + `SET status = (`
+            + `SELECT CASE `
+            + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 `
+            + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) = 0 THEN 1 `
+            + `WHEN COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.COVER} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 `
+            + `AND COUNT(CASE WHEN vm.type = ${MEDIA_VIDEO_MINIO_TYPE.SOURCE} AND vm.status = ${MEDIA_MINIO_STATUS.COMPLETE} THEN 1 END) >= 1 THEN 3 `
+            + `ELSE 2 `
+            + `END `
+            + `FROM video_minio vm `
+            + `WHERE vm.video_id = videos.id`
+            + `) WHERE id = ? AND status != ${MEDIA_VIDEO_STATUS.REMOVED} `
+            + `RETURNING status`;
         return __sqliteDB.selectOne(sql, [videoId], null, dbName).then(data => data.status)
     },
     updateVideoRemoved: videoId => {
@@ -251,5 +251,9 @@ export default {
             + `LEFT JOIN authors ta ON tv.author_id=ta.id `
             + `WHERE tv.id=?`;
         return __sqliteDB.selectOne(sql, [id], null, dbName)
+    },
+    selectAllByAuthor: authorId => {
+        const sql = `SELECT id FROM videos WHERE author_id=?`
+        return __sqliteDB.selectAll(sql, [authorId], null, dbName)
     }
 }
