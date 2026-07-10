@@ -1,3 +1,6 @@
+/**
+ * Deprecated
+ */
 import sqlite3 from 'sqlite3'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { AsyncExecutor as Executor } from '../infra/asyncExecutor.js'

@@ -1,3 +1,5 @@
+import { embedTransformer } from "../../../core/infra/transformer.js";
+
 const callbackIfKeyAbsent = (callback, data) => {
     const insertPropertyMap = {
         'season': 'season',
@@ -165,5 +167,15 @@ export default {
             + `GROUP BY rs.id `
             + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
         return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(res => res?.total || 0)
-    }
+    },
+    selectEmptyNameVector: (limited = 500) => {
+        return __sqliteDB.selectAll(`SELECT id FROM rss_subscribe WHERE name_vector IS NULL LIMIT ${limited}`, [], null, dbName)
+    },
+    updateNameVectorById: async (id, transactionDB) => {
+        const db = transactionDB || __sqliteDB
+        const sub = await db.selectOne(`SELECT id, name FROM rss_subscribe WHERE id=?`, [id], null, dbName)
+        if (!sub) return { rows: 0 }
+        const embedValue = await embedTransformer.extract(sub.name)
+        return db.update(`UPDATE rss_subscribe SET name_vector = vector(?) WHERE id=?`, [JSON.stringify(embedValue), id], null, dbName)
+    },
 }

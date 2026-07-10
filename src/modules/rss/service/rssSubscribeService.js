@@ -113,3 +113,15 @@ export async function analysisRssSubscribe(obj, resolve, reject) {
 export async function canDeleteSubscribe(id) {
     return (await rssSubscribeRep.selectEpisodesExistsSubsBySubsId(id)) === 0
 }
+
+export async function backfillEmptyNameVector(limited = 500) {
+    let rows = 0;
+    const subs = await rssSubscribeRep.selectEmptyNameVector(limited).then(res => res.data)
+    if (__isNotEmptyArray(subs)) {
+        for (const { id } of subs) {
+            const res = await rssSubscribeRep.updateNameVectorById(id)
+            rows += res?.rows ?? 0
+        }
+    }
+    return { rows }
+}

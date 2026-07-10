@@ -2,6 +2,7 @@ import { createClient } from '@libsql/client'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { AsyncExecutor as Executor } from '../infra/asyncExecutor.js'
 import { Tracer } from '../infra/tracer.js'
+import { embedTransformer } from '../infra/transformer.js'
 
 const defaultOptions = { print: false, resultMap: null }
 
@@ -250,11 +251,66 @@ export class SqliteDB {
         return this.#queryOne(sql, params, options, dbName);
     }
 
+    /**
+     * 向量相似度搜索
+     * @param {Object} options
+     * @param {string} options.tableName - 表名
+     * @param {string} options.embedColumn - 向量列名
+     * @param {string} options.embedStr - 查询向量 (已归一化的数组)
+     * @param {number} [options.similarity=0.8] - 相似度阈值 (0~1), 默认 0.8
+     * @param {number} [options.limit=20] - 最大返回条数
+     * @param {string} [options.selectColumns='*'] - 查询列
+     * @param {string} [options.extraWhere] - 额外 WHERE 条件 (不含 AND)
+     * @param {Object} [options.options] - 透传 options (print, resultMap)
+     * @param {string} [dbName] - 数据库名
+     * @returns {Promise<{rows: number, data: Array}>}
+     */
+    async vectorSearch(options, dbName) {
+        const {
+            tableName,
+            embedColumn,
+            embedStr,
+            similarity = 0.8,
+            limit = 20,
+            selectColumns = '*',
+            extraWhere = '',
+        } = options;
+
+        if (!tableName || !embedColumn || !embedStr) {
+            throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
+        }
+
+        const embedValue = await embedTransformer.extract(embedStr)
+
+        const vectorStr = JSON.stringify(embedValue);
+        const distanceThreshold = 1 - similarity;
+
+        let whereClause = `vector_distance(${embedColumn}, vector(?)) < ?`;
+        const params = [vectorStr, distanceThreshold];
+
+        if (__isNotBlank(extraWhere)) {
+            whereClause = `(${whereClause}) AND (${extraWhere})`;
+        }
+
+        const sql = `
+            SELECT ${selectColumns},
+                   vector_distance(${embedColumn}, vector(?)) AS _distance,
+                   (1 - vector_distance(${embedColumn}, vector(?))) AS _similarity
+            FROM ${tableName}
+            WHERE ${whereClause}
+            ORDER BY _distance ASC
+            LIMIT ${Number(limit)}
+        `;
+        params.unshift(vectorStr, vectorStr);
+
+        const opts = options.options || defaultOptions;
+        return this.#query(sql, params, opts, dbName);
+    }
+
     async getTransactionDB(callback, reject, dbName) {
         const dbName_ = dbName || this.#defaultDbName
         if (this.#schema.hasOwnProperty(dbName_)) {
             try {
-                // 8. 传入已经初始化的 client 实例到事务封装中
                 return await new TransactionLibSqlDB(this.#schema[dbName_]).beginTransaction(callback)
             } catch (error) {
                 if (__isFunction?.(reject)) {
@@ -280,7 +336,6 @@ export class SqliteDB {
     }
 }
 
-// 10. 全面改造事务处理类
 class TransactionLibSqlDB {
     #client;
     #tx = null;
@@ -298,7 +353,6 @@ class TransactionLibSqlDB {
         }
         const context = Tracer.getStore()
         try {
-            // 在事务对象 tx 上执行命令
             const resSet = await this.#tx.execute({ sql, args: params || [] });
             const res = {
                 rows: resSet.rowsAffected,
@@ -341,7 +395,7 @@ class TransactionLibSqlDB {
     async execute(sql) {
         const context = Tracer.getStore()
         try {
-            await this.#tx.execute(sql);
+            await this.#tx.executeMultiple(sql);
             Tracer.run(context, () => { });
         } catch (err) {
             throw err;
@@ -351,7 +405,6 @@ class TransactionLibSqlDB {
     async beginTransaction(callback) {
         const snapshot = Tracer.getStore()
 
-        // 11. 使用 libsql 官方提供的 client.transaction() 开启真实事务
         this.#tx = await this.#client.transaction("write");
         __log.info("====> begin transaction!");
 
@@ -390,6 +443,48 @@ class TransactionLibSqlDB {
 
     selectOne(sql, params, options) {
         return this.#queryOne(sql, params, options);
+    }
+    
+    async vectorSearch(options) {
+        const {
+            tableName,
+            embedColumn,
+            embedStr,
+            similarity = 0.8,
+            limit = 20,
+            selectColumns = '*',
+            extraWhere = '',
+        } = options;
+
+        if (!tableName || !embedColumn || !embedStr) {
+            throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
+        }
+
+        const embedValue = await embedTransformer.extract(embedStr)
+
+        const vectorStr = JSON.stringify(embedValue);
+        const distanceThreshold = 1 - similarity;
+
+        let whereClause = `vector_distance(${embedColumn}, vector(?)) < ?`;
+        const params = [vectorStr, distanceThreshold];
+
+        if (__isNotBlank(extraWhere)) {
+            whereClause = `(${whereClause}) AND (${extraWhere})`;
+        }
+
+        const sql = `
+            SELECT ${selectColumns},
+                   vector_distance(${embedColumn}, vector(?)) AS _distance,
+                   (1 - vector_distance(${embedColumn}, vector(?))) AS _similarity
+            FROM ${tableName}
+            WHERE ${whereClause}
+            ORDER BY _distance ASC
+            LIMIT ${Number(limit)}
+        `;
+        params.unshift(vectorStr, vectorStr);
+
+        const opts = options.options || defaultOptions;
+        return this.#query(sql, params, opts);
     }
 }
 

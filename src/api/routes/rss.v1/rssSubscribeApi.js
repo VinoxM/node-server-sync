@@ -97,6 +97,7 @@ export default {
                 if (__isNotEmptyArray(copyright)) {
                     await rssCopyrightRep.insertManyWithPid(copyright, lastId, db);
                 }
+                await rssSubscribeRep.updateNameVectorById(lastId, db)
                 return { rows }
             }, (err) => {
                 throw err;
@@ -137,6 +138,7 @@ export default {
                             if (__isNotEmptyArray(copyright)) {
                                 copyrightArr.push(...copyright.map(obj => (obj.pid = lastId, obj)))
                             }
+                            await rssSubscribeRep.updateNameVectorById(lastId, db)
                         }
                         resolve_1({ linkArr, copyrightArr });
                     })).start({ linkArr: linkResults, copyrightArr: copyrightResults })
@@ -152,7 +154,7 @@ export default {
      *  seasons: [...], // required, not empty Array
      *  replaceBy: "", // required, supported value: name, cover
      *  replaceParams: [...], // required, not empty Array exclude @replaceBy, supported value: exclude season,url,regex
-     *  rssSubs: [...] // required, not empty Array, every item must inclde replaceParams and repalceBy and season
+     *  rssSubs: [...] // required, not empty Array, every item must include replaceParams and replaceBy and season
      * }
      */
     "/replaceMany": {
@@ -205,6 +207,9 @@ export default {
                             try {
                                 const { rows } = await rssSubscribeRep.updateOneWithParamsById(result.id, replace, db);
                                 if (rows > 0) {
+                                    if (replaceBy === 'name') {
+                                        await rssSubscribeRep.updateNameVectorById(result.id, db);
+                                    }
                                     if (containsLink) {
                                         delLinkIds.push(result.id);
                                         if (__isNotEmptyArray(sub[bodyConst.LINK])) addLinkArr.push(...(sub[bodyConst.LINK].map(obj => (obj.pid = result.id, obj))));
@@ -222,7 +227,7 @@ export default {
                         }
                     })).start();
                 })
-            }, err => { throw err })
+            }, err => { throw err }, 'rss')
         }
     },
     "/delOne": {
