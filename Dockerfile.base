@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /models
+
 # 设置工作目录
 WORKDIR /app
 
@@ -16,3 +18,7 @@ COPY package*.json ./
 
 # 安装依赖
 RUN npm config set registry https://mirrors.cloud.tencent.com/npm/ && npm install
+
+COPY install.js ./
+
+RUN node install.js
