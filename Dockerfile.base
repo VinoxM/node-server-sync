@@ -18,8 +18,7 @@ COPY package*.json ./
 
 # 安装依赖
 RUN npm config set registry https://mirrors.cloud.tencent.com/npm/ && \
-    npm config set sharp_binary_host "https://npmmirror.com/mirrors/sharp/" && \
-    npm config set sharp_libvips_binary_host "https://npmmirror.com/mirrors/sharp-libvips/" && \
+    export SHARP_DIST_BASE_URL="https://npmmirror.com/mirrors/sharp-libvips/" && \
     npm install
 
 COPY install.js ./
