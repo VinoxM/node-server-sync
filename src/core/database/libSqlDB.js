@@ -57,9 +57,7 @@ export class SqliteDB {
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters)
-        if (params && params.length > 0) {
-            printer(`===> Parameters: `, params.length < 10 ? params : params.length);
-        }
+        tryPrintParams(params, printer)
 
         const context = Tracer.getStore()
         try {
@@ -77,6 +75,17 @@ export class SqliteDB {
         }
     }
 
+    async #execBatch(sql, options = defaultOptions, dbName) {
+        if (!dbName) {
+            dbName = this.#defaultDbName;
+        }
+        const client = this.#connect(dbName);
+        const printer = getPrinter(options)
+        printer(`===> Preparing: ${sql}`);
+        const context = Tracer.getStore()
+        await client.executeMultiple(sql);
+    }
+
     async #query(sql, parameters, options = defaultOptions, dbName) {
         if (!dbName) {
             dbName = this.#defaultDbName;
@@ -87,9 +96,7 @@ export class SqliteDB {
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters)
-        if (params && params.length > 0) {
-            printer(`===> Parameters: `, params.length < 10 ? params : params.length);
-        }
+        tryPrintParams(params, printer)
 
         const context = Tracer.getStore()
         try {
@@ -125,7 +132,7 @@ export class SqliteDB {
                 }
                 const tableCreate = () => {
                     __log.info(`[Create Table] ${tableName}`)
-                    this.#exec(DDL, [], null, dbName).then(() => {
+                    this.#execBatch(DDL, null, dbName).then(() => {
                         tableImport();
                     }).catch(ex => {
                         __log.error(`[Create Error] ${tableName}. Cause: ${ex.message}`)
@@ -259,8 +266,10 @@ export class SqliteDB {
      * @param {string} options.embedStr - 查询向量 (已归一化的数组)
      * @param {number} [options.similarity=0.8] - 相似度阈值 (0~1), 默认 0.8
      * @param {number} [options.limit=20] - 最大返回条数
-     * @param {string} [options.selectColumns='*'] - 查询列
+     * @param {Array<string>} [options.selectColumns] - 查询列
      * @param {string} [options.extraWhere] - 额外 WHERE 条件 (不含 AND)
+     * @param {Array<any>} [options.whereParams] - 额外 WHERE 条件传参
+     * @param {string} [options.vectorFunc] - vector计算的函数, 默认vector8
      * @param {Object} [options.options] - 透传 options (print, resultMap)
      * @param {string} [dbName] - 数据库名
      * @returns {Promise<{rows: number, data: Array}>}
@@ -272,37 +281,36 @@ export class SqliteDB {
             embedStr,
             similarity = 0.8,
             limit = 20,
-            selectColumns = '*',
+            selectColumns = [],
             extraWhere = '',
+            whereParams = [],
+            indexName = `${tableName}_${embedColumn}_idx`,
+            vectorFunc = `vector8`
         } = options;
-
         if (!tableName || !embedColumn || !embedStr) {
             throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
         }
-
-        const embedValue = await embedTransformer.extract(embedStr)
-
+        const embedValue = await embedTransformer.extract(embedStr);
         const vectorStr = JSON.stringify(embedValue);
-        const distanceThreshold = 1 - similarity;
-
-        let whereClause = `vector_distance(${embedColumn}, vector(?)) < ?`;
-        const params = [vectorStr, distanceThreshold];
-
+        const distanceFn = `vector_distance_cos(t.${embedColumn}, ${vectorFunc}(?))` + (vectorFunc === 'vector1bit' ? '/1024' : '');
+        let whereClause = `(1 - ${distanceFn}) >= ?`;
+        const params = [vectorStr, similarity];
         if (__isNotBlank(extraWhere)) {
             whereClause = `(${whereClause}) AND (${extraWhere})`;
+            params.push(...whereParams);
         }
-
-        const sql = `
-            SELECT ${selectColumns},
-                   vector_distance(${embedColumn}, vector(?)) AS _distance,
-                   (1 - vector_distance(${embedColumn}, vector(?))) AS _similarity
-            FROM ${tableName}
-            WHERE ${whereClause}
-            ORDER BY _distance ASC
-            LIMIT ${Number(limit)}
-        `;
-        params.unshift(vectorStr, vectorStr);
-
+        const sql = `SELECT `
+            + `${__isEmptyArray(selectColumns) ? 't.*' : selectColumns.map(c => `t.${c}`).join(', ')}, `
+            + `${distanceFn} AS _distance, `
+            + `(1 - ${distanceFn}) AS _similarity `
+            + `FROM vector_top_k(?, ${vectorFunc}(?), ?) AS v `
+            + `JOIN ${tableName} t ON t.rowid = v.id `
+            + `WHERE ${whereClause} `
+            + `ORDER BY _distance ASC`;
+        params.unshift(
+            vectorStr, vectorStr,
+            indexName, vectorStr, limit
+        );
         const opts = options.options || defaultOptions;
         return this.#query(sql, params, opts, dbName);
     }
@@ -348,9 +356,7 @@ class TransactionLibSqlDB {
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters)
-        if (params && params.length > 0) {
-            printer(`===> Parameters: `, params.length < 10 ? params : params.length);
-        }
+        tryPrintParams(params, printer)
         const context = Tracer.getStore()
         try {
             const resSet = await this.#tx.execute({ sql, args: params || [] });
@@ -370,9 +376,7 @@ class TransactionLibSqlDB {
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters)
-        if (params && params.length > 0) {
-            printer(`===> Parameters: `, params.length < 10 ? params : params.length);
-        }
+        tryPrintParams(params, printer)
         const context = Tracer.getStore()
         try {
             const resSet = await this.#tx.execute({ sql, args: params || [] });
@@ -444,7 +448,7 @@ class TransactionLibSqlDB {
     selectOne(sql, params, options) {
         return this.#queryOne(sql, params, options);
     }
-    
+
     async vectorSearch(options) {
         const {
             tableName,
@@ -452,39 +456,38 @@ class TransactionLibSqlDB {
             embedStr,
             similarity = 0.8,
             limit = 20,
-            selectColumns = '*',
+            selectColumns = [],
             extraWhere = '',
+            whereParams = [],
+            indexName = `${tableName}_${embedColumn}_idx`,
+            vectorFunc = `vector8`
         } = options;
-
         if (!tableName || !embedColumn || !embedStr) {
             throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
         }
-
-        const embedValue = await embedTransformer.extract(embedStr)
-
+        const embedValue = await embedTransformer.extract(embedStr);
         const vectorStr = JSON.stringify(embedValue);
-        const distanceThreshold = 1 - similarity;
-
-        let whereClause = `vector_distance(${embedColumn}, vector(?)) < ?`;
-        const params = [vectorStr, distanceThreshold];
-
+        const distanceFn = `vector_distance_cos(t.${embedColumn}, ${vectorFunc}(?))` + (vectorFunc === 'vector1bit' ? '/1024' : '');
+        let whereClause = `(1 - ${distanceFn}) >= ?`;
+        const params = [vectorStr, similarity];
         if (__isNotBlank(extraWhere)) {
             whereClause = `(${whereClause}) AND (${extraWhere})`;
+            params.push(...whereParams);
         }
-
-        const sql = `
-            SELECT ${selectColumns},
-                   vector_distance(${embedColumn}, vector(?)) AS _distance,
-                   (1 - vector_distance(${embedColumn}, vector(?))) AS _similarity
-            FROM ${tableName}
-            WHERE ${whereClause}
-            ORDER BY _distance ASC
-            LIMIT ${Number(limit)}
-        `;
-        params.unshift(vectorStr, vectorStr);
-
+        const sql = `SELECT `
+            + `${__isEmptyArray(selectColumns) ? 't.*' : selectColumns.map(c => `t.${c}`).join(', ')}, `
+            + `${distanceFn} AS _distance, `
+            + `(1 - ${distanceFn}) AS _similarity `
+            + `FROM vector_top_k(?, ${vectorFunc}(?), ?) AS v `
+            + `JOIN ${tableName} t ON t.rowid = v.id `
+            + `WHERE ${whereClause} `
+            + `ORDER BY _distance ASC`;
+        params.unshift(
+            vectorStr, vectorStr,
+            indexName, vectorStr, limit
+        );
         const opts = options.options || defaultOptions;
-        return this.#query(sql, params, opts);
+        return this.#query(sql, params, opts, dbName);
     }
 }
 
@@ -548,4 +551,14 @@ const generateColumnProperty = (column) => {
 const tryResolveParams = (params) => {
     const result = params || []
     return result.map(o => o === undefined ? null : o)
+}
+
+const tryPrintParams = (params, printer) => {
+    if (!params || params.length === 0) {
+        return;
+    } else if (params.length >= 10) {
+        printer(`===> Parameters total: ${params.length}`)
+    } else {
+        printer(`===> Parameters: `, params.map(p => typeof p === 'string' && p.length > 500 ? (p.substring(0, 500) + '...') : p));
+    }
 }

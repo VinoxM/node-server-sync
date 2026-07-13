@@ -1,4 +1,4 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline, env } from '@xenova/transformers';
 import path from 'path';
 import { ContextSubscribe } from '../context/subscribe.js';
 
@@ -14,9 +14,11 @@ class EmbedTransformer extends ContextSubscribe {
     async #initialize(force = false) {
         this.doSubscribe()
         if (this.#extractor === null || force) {
+            // env.allowRemoteModels = true;
+            // env.remoteHost = 'https://hf-mirror.com';
             this.#modelsPath = __env.get('vector.model.path', path.join(__dirname, './models'))
             const cacheDir = this.#modelsPath;
-            this.#extractor = await pipeline('feature-extraction', 'Xenova/bge-small-zh-v1.5', {
+            this.#extractor = await pipeline('feature-extraction', 'Xenova/bge-m3', {
                 local_files_only: true,
                 cache_dir: cacheDir
             });
@@ -29,7 +31,22 @@ class EmbedTransformer extends ContextSubscribe {
             pooling: 'mean',
             normalize: true,
         });
-        return Array.from(output.data);
+        const result = Array.from(output.data);
+        return result;
+        // return this.#packBgeM3ToBQBuffer(result);
+    }
+
+    #packBgeM3ToBQBuffer(embedding = []) {
+        // 1. 计算这 1024 维向量的平均值
+        const sum = embedding.reduce((acc, val) => acc + val, 0);
+        const mean = sum / embedding.length;
+
+        // 2. 映射到一个同样长度的 0/1 数组
+        return embedding.map(val => {
+            // 减去均值后再与 0 比较
+            // 大于均值返回 1，小于等于均值返回 0
+            return (val - mean) > 0 ? 1 : 0;
+        });
     }
 }
 

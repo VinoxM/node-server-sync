@@ -125,3 +125,18 @@ export async function backfillEmptyNameVector(limited = 500) {
     }
     return { rows }
 }
+
+/**
+ * Semantic search
+ */
+export async function searchBySemantic(text, season) {
+    const idsResult = await rssSubscribeRep.selectByNameVector(text, season)
+    if (__isNotEmptyArray(idsResult)) {
+        const result = await rssRep.selectRssSubscribeForSearchV2ByIds(idsResult.map(o => o.id)).then(res => res.data)
+        return result.map(r => {
+            r.similarity = idsResult.find(o => o.id === r.id)?.Similarity
+            return r
+        }).sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
+    }
+    return []
+}

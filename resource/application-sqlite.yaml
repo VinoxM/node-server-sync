@@ -38,9 +38,13 @@ sqlite:
             `origin_type` varchar(20) DEFAULT NULL,
             `type_tag` varchar(100) DEFAULT NULL,
             `broadcast` varchar(100) DEFAULT NULL,
+            `name_vector` F8_BLOB(1024) DEFAULT NULL,
             CONSTRAINT `idx_name` UNIQUE (`name`),
             CONSTRAINT `idx_season_cover` UNIQUE (`season`, `cover`)
-          )
+          );
+          CREATE INDEX rss_subscribe_name_vector_idx ON rss_subscribe (
+            libsql_vector_idx(name_vector, 'metric=cosine', 'compress_neighbors=float8')
+          );
         sqlScript: "@/resource/script/rss_subscribe.sql"
         forceImport: false
       - tableName: rss_link

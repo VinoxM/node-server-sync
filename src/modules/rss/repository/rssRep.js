@@ -56,7 +56,18 @@ export default {
         }
         sql += "GROUP BY rs.id";
         return __sqliteDB.selectAll(sql, params, { resultMap: rssSubscribe }, dbName);
-
+    },
+    selectRssSubscribeForSearchV2ByIds: (ids) => {
+        let sql = "SELECT rs.id,rs.name,rs.name_jp nameJP,rs.season,rs.start_time startTime," +
+            "rs.cover,rs.fin,rs.is_short isShort,rs.anime_type animeType, " +
+            "CASE WHEN rs.goon = 0 THEN 0 " +
+            "ELSE 1 END AS goon, MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count " +
+            ",CASE WHEN julianday('now') - julianday(rr.pub_date) < 1 then 1 else 0 end hasNew " +
+            "FROM rss_subscribe rs " +
+            "LEFT JOIN rss_result rr ON rs.id=rr.pid AND rr.hide=0 " +
+            "WHERE rs.id IN (" + ids.map(() => "?").join(',') + ") " +
+            "GROUP BY rs.id";
+        return __sqliteDB.selectAll(sql, ids, { resultMap: rssSubscribe }, dbName);
     },
     selectRssSubscribeSeasons: () => {
         const sql = "SELECT season FROM rss_subscribe GROUP BY season";

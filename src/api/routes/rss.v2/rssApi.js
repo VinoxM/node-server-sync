@@ -13,6 +13,7 @@ import rssSubscribeRep from "../../../modules/rss/repository/rssSubscribeRep.js"
 import rssSubtitleRep from "../../../modules/rss/repository/rssSubtitleRep.js";
 import rssTaskRep from "../../../modules/rss/repository/rssTaskRep.js";
 import rssTrackerRep from "../../../modules/rss/repository/rssTrackerRep.js";
+import { searchBySemantic } from "../../../modules/rss/service/rssSubscribeService.js";
 
 const { GET, POST } = apiMethodConst
 const { SEASON, ID, NAME } = apiQueryConst
@@ -47,7 +48,8 @@ const handleSearch = (data) => {
             N: obj.hasNew, // hasNew. enum: 0, 1
             U: obj.id, // id
             R: obj.count, // epCount
-            G: obj.goon // goon
+            G: obj.goon, // goon
+            SI: obj.similarity
         }
     })
 }
@@ -70,8 +72,15 @@ export default {
             }
             checkQueryKeyMatchIfPresent(req, SEASON, ['[0-9]{4}-(01|04|07|10)']);
         },
-        callback: (req) => {
+        callback: async (req) => {
             return rssRep.selectRssSubscribeForSearchV2(req.query.season, req.query.name).then(({ data }) => handleSearch(data));
+        }
+    },
+    '/getSearch.semantic': {
+        method: GET,
+        preCheck: (req) => checkQueryKeyNotBlank(req, NAME),
+        callback: async (req) => {
+            return searchBySemantic(req.query.name, req.query.season).then(data => handleSearch(data));
         }
     },
     "/getOne.detail": {

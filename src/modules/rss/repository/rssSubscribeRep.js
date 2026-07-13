@@ -176,6 +176,19 @@ export default {
         const sub = await db.selectOne(`SELECT id, name FROM rss_subscribe WHERE id=?`, [id], null, dbName)
         if (!sub) return { rows: 0 }
         const embedValue = await embedTransformer.extract(sub.name)
-        return db.update(`UPDATE rss_subscribe SET name_vector = vector(?) WHERE id=?`, [JSON.stringify(embedValue), id], null, dbName)
+        const embedStr = JSON.stringify(embedValue)
+        await db.update(`UPDATE rss_subscribe SET name_vector = vector8(?) WHERE id=?`, [embedStr, id], null, dbName)
     },
+    selectByNameVector: (name, season) => {
+        const options = {
+            tableName: 'rss_subscribe',
+            embedColumn: 'name_vector',
+            embedStr: name,
+            selectColumns: ['id'],
+            similarity: 0.6,
+            extraWhere: __isNotBlank(season) ? 'season=?' : '',
+            whereParams: [season]
+        }
+        return __sqliteDB.vectorSearch(options, dbName).then(res => res.data);
+    }
 }
