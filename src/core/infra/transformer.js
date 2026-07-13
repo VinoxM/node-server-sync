@@ -18,6 +18,7 @@ class EmbedTransformer extends ContextSubscribe {
             // env.remoteHost = 'https://hf-mirror.com';
             this.#modelsPath = __env.get('vector.model.path', path.join(__dirname, './models'))
             const cacheDir = this.#modelsPath;
+            console.log(`cacheDir: `, cacheDir)
             this.#extractor = await pipeline('feature-extraction', 'Xenova/bge-m3', {
                 local_files_only: true,
                 cache_dir: cacheDir
