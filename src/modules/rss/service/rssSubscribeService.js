@@ -4,6 +4,7 @@ import rssSubscribeRep from '../repository/rssSubscribeRep.js';
 import { AsyncExecutor } from '../../../core/infra/asyncExecutor.js';
 import { addManyResult } from './rssResultService.js';
 import { getUrlContent } from '../../../common/utils/httpUtil.js';
+import { GetterContextSubscribe } from '../../../core/context/subscribe.js';
 
 const rssUpdate = {
     isUpdating: false
@@ -129,8 +130,11 @@ export async function backfillEmptyNameVector(limited = 500) {
 /**
  * Semantic search
  */
+const similarityGetter = new GetterContextSubscribe("RssSemanticSearch", () => __env.get('rss.semanticSearch', {}))
 export async function searchBySemantic(text, season) {
-    const idsResult = await rssSubscribeRep.selectByNameVector(text, season)
+    const rssSemanticSearch = similarityGetter.getValue()
+    const similarity = rssSemanticSearch?.similarity ?? 0.6
+    const idsResult = await rssSubscribeRep.selectByNameVector(text, season, similarity)
     if (__isNotEmptyArray(idsResult)) {
         const result = await rssRep.selectRssSubscribeForSearchV2ByIds(idsResult.map(o => o.id)).then(res => res.data)
         return result.map(r => {

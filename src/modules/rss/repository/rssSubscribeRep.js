@@ -179,13 +179,13 @@ export default {
         const embedStr = JSON.stringify(embedValue)
         await db.update(`UPDATE rss_subscribe SET name_vector = vector8(?) WHERE id=?`, [embedStr, id], null, dbName)
     },
-    selectByNameVector: (name, season) => {
+    selectByNameVector: (name, season, similarity = 0.6) => {
         const options = {
             tableName: 'rss_subscribe',
             embedColumn: 'name_vector',
             embedStr: name,
             selectColumns: ['id'],
-            similarity: 0.6,
+            similarity,
             extraWhere: __isNotBlank(season) ? 'season=?' : '',
             whereParams: [season]
         }

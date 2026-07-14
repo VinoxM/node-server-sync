@@ -74,6 +74,8 @@ schedule:
     enable: true
     corn: 0 30 0/2 * * *
 rss:
+  semanticSearch:
+    similarity: 0.6
   subscribeHandler:
     parallelNum: 3
     everyHandleCount: 30
