@@ -19,7 +19,11 @@ class EmbedTransformer extends ContextSubscribe {
         if (this.#extractor === null || force) {
             // env.allowRemoteModels = true;
             // env.remoteHost = 'https://hf-mirror.com';
-            this.#modelsPath = __env.get('vector.model.path', path.join(__dirname, './models'))
+            const modelsPath = __env.get('vector.model.path', path.join(__dirname, './models'))
+            if (this.#extractor !== null && modelsPath === this.#modelsPath) {
+                return;
+            }
+            this.#modelsPath = modelsPath;
             const cacheDir = this.#modelsPath;
             this.#extractor = await pipeline('feature-extraction', EMBED_MODEL, {
                 local_files_only: true,
