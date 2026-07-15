@@ -65,5 +65,3 @@ ORDER BY id;
 DROP TABLE rss_subscribe;
 
 ALTER TABLE rss_subscribe_new RENAME TO rss_subscribe;
-
-VACUUM;
