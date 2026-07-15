@@ -158,7 +158,7 @@ export async function updateNameVectorByIds(ids = []) {
         })))
         failedResults = results.filter(r => r.status !== 'completed')
     } catch (ex) {
-        __log.error('[Rss Subscribe Vector] Upsert vector to qdrant failed. Cause:', ex.message ?? ex)
+        __log.error('[Rss Subscribe Vector] Upsert vector to qdrant failed. Cause:', ex)
         finalStatus = RSS_SUBSCRIBE_SYNC_STATUS.READY
     }
     if (finalStatus === RSS_SUBSCRIBE_SYNC_STATUS.COMPLETE && __isNotEmptyArray(failedResults)) {
