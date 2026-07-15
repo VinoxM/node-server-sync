@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { AsyncExecutor as Executor } from '../infra/asyncExecutor.js'
 import { Tracer } from '../infra/tracer.js'
-import { embedTransformer } from '../infra/transformer.js'
+import { embedTransformer } from '../instance/transformer.js'
 
 const defaultOptions = { print: false, resultMap: null }
 
@@ -33,16 +33,16 @@ export class SqliteDB {
         this.#defaultDbName = config.defaultDB;
     }
 
-    #connect(dbName) {
+    async #connect(dbName) {
         if (!this.#schema.hasOwnProperty(dbName)) {
             const dbFile = __join(this.#dbPath, dbName + '.db');
             const client = createClient({
                 url: `file:${dbFile}`
             });
 
-            client.execute('PRAGMA journal_mode = DELETE;');
-            client.execute('PRAGMA busy_timeout = 5000;');
-
+            await client.execute('PRAGMA journal_mode = DELETE;');
+            await client.execute('PRAGMA busy_timeout = 5000;');
+            await client.execute('PRAGMA auto_vacuum = 1;');
             this.#schema[dbName] = client;
         }
         return this.#schema[dbName];
@@ -52,7 +52,7 @@ export class SqliteDB {
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
-        const client = this.#connect(dbName);
+        const client = await this.#connect(dbName);
 
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
@@ -79,7 +79,7 @@ export class SqliteDB {
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
-        const client = this.#connect(dbName);
+        const client = await this.#connect(dbName);
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
         const context = Tracer.getStore()
@@ -91,7 +91,7 @@ export class SqliteDB {
             dbName = this.#defaultDbName;
         }
         const { resultMap } = options ?? defaultOptions
-        const client = this.#connect(dbName);
+        const client = await this.#connect(dbName);
 
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
@@ -165,52 +165,22 @@ export class SqliteDB {
         if (__isBlank(sqlScript)) return Promise.resolve();
         const importSql = readFileSync(__join(sqlScript)).toString();
 
-        const client = this.#connect(dbName);
-        __log.info(`[Sql Script] execute sql via Batch.`)
+        const client = await this.#connect(dbName);
+        __log.info(`[Sql Script] execute sql via executeMultiple.`)
 
         try {
             await client.execute('PRAGMA foreign_keys=OFF;');
-            const tx = await client.transaction("write");
+            await client.execute('BEGIN;');
 
-            const batchCommands = [];
+            // executeMultiple handles multiple SQL statements correctly
+            await client.executeMultiple(importSql);
+            await client.execute(`ANALYZE ${tableName};`);
+            await client.execute('COMMIT;');
 
-            return new Promise(resolve => {
-                const executor = new Executor(async () => {
-                    try {
-                        __log.info(`[Sql Script] Sending ${batchCommands.length} commands to SQLite batch...`);
-                        await tx.batch(batchCommands);
-
-                        await tx.execute(`ANALYZE ${tableName};`);
-                        await tx.commit();
-                        __log.info("[Sql Script] execute & analyze over.");
-                    } catch (err) {
-                        __log.error(`[Batch Error] ${err.message}`);
-                        await tx.rollback();
-                    } finally {
-                        tx.close();
-                        resolve();
-                    }
-                }, async (err) => {
-                    __log.error(`[Sql Script] execute error. Cause: ${err.message}`);
-                    await tx.rollback();
-                    tx.close();
-                    resolve();
-                }, 1);
-                for (let query of importSql.split(");")) {
-                    if (__isNotBlank(query)) {
-                        executor.submit((resolve_1, reject_1) => {
-                            batchCommands.push({
-                                sql: query + ');',
-                                args: []
-                            });
-                            resolve_1();
-                        });
-                    }
-                }
-                executor.start();
-            });
+            __log.info("[Sql Script] execute & analyze over.");
         } catch (err) {
-            __log.error(`[Sql Script] init error. Cause: ${err.message}`);
+            __log.error(`[Sql Script] execute error. Cause: ${err.message}`);
+            await client.execute('ROLLBACK;').catch(() => {});
         }
     }
 
@@ -236,6 +206,17 @@ export class SqliteDB {
                 }
             })).start();
         })
+    }
+
+    /**
+     * 按需重建数据库，回收空间、重建索引。
+     * 仅在大量删除/更新后需要整理时调用，避免频繁执行。
+     */
+    async vacuum(dbName) {
+        const client = await this.#connect(dbName || this.#defaultDbName);
+        __log.info(`[Vacuum] Rebuilding database: ${dbName || this.#defaultDbName}`);
+        await client.execute('VACUUM;');
+        __log.info(`[Vacuum] Done.`);
     }
 
     insert(sql, params, options, dbName) {
@@ -340,7 +321,7 @@ export class SqliteDB {
     }
 
     async reconnect(dbName) {
-        return this.#connect(dbName)
+        return await this.#connect(dbName)
     }
 }
 

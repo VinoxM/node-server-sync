@@ -1,4 +1,5 @@
-import { embedTransformer } from "../../../core/infra/transformer.js";
+import { embedTransformer } from "../../../core/instance/transformer.js";
+import { RSS_SUBSCRIBE_SYNC_STATUS } from "../constants/rssSubscribeConsts.js";
 
 const callbackIfKeyAbsent = (callback, data) => {
     const insertPropertyMap = {
@@ -168,16 +169,16 @@ export default {
             + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
         return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(res => res?.total || 0)
     },
-    selectEmptyNameVector: (limited = 500) => {
-        return __sqliteDB.selectAll(`SELECT id FROM rss_subscribe WHERE name_vector IS NULL LIMIT ${limited}`, [], null, dbName)
+    // Vector
+    selectReadyVectors: (limited = 500) => {
+        return __sqliteDB.selectAll(`SELECT id FROM rss_subscribe WHERE sync_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_SYNC_STATUS.READY], null, dbName)
     },
-    updateNameVectorById: async (id, transactionDB) => {
-        const db = transactionDB || __sqliteDB
-        const sub = await db.selectOne(`SELECT id, name FROM rss_subscribe WHERE id=?`, [id], null, dbName)
-        if (!sub) return { rows: 0 }
-        const embedValue = await embedTransformer.extract(sub.name)
-        const embedStr = JSON.stringify(embedValue)
-        await db.update(`UPDATE rss_subscribe SET name_vector = vector8(?) WHERE id=?`, [embedStr, id], null, dbName)
+    selectForVectorByIds: (ids) => {
+        return __sqliteDB.selectAll(`SELECT id, name, name_jp, season FROM rss_subscribe WHERE id IN (${ids.map(() => '?').join(',')}) AND sync_status!=?`,
+            [...ids, RSS_SUBSCRIBE_SYNC_STATUS.PENDING], null, dbName)
+    },
+    updateSyncStatusByIds: (ids, status) => {
+        return __sqliteDB.update(`UPDATE rss_subscribe SET sync_status=? WHERE id IN (${ids.map(() => '?').join(',')})`, [status, ...ids], null, dbName)
     },
     selectByNameVector: (name, season, similarity = 0.6) => {
         const options = {

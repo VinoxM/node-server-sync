@@ -5,6 +5,8 @@ import { AsyncExecutor } from '../../../core/infra/asyncExecutor.js';
 import { addManyResult } from './rssResultService.js';
 import { getUrlContent } from '../../../common/utils/httpUtil.js';
 import { GetterContextSubscribe } from '../../../core/context/subscribe.js';
+import { qdrantClient } from '../../../core/instance/qdrantClient.js';
+import { RSS_SUBSCRIBE_SYNC_STATUS } from '../constants/rssSubscribeConsts.js';
 
 const rssUpdate = {
     isUpdating: false
@@ -116,31 +118,118 @@ export async function canDeleteSubscribe(id) {
 }
 
 export async function backfillEmptyNameVector(limited = 500) {
-    let rows = 0;
-    const subs = await rssSubscribeRep.selectEmptyNameVector(limited).then(res => res.data)
-    if (__isNotEmptyArray(subs)) {
-        for (const { id } of subs) {
-            const res = await rssSubscribeRep.updateNameVectorById(id)
-            rows += res?.rows ?? 0
-        }
-    }
-    return { rows }
+    const subs = await rssSubscribeRep.selectReadyVectors(limited).then(res => res.data)
+    await updateNameVectorByIds(subs.map(d => d.id))
 }
 
-/**
- * Semantic search
- */
+const collectionName = 'RssSubscribe'
+async function ensureRssSubscribeCollection() {
+    const ensure = await qdrantClient.ensureCollection(collectionName)
+    if (!ensure) {
+        await qdrantClient.createPayloadIndex(collectionName, 'fullTitle', {
+            type: 'text',
+            tokenizer: 'word',
+            min_token_len: 1,
+            max_token_len: 20
+        });
+    }
+}
+
+export async function updateNameVectorByIds(ids = []) {
+    if (__isEmptyArray(ids)) return;
+    await ensureRssSubscribeCollection()
+    const { data } = await rssSubscribeRep.selectForVectorByIds(ids)
+    if (data.length === 0) return;
+    __log.info(`[RssSubscribe Vector] Update by ids:`, ids)
+    await rssSubscribeRep.updateSyncStatusByIds(ids, RSS_SUBSCRIBE_SYNC_STATUS.PENDING)
+    let finalStatus = RSS_SUBSCRIBE_SYNC_STATUS.COMPLETE
+    let failedResults = []
+    let completeResults = ids
+    try {
+        const results = await qdrantClient.upsertBatchWithEmbed(collectionName, data.map(d => ({
+            id: d.id,
+            payload: {
+                name: d.name,
+                nameJP: d.nameJp,
+                season: d.season,
+                fullTitle: d.name + " " + d.nameJp
+            },
+            textField: 'fullTitle'
+        })))
+        failedResults = results.filter(r => r.status !== 'completed')
+    } catch (ex) {
+        __log.error('[Rss Subscribe Vector] Upsert vector to qdrant failed. Cause:', ex.message ?? ex)
+        finalStatus = RSS_SUBSCRIBE_SYNC_STATUS.READY
+    }
+    if (finalStatus === RSS_SUBSCRIBE_SYNC_STATUS.COMPLETE && __isNotEmptyArray(failedResults)) {
+        const failedIds = failedResults.flatMap(r => r.ids)
+        __log.warn(`[Rss Subscribe Vector] ${failedIds.length} ids upsert failed:`, failedIds)
+        await rssSubscribeRep.updateSyncStatusByIds(failedResults, RSS_SUBSCRIBE_SYNC_STATUS.READY)
+        const failedResultsSet = new Set(failedResults)
+        completeResults = ids.filter(id => !failedResultsSet.has(id))
+    }
+    __log.info(`[RssSubscribe Vector] Update by ids:`, ids)
+    await rssSubscribeRep.updateSyncStatusByIds(completeResults, finalStatus)
+}
+
+export async function deleteNameVectorByIds(ids = []) {
+    if (__isEmptyArray(ids)) return;
+    const exists = await qdrantClient.collectionExists(collectionName)
+    if (exists) {
+        __log.info(`[RssSubscribe Vector] Delete by ids:`, ids)
+        await qdrantClient.delete(collectionName, { ids })
+    }
+}
+
 const similarityGetter = new GetterContextSubscribe("RssSemanticSearch", () => __env.get('rss.semanticSearch', {}))
-export async function searchBySemantic(text, season) {
+export async function searchBySemantic(queryText, season) {
     const rssSemanticSearch = similarityGetter.getValue()
     const similarity = rssSemanticSearch?.similarity ?? 0.6
-    const idsResult = await rssSubscribeRep.selectByNameVector(text, season, similarity)
-    if (__isNotEmptyArray(idsResult)) {
-        const result = await rssRep.selectRssSubscribeForSearchV2ByIds(idsResult.map(o => o.id)).then(res => res.data)
+    await ensureRssSubscribeCollection()
+    __log.info(`[RssSubscribe Search] Semantic search [queryText=${queryText}, season=${season || ''}, similarity=${similarity}]`)
+    // semantic search
+    const semanticResults = await qdrantClient.search(collectionName, queryText, {
+        limit: 20,
+        filter: __isBlank(season) ? null : {
+            must: [
+                {
+                    key: 'season',
+                    match: { value: season }
+                }
+            ]
+        },
+        withPayload: false,
+        scoreThreshold: similarity
+    });
+    // full text search
+    let textResults = [];
+    try {
+        textResults = await qdrantClient.search(collectionName, queryText, {
+            filter: {
+                must: [{ key: 'fullTitle', match: { text: queryText } }]
+            },
+            limit: 20,
+            withPayload: false,
+            scoreThreshold: similarity
+        });
+    } catch (e) {
+        // ignored
+        __log.error(`[RssSubscribe Search] Search [queryText=${queryText}, season=${season || ''}] by full text failed. Cause:`, e.message ?? e)
+    }
+    // merge results
+    const mergedResults = new Map();
+    textResults.forEach(item => mergedResults.set(item.id, item));
+    semanticResults.forEach(item => mergedResults.set(item.id, item));
+    // backfill result information
+    const idResults = Array.from(mergedResults.keys())
+    const valResults = Array.from(mergedResults.values())
+    const similarityKey = 'score'
+    if (__isNotEmptyArray(idResults)) {
+        const result = await rssRep.selectRssSubscribeForSearchV2ByIds(idResults).then(res => res.data)
         return result.map(r => {
-            r.similarity = idsResult.find(o => o.id === r.id)?.Similarity
+            r.similarity = valResults.find(o => o.id === r.id)?.[similarityKey]
             return r
-        }).sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
+        }).sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0)).slice(0, 20)
     }
     return []
 }

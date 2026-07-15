@@ -2,38 +2,47 @@ import { pipeline, env } from '@xenova/transformers';
 import path from 'path';
 import { ContextSubscribe } from '../context/subscribe.js';
 
+const EMBED_MODEL = 'Xenova/bge-m3'
+
 class EmbedTransformer extends ContextSubscribe {
     static instance = new EmbedTransformer();
 
     #modelsPath;
     #extractor = null;
+    #lastPromise = Promise.resolve();
     constructor() {
-        super('EmbedTransformer', async () => this.#initialize(true), true)
+        super('EmbedTransformer', async () => this.initialize(true), true)
     }
 
-    async #initialize(force = false) {
+    async initialize(force = false) {
         this.doSubscribe()
         if (this.#extractor === null || force) {
             // env.allowRemoteModels = true;
             // env.remoteHost = 'https://hf-mirror.com';
             this.#modelsPath = __env.get('vector.model.path', path.join(__dirname, './models'))
             const cacheDir = this.#modelsPath;
-            this.#extractor = await pipeline('feature-extraction', 'Xenova/bge-m3', {
+            this.#extractor = await pipeline('feature-extraction', EMBED_MODEL, {
                 local_files_only: true,
                 cache_dir: cacheDir
             });
+            __log.info(`[EmbedTransformer] Initialized model:`, EMBED_MODEL)
         }
     }
 
     async extract(text) {
-        await this.#initialize();
-        const output = await this.#extractor(text, {
-            pooling: 'mean',
-            normalize: true,
+        const currentPromise = this.#lastPromise.then(async () => {
+            __log.info(`[EmbedTransformer] Ready to extract text:`, text)
+            await this.initialize();
+            const output = await this.#extractor(text, {
+                pooling: 'mean',
+                normalize: true,
+            });
+            return Array.from(output.data);
         });
-        const result = Array.from(output.data);
-        return result;
-        // return this.#packBgeM3ToBQBuffer(result);
+
+        // 链式排队，确保同时最多只有一个 extract 在执行
+        this.#lastPromise = currentPromise.catch(() => { });
+        return currentPromise;
     }
 
     #packBgeM3ToBQBuffer(embedding = []) {

@@ -9,6 +9,7 @@ import { ipBlocker } from './core/instance/ipBlocker.js';
 import { tokenBucket } from './core/instance/tokenBucket.js';
 import { initializeMinioClient } from './core/instance/minioClient.js';
 import { doMigrations } from './modules/migrations/migrationsService.js';
+import { embedTransformer } from './core/instance/transformer.js';
 
 (async () => {
     await setupGlobal(join(import.meta.dirname, "../"));
@@ -19,6 +20,7 @@ import { doMigrations } from './modules/migrations/migrationsService.js';
     ipBlocker.start();
     tokenBucket.start();
     await sseInitialize();
-    await startSchedule();
     initializeMinioClient();
+    await embedTransformer.initialize();
+    await startSchedule();
 })();

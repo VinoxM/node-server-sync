@@ -7,7 +7,7 @@ import rssCopyrightRep from '../../../modules/rss/repository/rssCopyrightRep.js'
 import { AsyncExecutor } from '../../../core/infra/asyncExecutor.js';
 import rssSubscribeRep from '../../../modules/rss/repository/rssSubscribeRep.js';
 import rssResultRep from '../../../modules/rss/repository/rssResultRep.js';
-import { analysisRssSubscribe, canDeleteSubscribe, updateRssSubscribe } from '../../../modules/rss/service/rssSubscribeService.js';
+import { analysisRssSubscribe, canDeleteSubscribe, deleteNameVectorByIds, updateNameVectorByIds, updateRssSubscribe } from '../../../modules/rss/service/rssSubscribeService.js';
 
 const { POST } = apiMethodConst;
 const { URL, REGEX, ID, FIN, IDS } = bodyConst;
@@ -97,7 +97,7 @@ export default {
                 if (__isNotEmptyArray(copyright)) {
                     await rssCopyrightRep.insertManyWithPid(copyright, lastId, db);
                 }
-                await rssSubscribeRep.updateNameVectorById(lastId, db)
+                await updateNameVectorByIds([lastId])
                 return { rows }
             }, (err) => {
                 throw err;
@@ -111,6 +111,7 @@ export default {
         callback: (req) => {
             const rssArr = req.body[bodyConst.RSS_SUBSCRIBE_ARRAY];
             return __sqliteDB.getTransactionDB(async (db) => {
+                const toSyncIds = []
                 return new Promise(async (resolve, reject) => {
                     const linkResults = [], copyrightResults = [];
                     let handledRows = 0;
@@ -138,10 +139,13 @@ export default {
                             if (__isNotEmptyArray(copyright)) {
                                 copyrightArr.push(...copyright.map(obj => (obj.pid = lastId, obj)))
                             }
-                            await rssSubscribeRep.updateNameVectorById(lastId, db)
+                            toSyncIds.push(lastId)
                         }
                         resolve_1({ linkArr, copyrightArr });
                     })).start({ linkArr: linkResults, copyrightArr: copyrightResults })
+                }).then(async res => {
+                    await updateNameVectorByIds(toSyncIds)
+                    return res
                 })
             }, (err) => {
                 throw err;
@@ -184,6 +188,7 @@ export default {
             }
             fs.copyFileSync(__join(dbPath, 'rss.db'), __join(backDir, 'rss_' + new Date().getTime() + '.db'))
             return __sqliteDB.getTransactionDB((db) => {
+                const toSyncIds = []
                 return new Promise((resolve, reject) => {
                     new AsyncExecutor(async () => {
                         try {
@@ -208,7 +213,7 @@ export default {
                                 const { rows } = await rssSubscribeRep.updateOneWithParamsById(result.id, replace, db);
                                 if (rows > 0) {
                                     if (replaceBy === 'name') {
-                                        await rssSubscribeRep.updateNameVectorById(result.id, db);
+                                        toSyncIds.push(result.id)
                                     }
                                     if (containsLink) {
                                         delLinkIds.push(result.id);
@@ -226,6 +231,9 @@ export default {
                             }
                         }
                     })).start();
+                }).then(async res => {
+                    await updateNameVectorByIds(toSyncIds)
+                    return res
                 })
             }, err => { throw err }, 'rss')
         }
@@ -244,6 +252,7 @@ export default {
                     await rssResultRep.deleteByPid(id, db);
                     await rssLinkRep.deleteManyByPid(id, db);
                     await rssCopyrightRep.deleteManyByPid(id, db);
+                    await deleteNameVectorByIds([id])
                 }
                 return { rows };
             }, err => { throw err })
@@ -269,6 +278,7 @@ export default {
                     await rssResultRep.deleteByPids(canDelIds, db);
                     await rssLinkRep.deleteManyByPids(canDelIds, db);
                     await rssCopyrightRep.deleteManyByPids(canDelIds, db);
+                    await deleteNameVectorByIds(canDelIds)
                 }
                 return { rows };
             }, err => { throw err })
@@ -281,8 +291,12 @@ export default {
             checkBodyKeyNotBlank(req, ID);
             checkBodyKeysExists(req, [REGEX, URL]);
         },
-        callback: (req) => {
-            return rssSubscribeRep.updateOneById(req.body).then(res => ({ rows: res.rows }));
+        callback: async (req) => {
+            const result = await rssSubscribeRep.updateOneById(req.body).then(res => ({ rows: res.rows }));
+            if (result?.rows > 0) {
+                await updateNameVectorByIds([req.body.id])
+            }
+            return result
         }
     },
     "/updateOne": {
