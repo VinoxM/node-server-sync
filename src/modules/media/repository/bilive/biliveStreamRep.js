@@ -25,7 +25,7 @@ export default {
         return __sqliteDB.selectOne(sql, [id], null, dbName)
     },
     selectExistsVideoByStreamId: streamId => {
-        const sql = `SELECT brs.video_id, v.status FROM bilive_record_stream brs INNER JOIN videos v ON v.id=brs.video_id WHERE brs.id = ?`
+        const sql = `SELECT brs.video_id, brs.streaming, v.status FROM bilive_record_stream brs INNER JOIN videos v ON v.id=brs.video_id WHERE brs.id = ?`
         return __sqliteDB.selectOne(sql, [streamId], null, dbName)
     },
     insertStartStream: (roomId, hostName, title, areaNameParent, areaNameChild, startTime, endTime) => {
@@ -125,5 +125,25 @@ export default {
             sql += `WHERE ` + concat.join('AND ')
         }
         return __sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
+    },
+    selectNotLiveStream: () => {
+        const sql = `SELECT ${STREAM_FULL_COLUMNS.join(",")} FROM bilive_record_stream WHERE streaming=? ORDER BY id`
+        return __sqliteDB.selectAll(sql, [MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE], null, dbName)
+    },
+    updateStreamToSync: (id) => {
+        const sql = `UPDATE bilive_record_stream SET streaming=? WHERE id=? AND streaming=?`
+        return __sqliteDB.update(sql, [MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC, id, MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE], null, dbName).then(res => res.rows)
+    },
+    ensureSyncStream: id => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM bilive_record_stream WHERE id=? AND streaming=${MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC}) AS result`
+        return __sqliteDB.selectOne(sql, [id], null, dbName).then(({ result }) => !!result)
+    },
+    updateStreamNotLiveFromSync: (id) => {
+        const sql = `UPDATE bilive_record_stream SET streaming=? WHERE id=? AND streaming=?`
+        return __sqliteDB.update(sql, [MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE, id, MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC], null, dbName)
+    },
+    selectStreamByFileId: (fileId) => {
+        const sql = `SELECT brs.id, brs.streaming FROM bilive_record_files bf INNER JOIN bilive_record_stream brs ON bf.stream_id=brs.id WHERE bf.id=?`
+        return __sqliteDB.selectOne(sql, [fileId], null, dbName)
     }
 }

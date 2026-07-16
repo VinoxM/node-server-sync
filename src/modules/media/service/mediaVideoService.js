@@ -249,14 +249,14 @@ export async function cleanEmptyAuthor(categoryId) {
  * Tags
  */
 async function handleTags(tags) {
-    const tagIds = []
+    const tagIds = new Set();
     if (Array.isArray(tags)) {
         for (const tag of tags) {
             const tagId = await addTag(tag)
-            tagIds.push(tagId)
+            tagIds.add(tagId)
         }
     }
-    return tagIds
+    return Array.from(tagIds)
 }
 
 async function addTag(tag) {

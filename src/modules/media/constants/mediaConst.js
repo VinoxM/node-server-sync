@@ -83,6 +83,7 @@ export const MEDIA_BILIVE_FILE_EVENT = {
 }
 
 export const MEDIA_BILIVE_STREAM_STATUS = {
+    AUTO_ASYNC: -1,
     NOT_LIVE: 0,
     STREAMING: 1,
     READY_TO_ENDED: 2

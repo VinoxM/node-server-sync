@@ -1,7 +1,7 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
-import { deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream } from "../../../modules/media/service/bilive/biliveStreamService.js"
+import { deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream, stopAutoSync, syncStreamToMediaStorage } from "../../../modules/media/service/bilive/biliveStreamService.js"
 import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 import { biliveRecordApi } from "../../../modules/media/service/bilive/biliveApiService.js"
 import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
@@ -93,7 +93,7 @@ export default {
         needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
-        callback: req => removeFileByFileId(req.body['fileId'])
+        callback: req => removeFileByFileId(req.body['fileId'], true)
     },
     "/record/deleteFile": {
         method: POST,
@@ -101,6 +101,23 @@ export default {
         needAuth: true,
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
-        callback: req => deleteFile(req.body['fileId'])
+        callback: req => deleteFile(req.body['fileId'], true)
     },
+    "/record/autoSyncStream": {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        allowHosts: allowLanHosts,
+        maybeStream: true,
+        preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
+        callback: req => syncStreamToMediaStorage(req.body['streamId'])
+    },
+    "/record/stopAutoSync": {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
+        callback: req => stopAutoSync(req.body['streamId'])
+    }
 }

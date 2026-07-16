@@ -7,6 +7,7 @@ import { convertFlvToMp4, removeRemoteFiles } from "../../../ssh/sshExecutorServ
 import {
     MEDIA_BILIVE_FILE_EVENT, MEDIA_BILIVE_RECORD_EVENT_ARRAY,
     MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS,
+    MEDIA_BILIVE_STREAM_STATUS,
     MEDIA_TYPE_DESCRIPTION,
     MEDIA_VIDEO_MINIO_TYPE
 } from "../../constants/mediaConst.js"
@@ -75,7 +76,7 @@ const CAN_UPLOAD_FILE_SYNC_STATUS = [
     MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED,
     MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZED
 ]
-export async function uploadFileToMediaByFileId(id) {
+export async function uploadFileToMediaByFileId(id, ignoreAutoSync = false) {
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
     const { streamId, filePath, fileStatus, syncStatus, startTime } = file
@@ -83,7 +84,8 @@ export async function uploadFileToMediaByFileId(id) {
     CAN_UPLOAD_FILE_SYNC_STATUS.includes(syncStatus) || __throwMessage('Illegal sync status.')
     const video = await biliveStreamRep.selectExistsVideoByStreamId(streamId);
     video || __throwMessage('Stream video not initialized.')
-    const { videoId, status: videoStatus } = video
+    const { videoId, status: videoStatus, streaming } = video
+    !ignoreAutoSync && streaming === MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC && __throwMessage('Stream auto sync, cannot upload file manually.')
     validateVideoStatusCanNotCreateMinio(videoStatus)
     if ((await biliveFileRep.updateFileUploading(id))?.rows === 0) {
         __throwMessage('Prepare to upload failed.')
@@ -178,7 +180,11 @@ async function uploadVideoStorage(videoId, type, uri, title, uploadCallback) {
     Tracer.tryStreamMessage(message, `message:${messageType}`)
 }
 
-export async function removeFileByFileId(id) {
+export async function removeFileByFileId(id, safely = false) {
+    if (safely) {
+        const stream = await biliveStreamRep.selectStreamByFileId(id)
+        stream?.streaming === MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC && __throwMessage('Stream auto sync, cannot remove file manually.')
+    }
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
     const { filePath, fileStatus } = file
@@ -201,7 +207,11 @@ export async function removeFileByFileId(id) {
     }], uploadTimeout)
 }
 
-export async function deleteFile(id) {
+export async function deleteFile(id, safely = false) {
+    if (safely) {
+        const stream = await biliveStreamRep.selectStreamByFileId(id)
+        stream?.streaming === MEDIA_BILIVE_STREAM_STATUS.AUTO_ASYNC && __throwMessage('Stream auto sync, cannot remove file manually.')
+    }
     await biliveFileRep.deleteFileById(id);
 }
 

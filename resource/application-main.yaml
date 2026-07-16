@@ -73,6 +73,9 @@ schedule:
   rssSubscribeVector:
     enable: true
     corn: 0 30 0/2 * * *
+  biliveStreamAutoSync:
+    enable: true
+    corn: 0 0 4 * * *
 rss:
   semanticSearch:
     similarity: 0.7

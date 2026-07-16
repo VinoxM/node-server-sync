@@ -170,6 +170,10 @@ export default {
         return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(res => res?.total || 0)
     },
     // Vector
+    selectVectorTextBeforeUpdate: id => {
+        const sql = `SELECT id, name, name_jp FROM rss_subscribe WHERE id=?`
+        return __sqliteDB.selectOne(sql, [id], null, dbName)
+    },
     selectReadyVectors: (limited = 500) => {
         return __sqliteDB.selectAll(`SELECT id FROM rss_subscribe WHERE sync_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_SYNC_STATUS.READY], null, dbName)
     },

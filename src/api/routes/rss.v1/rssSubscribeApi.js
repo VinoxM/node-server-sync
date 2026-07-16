@@ -292,9 +292,13 @@ export default {
             checkBodyKeysExists(req, [REGEX, URL]);
         },
         callback: async (req) => {
-            const result = await rssSubscribeRep.updateOneById(req.body).then(res => ({ rows: res.rows }));
-            if (result?.rows > 0) {
-                await updateNameVectorByIds([req.body.id])
+            const rss = req.body
+            const prev = await rssSubscribeRep.selectVectorTextBeforeUpdate(rss.id)
+            prev || __throwMessage('Rss subscribe not exists.')
+            const needToSync = prev.name !== rss.name || prev.nameJp !== rss.nameJP
+            const result = await rssSubscribeRep.updateOneById(rss).then(res => ({ rows: res.rows }));
+            if (needToSync && result?.rows > 0) {
+                await updateNameVectorByIds([rss.id])
             }
             return result
         }

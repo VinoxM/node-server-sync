@@ -10,6 +10,9 @@ import categoriesRep from "../../repository/categoriesRep.js"
 import videoTagMapRep from "../../repository/videoTagMapRep.js"
 import { getPushNotificationWhenBiliveStreamChanged } from "../mediaOptionsService.js"
 import { dateFormat } from "../../../../common/utils/dateUtil.js"
+import { uploadFileToMediaByFileId } from "./biliveFileService.js"
+import { Tracer } from "../../../../core/infra/tracer.js"
+import { GetterContextSubscribe } from "../../../../core/context/subscribe.js"
 
 export function getBiliveRecordFileSavePath() {
     return __env.get('bilive.record.savePath', '/mnt/storage-0/bilive/recording')
@@ -195,11 +198,89 @@ export async function deleteStream(streamId) {
     await biliveStreamRep.deleteStreamById(streamId);
 }
 
+export async function autoSyncStreams() {
+    const { rows, data: streams } = await biliveStreamRep.selectNotLiveStream();
+    if (rows === 0) return;
+    for (const stream of streams) {
+        await syncStreamToMediaStorage(stream.id)
+    }
+}
+
+export async function syncStreamToMediaStorage(streamId) {
+    const stream = await biliveStreamRep.selectOneById(streamId);
+    stream || __throwMessage('Bilive stream not exists.')
+    const { id, hostName, title, startTime, endTime } = stream
+    printAndTryStreamEvenMessage(`[Stream Sync:${id}] Ready to sync stream to media storage. [${hostName}] ${title} {${dateFormat(new Date(startTime))} - ${dateFormat(new Date(endTime))}`)
+    const rows = await biliveStreamRep.updateStreamToSync(id);
+    if (rows === 0) {
+        printAndTryStreamEvenMessage(`[Stream Sync:${id}] Setup stream status to autoSync failed. Skipped.`, 'warning')
+        return;
+    }
+    try {
+        const tags = generateStreamTags(hostName)
+        await initStreamVideo(id, tags)
+        const { rows, data: files } = await biliveFileRep.selectFilesByStreamId(id)
+        if (rows === 0) {
+            printAndTryStreamEvenMessage(`[Stream Sync:${id}] Stream files empty. Skipped.`, 'warning')
+            return;
+        }
+        for (const file of files) {
+            const canContinue = await tryUploadStreamFile(file.id, id)
+            if (!canContinue) {
+                printAndTryStreamEvenMessage(`[Stream Sync:${id}] Upload stream file interrupted. Skipped stream sync.`, 'warning')
+                break;
+            }
+        }
+    } catch (ex) {
+        printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Sync stream to storage failed. Cause:${ex?.message || ex}`, 'error')
+    } finally {
+        printAndTryStreamEvenMessage(`[Stream Sync:${id}] Sync stream to media storage finished, backup stream status to notLive.`)
+        await biliveStreamRep.updateStreamNotLiveFromSync(id)
+    }
+}
+
+async function tryUploadStreamFile(fileId, streamId) {
+    try {
+        const ensure = await biliveStreamRep.ensureSyncStream(streamId)
+        ensure || __throwMessage('Illegal Stream status.')
+        await uploadFileToMediaByFileId(fileId, true)
+        return true;
+    } catch (ex) {
+        printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Upload stream file[${fileId}] to storage failed. Cause:${ex?.message || ex}`, 'error')
+        return false;
+    }
+}
+
+const tagMappingGetter = new GetterContextSubscribe("BiliveStreamTagMapping", () => __env.get('bilive.tagMapping', []))
+function generateStreamTags(hostName) {
+    const tagMapping = tagMappingGetter.getValue();
+    if (__isNotEmptyArray(tagMapping)) {
+        const mapping = tagMapping.find(t => t.hostName === hostName)
+        return mapping?.tags ?? []
+    }
+    return []
+}
+
+export async function stopAutoSync(id) {
+    await biliveStreamRep.updateStreamNotLiveFromSync(id)
+}
+
 function tryResolveTime(time) {
     try {
         return new Date(time)
     } catch (ignored) {
         return new Date()
+    }
+}
+
+function printAndTryStreamEvenMessage(message, messageType = '') {
+    Tracer.tryStreamMessage(message, `message${__isNotBlank(messageType) ? (':' + messageType) : ''}`)
+    if (messageType === 'warning') {
+        __log.warn(message)
+    } else if (messageType === 'error') {
+        __log.error(message)
+    } else {
+        __log.info(message)
     }
 }
 
