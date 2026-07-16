@@ -232,7 +232,7 @@ export async function syncStreamToMediaStorage(streamId) {
             }
         }
     } catch (ex) {
-        printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Sync stream to storage failed. Cause:${ex?.message || ex}`, 'error')
+        printAndTryStreamEvenMessage(`[Stream Sync:${id}] Sync stream to storage failed. Cause:${ex?.msg || ex?.message || ex}`, 'error')
     } finally {
         printAndTryStreamEvenMessage(`[Stream Sync:${id}] Sync stream to media storage finished, backup stream status to notLive.`)
         await biliveStreamRep.updateStreamNotLiveFromSync(id)
@@ -246,7 +246,7 @@ async function tryUploadStreamFile(fileId, streamId) {
         await uploadFileToMediaByFileId(fileId, true)
         return true;
     } catch (ex) {
-        printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Upload stream file[${fileId}] to storage failed. Cause:${ex?.message || ex}`, 'error')
+        printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Upload stream file[${fileId}] to storage failed. Cause:${ex?.msg || ex?.message || ex}`, 'error')
         return false;
     }
 }
