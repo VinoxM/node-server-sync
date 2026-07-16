@@ -203,7 +203,7 @@ export async function closeReadyToEndStream(streamId) {
 }
 
 export async function autoSyncStreams() {
-    const { rows, data: streams } = await biliveStreamRep.selectNotLiveStream();
+    const { rows, data: streams } = await biliveStreamRep.selectNotLiveStreamForAutoSync();
     if (rows === 0) return;
     for (const stream of streams) {
         await syncStreamToMediaStorage(stream.id)

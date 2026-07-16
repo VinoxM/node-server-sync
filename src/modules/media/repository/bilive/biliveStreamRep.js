@@ -130,9 +130,19 @@ export default {
         }
         return __sqliteDB.selectOne(sql, params, null, dbName).then(({ total }) => total || 0);
     },
-    selectNotLiveStream: () => {
-        const sql = `SELECT ${STREAM_FULL_COLUMNS.join(",")} FROM bilive_record_stream WHERE streaming=? ORDER BY id`
-        return __sqliteDB.selectAll(sql, [MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE], null, dbName)
+    selectNotLiveStreamForAutoSync: () => {
+        const sql =  `SELECT t.id FROM (`
+            + `SELECT brs.id, `
+            + `v.id AS videoExists, `
+            + `COUNT(brf.id) AS recordExists, `
+            + `SUM(CASE WHEN brf.file_status=${MEDIA_BILIVE_RECORD_FILE_STATUS.REMOVED} THEN 0 ELSE 1 END) AS fileExists `
+            + `FROM bilive_record_stream brs `
+            + `LEFT JOIN videos v ON v.id=brs.video_id `
+            + `LEFT JOIN bilive_record_files brf on brf.stream_id=brs.id `
+            + `WHERE brs.streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE} `
+            + `GROUP BY brs.id ORDER BY brs.id `
+            + `) AS t WHERE t.videoExists > 0 AND t.recordExists > 0 AND t.fileExists > 0 `
+        return __sqliteDB.selectAll(sql, [], null, dbName)
     },
     updateStreamToSync: (id) => {
         const sql = `UPDATE bilive_record_stream SET streaming=? WHERE id=? AND streaming=?`
