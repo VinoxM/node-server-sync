@@ -50,7 +50,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId = null }) {
  * Minio status:
  * PREPARED -> PREPARED/COMPLETE/FAILED
  */
-export async function createVideo(videoObj) {
+export async function createVideo(videoObj, executeAsync = true) {
     const { title, author, category, uploadTime, playlistTitle } = videoObj
     // validate category
     const categoryExists = await categoriesRep.selectOneByName(category)
@@ -87,10 +87,16 @@ export async function createVideo(videoObj) {
         // update video status
         await updateVideoStatusByVideoMinioStatus(videoId)
     } else {
-        // execute async task chain
-        const uploadTimeout = await getMediaUploadTimeoutOption()
         tasks.push(async () => updateVideoStatusByVideoMinioStatus(videoId))
-        await executeAsyncTaskChain(tasks, uploadTimeout)
+        if (executeAsync) {
+            // execute async task chain
+            const uploadTimeout = await getMediaUploadTimeoutOption()
+            await executeAsyncTaskChain(tasks, uploadTimeout)
+        } else {
+            for (const task of tasks) {
+                await task();
+            }
+        }
     }
     if (__isNotBlank(playlistTitle)) {
         try {

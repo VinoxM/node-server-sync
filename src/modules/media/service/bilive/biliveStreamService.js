@@ -159,7 +159,7 @@ export async function getStreamEndedRecordEventData(streamId) {
     } : null
 }
 
-export async function initStreamVideo(streamId, tags) {
+export async function initStreamVideo(streamId, tags, executeAsync = true) {
     const stream = await biliveStreamRep.selectOneById(streamId)
     stream || __throwMessage('Stream not found.')
     const { title, hostName, startTime, videoId } = stream;
@@ -172,7 +172,7 @@ export async function initStreamVideo(streamId, tags) {
         }
         const { filePath } = firstFile;
         const cover = generateVideoStorageFilePath(filePath)
-        const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover, tags })
+        const video = await createVideo({ title, author: hostName, category, uploadTime: tryResolveTime(startTime), cover, tags }, executeAsync)
         await biliveStreamRep.updateVideoIdById(video.id, streamId)
         return video.id
     }
@@ -218,7 +218,7 @@ export async function syncStreamToMediaStorage(streamId) {
     }
     try {
         const tags = generateStreamTags(hostName)
-        await initStreamVideo(id, tags)
+        await initStreamVideo(id, tags, false)
         const { rows, data: files } = await biliveFileRep.selectFilesByStreamId(id)
         if (rows === 0) {
             printAndTryStreamEvenMessage(`[Stream Sync:${id}] Stream files empty. Skipped.`, 'warning')
@@ -243,7 +243,7 @@ async function tryUploadStreamFile(fileId, streamId) {
     try {
         const ensure = await biliveStreamRep.ensureSyncStream(streamId)
         ensure || __throwMessage('Illegal Stream status.')
-        await uploadFileToMediaByFileId(fileId, true)
+        await uploadFileToMediaByFileId(fileId, true, false)
         return true;
     } catch (ex) {
         printAndTryStreamEvenMessage(`[Stream Sync:${streamId}] Upload stream file[${fileId}] to storage failed. Cause:${ex?.msg || ex?.message || ex}`, 'error')

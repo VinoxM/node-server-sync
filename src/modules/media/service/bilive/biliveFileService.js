@@ -76,7 +76,7 @@ const CAN_UPLOAD_FILE_SYNC_STATUS = [
     MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.NOT_SYNCHRONIZED,
     MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS.SYNCHRONIZED
 ]
-export async function uploadFileToMediaByFileId(id, ignoreAutoSync = false) {
+export async function uploadFileToMediaByFileId(id, ignoreAutoSync = false, executeAsync = true) {
     const file = await biliveFileRep.selectFileById(id)
     file || __throwMessage('File not found.')
     const { streamId, filePath, fileStatus, syncStatus, startTime } = file
@@ -96,25 +96,30 @@ export async function uploadFileToMediaByFileId(id, ignoreAutoSync = false) {
         const uploadCallback = await initUploadStorageCallback(coverExists ? 2 : 3, id);
         if (!coverExists) {
             const cover = generateVideoStorageFilePath(filePath, '.cover.jpg')
-            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover, null, uploadCallback)
+            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.COVER, cover, null, uploadCallback, executeAsync)
         }
         const title = generateStorageTitle(startTime)
         // upload barrage
         const barrage = generateVideoStorageFilePath(filePath, '.xml')
-        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback)
+        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.BARRAGE, barrage, title, uploadCallback, executeAsync)
         // upload source
         const source = generateVideoStorageFilePath(filePath, '.flv')
         const convertBiliveStreamFileFlvToMp4 = await getConvertBiliveStreamFileFlvToMp4Option();
         if (convertBiliveStreamFileFlvToMp4) {
-            const uploadTimeout = await getMediaUploadTimeoutOption()
-            await executeAsyncTaskChain([
-                async () => {
-                    const convertedSource = await tryConvertFlvToMp4(source)
-                    await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback)
-                }
-            ], uploadTimeout)
+            if (executeAsync) {
+                const uploadTimeout = await getMediaUploadTimeoutOption()
+                await executeAsyncTaskChain([
+                    async () => {
+                        const convertedSource = await tryConvertFlvToMp4(source)
+                        await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback, executeAsync)
+                    }
+                ], uploadTimeout)
+            } else {
+                const convertedSource = await tryConvertFlvToMp4(source)
+                await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, convertedSource, title, uploadCallback, executeAsync)
+            }
         } else {
-            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title, uploadCallback)
+            await uploadVideoStorage(videoId, MEDIA_VIDEO_MINIO_TYPE.SOURCE, source, title, uploadCallback, executeAsync)
         }
     } finally {
         // setup file uploaded
@@ -171,8 +176,8 @@ async function tryConvertFlvToMp4(fileUri) {
     return fileUri;
 }
 
-async function uploadVideoStorage(videoId, type, uri, title, uploadCallback) {
-    const code = await createMinioManually({ videoId, type, uri, title }, uploadCallback)
+async function uploadVideoStorage(videoId, type, uri, title, uploadCallback, executeAsync = true) {
+    const code = await createMinioManually({ videoId, type, uri, title }, uploadCallback, executeAsync)
     const desc = MEDIA_TYPE_DESCRIPTION[type]
     const message = `Upload ${desc} file to minio ${code ? 'success' : 'timeout'}.`
     const messageType = code ? 'info' : 'warning'

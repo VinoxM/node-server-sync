@@ -47,7 +47,7 @@ const CAN_NOT_CREATE_MINIO_VIDEO_STATUS = [
 export function validateVideoStatusCanNotCreateMinio(status) {
     CAN_NOT_CREATE_MINIO_VIDEO_STATUS.includes(status) && __throwMessage('Invalid video status, cannot create minio.')
 }
-export async function createMinioManually(minioObj, callback) {
+export async function createMinioManually(minioObj, callback, executeAsync = true) {
     const { videoId, type, uri, sort, title } = minioObj
     // validate type
     SUPPORTED_MEDIA_MINIO_TYPE.includes(type) || __throwMessage('Invalid type.')
@@ -76,17 +76,25 @@ export async function createMinioManually(minioObj, callback) {
         await updateVideoStatusByVideoMinioStatus(videoId);
         return 1
     } else {
-        const uploadTimeout = await getMediaUploadTimeoutOption()
-        const { status } = await executeAsyncTaskChain([
-            async () => {
-                const complete = await task();
-                if (typeof callback === 'function') {
-                    await callback(complete)
-                }
-            },
-            async () => updateVideoStatusByVideoMinioStatus(videoId)
-        ], uploadTimeout)
-        return status === ASYNC_SEQUENCE_EXECUTE_STATUS.TIMEOUT ? 0 : 1
+        if (executeAsync) {
+            const uploadTimeout = await getMediaUploadTimeoutOption()
+            const { status } = await executeAsyncTaskChain([
+                async () => {
+                    const complete = await task();
+                    if (typeof callback === 'function') {
+                        await callback(complete)
+                    }
+                },
+                async () => updateVideoStatusByVideoMinioStatus(videoId)
+            ], uploadTimeout)
+            return status === ASYNC_SEQUENCE_EXECUTE_STATUS.TIMEOUT ? 0 : 1
+        }
+        const complete = await task();
+        if (typeof callback === 'function') {
+            await callback(complete)
+        }
+        await updateVideoStatusByVideoMinioStatus(videoId)
+        return 1
     }
 }
 
