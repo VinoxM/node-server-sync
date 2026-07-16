@@ -72,6 +72,10 @@ export default {
         const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE} WHERE room_id=?`
         return __sqliteDB.update(sql, [roomId], null, dbName)
     },
+    updateReadyToEndStreamEndedById: (id) => {
+        const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE} WHERE id=? AND streaming=?`
+        return __sqliteDB.update(sql, [id, MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED], null, dbName)
+    },
     selectEndedEventDataById: (id) => {
         const sql = `SELECT br.event,br.event_timestamp,br.event_data FROM bilive_record br WHERE br.id IN (SELECT brs.end_by_record_id FROM bilive_record_stream brs WHERE brs.id=?)`
         return __sqliteDB.selectOne(sql, [id], null, dbName)

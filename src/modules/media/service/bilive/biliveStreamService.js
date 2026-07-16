@@ -198,6 +198,10 @@ export async function deleteStream(streamId) {
     await biliveStreamRep.deleteStreamById(streamId);
 }
 
+export async function closeReadyToEndStream(streamId) {
+    await biliveStreamRep.updateReadyToEndStreamEndedById(streamId)
+}
+
 export async function autoSyncStreams() {
     const { rows, data: streams } = await biliveStreamRep.selectNotLiveStream();
     if (rows === 0) return;

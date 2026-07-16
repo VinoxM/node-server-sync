@@ -1,7 +1,7 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js"
 import { checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js"
 import { saveWebhookEvent } from "../../../modules/media/service/mediaBiliveRecordService.js"
-import { deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream, stopAutoSync, syncStreamToMediaStorage } from "../../../modules/media/service/bilive/biliveStreamService.js"
+import { closeReadyToEndStream, deleteStream, getBiliveRecordTags, getStreamEndedRecordEventData, initStreamVideo, searchStream, stopAutoSync, syncStreamToMediaStorage } from "../../../modules/media/service/bilive/biliveStreamService.js"
 import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from "../../../modules/media/service/bilive/biliveFileService.js"
 import { biliveRecordApi } from "../../../modules/media/service/bilive/biliveApiService.js"
 import { allowLanHosts } from "../../../common/constants/allowHostsConst.js"
@@ -102,6 +102,14 @@ export default {
         allowHosts: allowLanHosts,
         preCheck: req => checkBodyKeysNotBlank(req, ['fileId']),
         callback: req => deleteFile(req.body['fileId'], true)
+    },
+    "/record/closeReadyToEndStream": {
+        method: POST,
+        needSecret,
+        needAuth: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeysNotBlank(req, ['streamId']),
+        callback: req => closeReadyToEndStream(req.body['streamId'])
     },
     "/record/autoSyncStream": {
         method: POST,
