@@ -46,8 +46,8 @@ export default {
         return __sqliteDB.selectOne(sql, [videoId, id], null, dbName)
     },
     updateStreamReadyToEndedById: (id, endTime, recordId, reason) => {
-        const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED},end_time=?,end_by_record_id=?,end_reason=? WHERE id=?`
-        return __sqliteDB.update(sql, [endTime, recordId, reason, id], null, dbName)
+        const sql = `UPDATE bilive_record_stream SET streaming=${MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED},end_time=?,end_by_record_id=?,end_reason=? WHERE id=? AND streaming=?`
+        return __sqliteDB.update(sql, [endTime, recordId, reason, id, MEDIA_BILIVE_STREAM_STATUS.STREAMING], null, dbName)
     },
     updateStreamEndedById: (id, endTime, recordId, reason) => {
         const params = []
