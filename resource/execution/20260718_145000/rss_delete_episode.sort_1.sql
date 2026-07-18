@@ -1,0 +1,1 @@
+DELETE FROM rss_episode WHERE id IN (417, 418, 419, 420);
