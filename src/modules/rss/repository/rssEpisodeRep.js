@@ -116,7 +116,7 @@ export default {
         return __sqliteDB.delete(sql, [id], null, dbName)
     },
     selectFailedTaskExistsById: id => {
-        const sql = 'SELECT ref.id, COUNT(rt.id) count FROM rss_episode_failed ref INNER JOIN rss_torrent_task rt ON ref.rss_task_id=rt.id WHERE ref.id=?'
+        const sql = 'SELECT ref.id, COUNT(rt.id) count FROM rss_episode_failed ref INNER JOIN rss_torrent_task rt ON ref.rss_task_id=rt.id WHERE ref.id=? GROUP BY ref.id'
         return __sqliteDB.selectOne(sql, [id], null, dbName).then(data => data.count > 0)
     },
     selectFailedCount: () => {
