@@ -413,7 +413,7 @@ export function generateMinioSourceSafely(minioLink) {
             const { matcher, hostname } = clientMatchers[label];
             try {
                 if (new RegExp(matcher).test(minioLink)) {
-                    return `http://${hostname}${minioLink}`
+                    return `https://${hostname}${minioLink}`
                 }
             } catch (ex) {
             }
