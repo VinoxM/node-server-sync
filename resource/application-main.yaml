@@ -77,6 +77,8 @@ schedule:
     enable: true
     corn: 0 0 4 * * *
 rss:
+  convertMkvToMp4:
+    enable: false
   semanticSearch:
     similarity: 0.7
   subscribeHandler:

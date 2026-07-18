@@ -99,7 +99,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
         __throwMessage('Rss subscribe not found.')
     }
 
-    if (ext === '.mkv') {
+    if (__env.get('rss.convertMkvToMp4.enable', false) && ext === '.mkv') {
         const mp4FileName = fileName.substring(0, fileName.length - 4) + '.mp4'
         const mp4FilePath = join(rootPath, mp4FileName)
         __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] file is mkv, ready to convert to mp4: ${filePath} -> ${mp4FilePath}`)
