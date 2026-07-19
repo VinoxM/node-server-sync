@@ -141,7 +141,7 @@ export default {
             + `LEFT JOIN bilive_record_files brf on brf.stream_id=brs.id `
             + `WHERE brs.streaming=${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE} `
             + `GROUP BY brs.id ORDER BY brs.id `
-            + `) AS t WHERE t.videoExists > 0 AND t.recordExists > 0 AND t.fileExists > 0 `
+            + `) AS t WHERE t.videoExists IS NULL AND t.recordExists > 0 AND t.fileExists > 0 `
         return __sqliteDB.selectAll(sql, [], null, dbName)
     },
     updateStreamToSync: (id) => {
