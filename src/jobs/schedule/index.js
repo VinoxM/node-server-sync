@@ -64,8 +64,10 @@ class Schedule {
         if (schedule?.execution) {
             __log.info(`[Schedule] Job Manual Execute: ${schedule.name ?? 'unknown jobName'}`);
             schedule.execution()
+            return 'Job execution triggered.';
+        } else {
+            __throwMessage(`Job has no execution.`)
         }
-        __throwMessage(`Job has no execution.`)
     }
 
     cancelJob(scheduleKey) {
