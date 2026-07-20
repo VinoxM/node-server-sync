@@ -2,6 +2,7 @@ import apiHeaderConst from "../../common/constants/apiHeaderConst.js";
 import apiMethodConst from "../../common/constants/apiMethodConst.js";
 import { checkHeaderKeyValue, checkQueryKeyValue } from "../../common/utils/preCheckUtil.js";
 import { getRequestRealIp } from "../../common/utils/requestUtil.js";
+import clashFileNameConst from "../../modules/clash/constants/clashFileNameConst.js";
 import { concatClashYaml } from "../../modules/clash/service/clashConcatService.js";
 import { getClashFileContent } from "../../modules/clash/service/clashService.js";
 import { subscribeSources } from "../../modules/clash/service/clashSubscribeService.js";
@@ -26,17 +27,20 @@ export default {
                 checkQueryKeyValue(req, SECRET, needSecret(), { errorStatus: 400 });
             }
         },
-        callback: async (_, res) => getClashFileContent().then(result => {
-            const fileName = encodeURIComponent(clashFileName)
+        callback: async (req, res) => {
+            const type = req.query?.type
+            const fileName = type === 'tailscale' ? clashFileNameConst.TAILSCALE_LATEST_FILE_NAME : clashFileNameConst.LATEST_FILE_NAME
+            const headerFileName = encodeURIComponent(clashFileName)
+            const result = await getClashFileContent(fileName);
             const headers = {
                 'Access-Control-Allow-Origin': '*',
                 'Content-Type': 'text/plain;charset=UTF8',
-                'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`
+                'Content-Disposition': `attachment; filename="${headerFileName}"; filename*=UTF-8''${headerFileName}`
             }
             Object.assign(headers, result.headers);
             res.writeHead(200, headers);
             res.end(result.content);
-        })
+        }
     },
     "/subscribe": {
         method: POST,

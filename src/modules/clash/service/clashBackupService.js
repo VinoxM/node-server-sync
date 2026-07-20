@@ -1,6 +1,7 @@
 import yaml from 'yaml';
 import fs from 'fs';
 import clashConst from '../constants/clashFileNameConst.js';
+import { concatTailscale } from './clashTailscaleService.js';
 
 const latestClashFileName = clashConst.LATEST_FILE_NAME
 const deploymentFileName = clashConst.DEPLOYMENT_FILE_NAME
@@ -23,10 +24,15 @@ export function updateLatestConfig(dataObj) {
         excludeKeys.forEach(k => Reflect.deleteProperty(dataObj, k))
     }
     const date = formattedDate()
-    // save file
+    // Save file
     savePersistenceYaml(dataObj, saveFile, date)
     // Save deployment files
     saveDeployClashYaml(dataObj, deployPath, mixin, date);
+
+    // Concat Tailscale
+    const tailscaleObj = concatTailscale(dataObj)
+    const tailscaleFile = __join(savePath, clashConst.TAILSCALE_LATEST_FILE_NAME)
+    savePersistenceYaml(tailscaleObj, tailscaleFile, date)
 }
 
 function backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum) {

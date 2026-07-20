@@ -124,6 +124,7 @@ clash:
     subscription: /mnt/data/.config/clash/subscription
     concat: /mnt/data/.config/clash/concat
     backup: /mnt/data/.config/clash/backup
+    tailscale: /mnt/data/.config/clash/tailscale
   deployment:
     excludeKeys:
       - "external-controller"

@@ -52,30 +52,44 @@ export class GetterContextSubscribe extends ContextSubscribe {
     #initialized = false;
     #currentEpoch = 0;
 
+    #backfill = null;
+
     constructor(label, getter) {
-        super(label, () => {
-            const epoch = ++this.#currentEpoch;
-            const res = getter?.();
-            if (res instanceof Promise) {
-                res.then(val => {
-                    if (epoch === this.#currentEpoch) {
-                        this.#value = val;
-                    }
-                }).catch(err => {
-                    __log.error(`[GetterContextSubscribe:${label}] Async getter failed:`, err);
-                });
-            } else {
-                this.#value = res;
-            }
-        }, true)
+        super(label, () => { this.#executeGetter(); }, true)
         this.#getter = getter;
+    }
+
+    async #executeGetter() {
+        const epoch = ++this.#currentEpoch;
+        const res = this.#getter?.();
+        if (res instanceof Promise) {
+            try {
+                const val = await res;
+                if (epoch === this.#currentEpoch) {
+                    this.#value = val;
+                }
+            } catch (err) {
+                __log.error(`[GetterContextSubscribe:${this.getLabel()}] Async getter failed:`, err);
+            }
+        } else {
+            this.#value = res;
+        }
     }
 
     getValue() {
         if (!this.#initialized) {
             this.doSubscribe();
-            this.#value = this.#getter?.();
+            this.onRefresh();
             this.#initialized = true;
+        }
+        return tryClone(this.#value);
+    }
+
+    async getValueAsync() {
+        if (!this.#initialized) {
+            this.doSubscribe();
+            this.#initialized = true;
+            await this.#executeGetter();
         }
         return tryClone(this.#value);
     }
