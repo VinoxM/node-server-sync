@@ -74,21 +74,31 @@ export function mergeObject(target, source) {
     });
 }
 
-export function isPrimitive(obj) {
-    if (obj === null || obj === undefined) {
-        return true
+function isPlainObjectOrArray(value) {
+    if (Array.isArray(value)) {
+        return true;
     }
-    return typeof obj !== 'object' && typeof obj !== 'function'
-}
-
-function canBeCloned(obj) {
-    if (obj === null || obj === undefined) {
-        return false
+    if (typeof value !== 'object' || value === null) {
+        return false;
     }
-    const tp = typeof obj
-    return !['function', 'object'].includes(tp)
+    if (Object.prototype.toString.call(value) !== '[object Object]') {
+        return false;
+    }
+    const proto = Object.getPrototypeOf(value);
+    if (proto === null) {
+        return true;
+    }
+    const Ctor = Object.prototype.hasOwnProperty.call(proto, 'constructor') && proto.constructor;
+    return typeof Ctor === 'function' && Ctor === Object;
 }
 
 export function tryClone(obj) {
-    return canBeCloned(obj) ? structuredClone(obj) : obj;
+    if (!isPlainObjectOrArray(obj)) {
+        return obj
+    }
+    try {
+        return structuredClone(obj)
+    } catch {
+        return obj
+    }
 }

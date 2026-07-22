@@ -80,7 +80,6 @@ export class ApplicationContext {
             this.#propertyCache.clear();
             __log.info(`[${this.logPlaceholder()}] Merged configuration: ${label}.`);
         }
-        return tryClone(this.#context);
     }
 
     addListen(subscribe) {

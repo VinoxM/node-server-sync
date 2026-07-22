@@ -26,7 +26,7 @@ export class K8SApplicationContext extends ApplicationContext {
 
     async #loadConfiguration() {
         const placeholder = this.logPlaceholder()
-        this.#k3sApi = this.#kubeConf.makeApiClient(k8s.CoreV1Api);
+        this.#k3sApi ??= this.#kubeConf.makeApiClient(k8s.CoreV1Api);
         const namespace = process.env.NAMESPACE || 'default';
         __log.info(`[${placeholder}] Use namespace: ${namespace}.`)
         const res = await this.#k3sApi.readNamespacedConfigMap({
