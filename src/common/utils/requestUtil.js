@@ -1,23 +1,49 @@
-export function getRequestRealIp(req) {
-    if (req) {
-        const forwardKey = "X-Forwarded-For"
-        const forwards = req?.get?.(forwardKey) || req?.headers?.[forwardKey.toLocaleLowerCase()] || '';
-        if (forwards && forwards !== "") {
-            return forwards.split(",")[0] || 'Unknown';
-        }
+function cleanIpAddress(ip) {
+    if (!ip || ip === 'Unknown') return null
+    ip = ip.trim()
+    if (ip.startsWith('[') && ip.includes(']')) {
+        ip = ip.substring(1, ip.indexOf(']'))
     }
-    return "Unknown";
+    if (ip.startsWith('::ffff:')) {
+        ip = ip.substring(7)
+    }
+    return ip
+}
+
+export function getRequestRealIp(req) {
+    if (!req) return 'Unknown'
+    const forwardKey = 'x-forwarded-for'
+    let forwards = req.get?.(forwardKey) || req.headers?.[forwardKey] || ''
+    if (!forwards) {
+        forwards = req.get?.('X-Forwarded-For') || req.headers?.['X-Forwarded-For'] || ''
+    }
+    if (forwards && forwards !== '') {
+        const firstIp = forwards.split(',')[0].trim()
+        return cleanIpAddress(firstIp) || 'Unknown'
+    }
+    const remoteAddr = req.socket?.remoteAddress || req.connection?.remoteAddress || ''
+    return cleanIpAddress(remoteAddr) || 'Unknown'
+}
+
+function extractHostname(hostHeader) {
+    if (!hostHeader || typeof hostHeader !== 'string') return ''
+    hostHeader = hostHeader.trim()
+    const ipv6Match = hostHeader.match(/^\[(.*?)\](?::|$)/)
+    if (ipv6Match) {
+        return ipv6Match[1]
+    }
+    const parts = hostHeader.split(':')
+    return parts[0] || ''
 }
 
 export function getRequestHost(req) {
-    if (req) {
-        const hostKey = "host"
-        const hosts = req?.get?.(hostKey) || req?.headers?.[hostKey.toLocaleLowerCase()] || '';
-        if (hosts && hosts !== "") {
-            return hosts.split(",")[0] || 'Unknown';
-        }
+    if (!req) return 'Unknown'
+    let host = req?.get?.('host') || req?.headers?.host || ''
+    if (!host) {
+        host = req?.headers?.['x-forwarded-host'] || ''
     }
-    return "Unknown";
+    if (!host) return 'Unknown'
+    return extractHostname(host) || 'Unknown'
 }
 
 export function getRequestTokenHash(req) {
