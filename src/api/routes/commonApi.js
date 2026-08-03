@@ -58,6 +58,7 @@ export default {
     },
     "/doNothing": {
         method: GET,
+        allowHosts: allowLanHosts,
         needSecret: () => 'mAou5820.doNothing',
         callback: () => "Ok"
     }

@@ -15,8 +15,7 @@ axios:
     port: 7890
 api:
   requestBodyLimit: 2 * 1024 * 1024
-  apiDisabled:
-    - /common/doNothing
+  apiDisabled: []
   allowHosts:
     - api: /summary/*
       hosts: ["*-coder.vinoxm.cloud", "server.vinoxm.art"]
