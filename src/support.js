@@ -1,6 +1,6 @@
 import { join as pathJoin } from "path";
 import { initializeDB, getSqliteDB, getRedisClient } from "./core/database/index.js";
-import { initializeLogger, setupGlobalLogFunc, setupLoggerLevel } from "./core/logger/index.js";
+import { registerLogger, setupLoggerLevel, setupLoggerWorker } from "./core/logger/index.js";
 import { createContext } from "./core/context/index.js";
 import { evaluate } from 'mathjs';
 
@@ -46,8 +46,15 @@ function getProcessArgs() {
     const argv = process.argv;
     argv.forEach(arg => {
         if (arg.startsWith("--")) {
-            const kv = arg.replace("--", '').split("=");
-            result[kv[0]] = kv[1] || null;
+            const str = arg.replace("--", '');
+            const equalIndex = str.indexOf('=');
+            if (equalIndex !== -1) {
+                const key = str.substring(0, equalIndex);
+                const value = str.substring(equalIndex + 1);
+                result[key] = value || null;
+            } else {
+                result[str] = null;
+            }
         }
     })
     return result;
@@ -65,9 +72,10 @@ export async function setupGlobal(rootPath) {
 
     // replace '@' to root path
     globalThis.__join = (...args) => {
-        if (!args) return "";
-        if (args[0].startsWith("@")) {
-            args[0] = args[0].replace("@", rootPath);
+        if (!args || args.length === 0) return "";
+        if (args[0] && args[0].startsWith("@")) {
+            args[0] = args[0].replace(/^@/, "");
+            args = [rootPath, ...args];
         }
         return pathJoin(...args);
     }
@@ -77,7 +85,7 @@ export async function setupGlobal(rootPath) {
     // load process arguments
     globalThis.__args = getProcessArgs()
 
-    setupGlobalLogFunc()
+    registerLogger()
 
     // load environment
     await reloadApplicationContext()
@@ -98,7 +106,8 @@ export async function setupGlobal(rootPath) {
         isDev: () => applicationContext.isActive?.('dev')
     }
 
-    initializeLogger(__env.get('logger.savePath'))
+    setupLoggerLevel(__env.get('logger.level'))
+    setupLoggerWorker(__env.get('logger.savePath'))
 
     // load database
     await initializeDB();

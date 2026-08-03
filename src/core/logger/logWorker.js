@@ -15,8 +15,9 @@ function padEnd(str, maxLength = 2, fillString = '0') {
 }
 
 function dateFormat(d, formatStr, is30Hours = false) {
-    const flag = is30Hours && d.getHours() < 6
-    const date = flag ? new Date(d.setDate(d.getDate() - 1)) : d;
+    const dateCopy = new Date(d.getTime());
+    const flag = is30Hours && dateCopy.getHours() < 6;
+    const date = flag ? new Date(dateCopy.setDate(dateCopy.getDate() - 1)) : dateCopy;
     const year = date.getFullYear();
     const month = padStart(date.getMonth() + 1);
     const day = padStart(date.getDate());
@@ -39,14 +40,15 @@ function dateFormatForLog(d) {
     return dateFormat(date, "yyyy/MM/dd HH:mm:ss.ms");
 }
 
-function convertLogMessage({ timestamp, level, message, traceId }) {
+function convertLogMessage({ timestamp, level, message, traceId }, stdMaxLen = 5) {
     let str = ''
+    const traceStr = traceId && traceId !== '-' ? ` [${traceId}]` : ''
     switch (level) {
         case 'origin':
             str = message
             break;
         case 'print':
-            str = `[${dateFormatForLog(timestamp)}] > [${traceId}] ${message}`
+            str = `[${dateFormatForLog(timestamp)}] >${traceStr} ${message}`
             break;
         case 'initialized':
             str = `\r\n ------ Started: ${dateFormatForLog(timestamp)} ------ \r\n`
@@ -55,7 +57,7 @@ function convertLogMessage({ timestamp, level, message, traceId }) {
             str = `\r\n ------ Stopped: ${dateFormatForLog(timestamp)} ------ \r\n`
             break;
         default:
-            str = `[${dateFormatForLog(timestamp)}] [${padEnd(String(level).toLocaleUpperCase(), 5, ' ')}] [${traceId}] ${message}`
+            str = `[${dateFormatForLog(timestamp)}] [${padEnd(String(level).toLocaleUpperCase(), stdMaxLen, ' ')}]${traceStr} ${message}`
     }
     return str
 }
@@ -69,9 +71,12 @@ class AdvancedLogger {
     #stats
     #initialized = false
     #flushTimer = null
+    #stdMaxLen = 5
 
     constructor(options) {
-        this.#logFile = path.join(options.basePath, 'logger.log')
+        const { fileName, stdMaxLen } = options
+        this.#logFile = path.join(options.basePath, fileName)
+        this.#stdMaxLen = stdMaxLen
         this.#maxFileSize = options.maxFileSize
         this.#maxFiles = options.maxFiles
         this.#flushInterval = options.flushInterval
@@ -104,8 +109,12 @@ class AdvancedLogger {
     async flush() {
         if (this.#buffer.length === 0) return;
         const entries = this.#buffer.splice(0, this.#buffer.length);
-        const content = entries.map(convertLogMessage).join('\r\n') + '\r\n';
+        const content = entries.map(o => convertLogMessage(o, this.#stdMaxLen)).join('\r\n') + '\r\n';
         try {
+            const dir = path.dirname(this.#logFile);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
             fs.appendFileSync(this.#logFile, content);
             this.#stats.logsWritten += entries.length;
             this.#stats.bytesWritten += Buffer.byteLength(content);
