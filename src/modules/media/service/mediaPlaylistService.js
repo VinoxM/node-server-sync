@@ -90,6 +90,10 @@ export async function removePlaylistVideo(id, videoId) {
     return playlistsRep.deleteVideo(id, videoId);
 }
 
+export async function removePlaylistVideos(id, videos) {
+    return playlistsRep.deleteVideos(id, videos);
+}
+
 export async function removePlaylist(id) {
     await playlistsRep.deleteOne(id);
     await playlistsRep.deleteByPlaylistId(id);

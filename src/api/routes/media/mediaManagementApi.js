@@ -27,7 +27,7 @@ import {
     getPlaylistById,
     getPlaylistsByVideoId,
     removePlaylist,
-    removePlaylistVideo, searchPlaylist,
+    removePlaylistVideo, removePlaylistVideos, searchPlaylist,
     updatePlaylistTitle,
     updatePlaylistVideoSort,
     updatePlaylistVideoSortBatch
@@ -368,5 +368,14 @@ export default {
         preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId']),
         callback: async req => removePlaylistVideo(req.body.id, req.body.videoId)
+    },
+    "/playlist/removeVideoBatch": {
+        method: POST,
+        ignoreSecret: true,
+        needAuth: true,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkHeaderInside(req, needSecret(), insideManagementSecret)
+            && checkBodyKeyNotBlank(req, 'id') && checkBodyKeyNotEmptyArray(req, 'videos'),
+        callback: async req => removePlaylistVideos(req.body.id, req.body.videos)
     },
 }
