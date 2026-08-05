@@ -1,9 +1,9 @@
 node_modules
 package-lock.json
-/db/*
+db/
 .idea
 /static/*
-/log/*
+log/
 .vscode
 test/*
 test*
