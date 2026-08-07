@@ -106,7 +106,6 @@ export async function setupGlobal(rootPath) {
         isDev: () => applicationContext.isActive?.('dev')
     }
 
-    setupLoggerLevel(__env.get('logger.level'))
     setupLoggerWorker(__env.get('logger.savePath'))
 
     // load database
