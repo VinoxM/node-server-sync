@@ -117,7 +117,7 @@ export default {
         return __sqliteDB.update(sql, [totalSize, videoId], null, dbName)
     },
     /** Search */
-    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false, userId) => {
+    selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false, userId, orderBy) => {
         let sqlConcat = [];
         let params = [];
         let categoryJoin = '';
@@ -189,7 +189,11 @@ export default {
         if (userId) {
             sql += `LEFT JOIN favorites tf ON tf.target_id=v.id AND tf.target_type=${FAVORITES_TARGET_TYPE.VIDEO} `
         }
-        sql += 'ORDER BY v.upload_time DESC, v.id DESC';
+        if (needTotalSize && orderBy?.type === 'totalSize') {
+            sql += 'ORDER BY v.total_size ' + (orderBy?.asc ? 'ASC' : 'DESC')
+        } else {
+            sql += 'ORDER BY v.upload_time ' + (orderBy?.asc ? 'ASC' : 'DESC')
+        }
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
     countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {

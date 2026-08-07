@@ -24,9 +24,18 @@ export async function checkCategoryExistsByInside(categoryId, isInside) {
 }
 
 export async function searchVideos(body, isInside, userId) {
-    const { title, category: categoryId, author: authorId, pageNum = 1, pageSize = 20, tags = [], status, needTotalSize } = body
+    const {
+        title,
+        category: categoryId,
+        author: authorId,
+        pageNum = 1, pageSize = 20,
+        tags = [],
+        status,
+        needTotalSize,
+        orderBy = {}
+    } = body
     const videoStatus = Object.values(MEDIA_VIDEO_STATUS).includes(status) ? String(status) : null
-    const record = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, pageNum, pageSize, needTotalSize, userId).then(({ data }) => data)
+    const record = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, pageNum, pageSize, needTotalSize, userId, orderBy).then(({ data }) => data)
     const total = await videosRep.countForSearch(isInside, title, categoryId, authorId, tags, videoStatus)
     return { record, total, pageNum, pageSize }
 }
