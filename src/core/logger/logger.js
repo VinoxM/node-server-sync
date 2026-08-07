@@ -109,7 +109,7 @@ class LogHandler {
     #stdLevelPrefix = '';
 
     constructor(loggerLevel, stdLevelPrefix = '') {
-        this.setLoggerLevel(loggerLevel)
+        this.setLoggerLevel(loggerLevel, true)
         this.#stdLevelPrefix = generateStdLevelPrefix(stdLevelPrefix)
     }
 
@@ -163,8 +163,9 @@ class LogHandler {
         this.#logWorker.initialize(savePath, fileName, this.#stdLevelPrefix)
     }
 
-    setLoggerLevel(loggerLevel) {
+    setLoggerLevel(loggerLevel, ignorePrint = false) {
         this.#loggerLevel = LoggerLevel.of(loggerLevel);
+        ignorePrint || this.#handleLog(this.#loggerLevel, `[LogHandler] Setup logger level: ${this.#loggerLevel.label}`)
     }
 
     registerLogger(logLevel, afterPrint) {
