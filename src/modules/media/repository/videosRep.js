@@ -118,6 +118,13 @@ export default {
     },
     /** Search */
     selectForSearch: (isInside, title, categoryId, authorId, tagNames, status, pageNum, pageSize, needTotalSize = false, userId, orderBy) => {
+        function searchOrderBy(tbName, needTotalSize, orderBy) {
+            if (needTotalSize && orderBy?.type === 'totalSize') {
+                return `ORDER BY ${tbName}.total_size ` + (orderBy?.asc ? 'ASC' : 'DESC')
+            } else {
+                return `ORDER BY ${tbName}.upload_time ` + (orderBy?.asc ? 'ASC' : 'DESC')
+            }
+        }
         let sqlConcat = [];
         let params = [];
         let categoryJoin = '';
@@ -180,7 +187,8 @@ export default {
             + 'FROM videos tv '
             + categoryJoin
             + whereClause + ' '
-            + 'ORDER BY tv.upload_time DESC, tv.id DESC '
+            + searchOrderBy('tv', needTotalSize, orderBy)
+            + ' '
             + limitOffset
             + ') AS keys '
             + 'JOIN videos v ON v.id = keys.id '
@@ -189,11 +197,7 @@ export default {
         if (userId) {
             sql += `LEFT JOIN favorites tf ON tf.target_id=v.id AND tf.target_type=${FAVORITES_TARGET_TYPE.VIDEO} `
         }
-        if (needTotalSize && orderBy?.type === 'totalSize') {
-            sql += 'ORDER BY v.total_size ' + (orderBy?.asc ? 'ASC' : 'DESC')
-        } else {
-            sql += 'ORDER BY v.upload_time ' + (orderBy?.asc ? 'ASC' : 'DESC')
-        }
+        sql += searchOrderBy('v', needTotalSize, orderBy)
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
     countForSearch: (isInside, title, categoryId, authorId, tagNames, status) => {
