@@ -65,8 +65,9 @@ export class K8SApplicationContext extends ApplicationContext {
     }
 
     async load() {
-        const context = await this.#superLoad()
-        return this.#loadConfiguration().then(() => context)
+        await this.#superLoad()
+        await this.#loadConfiguration()
+        return this.getSnapshot()
     }
 
     logPlaceholder() {

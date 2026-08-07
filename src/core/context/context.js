@@ -65,6 +65,10 @@ export class ApplicationContext {
         return Promise.resolve(context);
     }
 
+    getSnapshot() {
+        return tryClone(this.#context);
+    }
+
     getProperty(key, defaultValue) {
         if (this.#propertyCache.has(key)) {
             return this.#propertyCache.get(key)

@@ -2,8 +2,10 @@ import LogHandler, { LOGGER_LEVEL } from "./logger.js";
 
 const logHandler = new LogHandler(LOGGER_LEVEL.INFO)
 
-export function registerLogger(loggerLevel = LOGGER_LEVEL.INFO) {
-    logHandler.setLoggerLevel(loggerLevel)
+export function registerLogger(loggerLevel) {
+    if (loggerLevel) {
+        logHandler.setLoggerLevel(loggerLevel)
+    }
     logHandler.registerLogger(LOGGER_LEVEL.ORIGIN)
     logHandler.registerLogger(LOGGER_LEVEL.LOG)
     logHandler.registerLogger(LOGGER_LEVEL.ERROR)
