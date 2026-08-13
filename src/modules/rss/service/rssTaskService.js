@@ -213,7 +213,7 @@ async function resolveTaskEpisode(rssTask) {
                     }
                     if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
                         __log.info(`[RssTask] Task[${rssTask.id}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
-                        await removeRemoteFiles(subtitleFilePath)
+                        await removeRemoteFiles([subtitleFilePath])
                     } else {
                         __log.warn(`[RssTask] Task[${rssTask.id}] any extract subtitle resolved failed: ${subtitleFilePath}`)
                     }

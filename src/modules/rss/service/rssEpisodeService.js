@@ -121,7 +121,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
                 }
                 if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
                     __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
-                    await removeRemoteFiles(subtitleFilePath)
+                    await removeRemoteFiles([subtitleFilePath])
                 } else {
                     __log.warn(`[RssEpisode] Failed episode[${failedEpisodeId}] any extract subtitle resolved failed: ${subtitleFilePath}`)
                 }
