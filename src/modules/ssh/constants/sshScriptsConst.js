@@ -60,6 +60,24 @@ done;
 exit $ERR_FLAG;
 ' --`;
 
+export const SSH_CMD_BATCH_DELETE_EMPTY_DIR = `bash -c '
+set +H;
+ERR_FLAG=0;
+for path in "$@"; do
+    if [ -z "$path" ]; then
+        continue;
+    fi
+    clean_path="\${path%/}"
+    if [ -z "$clean_path" ] || [ "$clean_path" = "." ] || [ "$clean_path" = ".." ] || [ "$clean_path" = "/" ]; then
+        echo "[Safety Block] Denied directory path: '\''$path'\''" >&2;
+        ERR_FLAG=1;
+        continue;
+    fi
+    rmdir ignore-fail-on-non-empty "$clean_path" 2>/dev/null || true;
+done;
+exit $ERR_FLAG;
+' --`;
+
 export const SSH_CMD_FFMPEG_CONVERT_MKV_TO_MP4 = `bash -c '
 set +H
 IN="$1"; OUT="$2"

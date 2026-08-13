@@ -6,7 +6,7 @@ import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { pushNotification } from "../../../api/sockets/notification.js";
 import { Tracer } from "../../../core/infra/tracer.js";
-import { convertMkvToMp4, extractMkvSubtitles, moveRemoteFileToMinio, removeRemoteFiles, scanFolderSubtitles } from "../../ssh/sshExecutorService.js";
+import { convertMkvToMp4, extractMkvSubtitles, moveRemoteFileToMinio, removeRemoteEmptyFolders, removeRemoteFiles, scanFolderSubtitles } from "../../ssh/sshExecutorService.js";
 import { resolveEpisodeSubtitle } from "./rssSubtitleService.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
@@ -121,7 +121,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
                 }
                 if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
                     __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
-                    await removeRemoteFiles([subtitleFilePath])
+                    await removeRemoteEmptyFolders([subtitleFilePath])
                 } else {
                     __log.warn(`[RssEpisode] Failed episode[${failedEpisodeId}] any extract subtitle resolved failed: ${subtitleFilePath}`)
                 }

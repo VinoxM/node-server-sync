@@ -42,6 +42,11 @@ export async function removeRemoteFiles(files, opts = {}) {
     return executeSshScript(sshExecutorConst.REMOVE_REMOTE_FILE, opts, ...files)
 }
 
+export async function removeRemoteEmptyFolders(folders, opts = {}) {
+    __log.info(`Ready to delete empty folders: `, folders)
+    return executeSshScript(sshExecutorConst.REMOVE_REMOTE_EMPTY_FOLDER, opts, ...folders)
+}
+
 export async function convertMkvToMp4(mkvFilePath, mp4FilePath, opts = {}) {
     return executeSshScript(sshExecutorConst.CONVERT_MKV_TO_MP4, opts, mkvFilePath, mp4FilePath)
 }

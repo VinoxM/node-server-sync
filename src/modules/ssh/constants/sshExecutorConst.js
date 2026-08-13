@@ -24,6 +24,12 @@ const REMOVE_REMOTE_FILE = {
     script: sshScripts.SSH_CMD_BATCH_DELETE_SIMPLE
 }
 
+const REMOVE_REMOTE_EMPTY_FOLDER = {
+    title: 'Remove Remote Empty Folder',
+    descGenerator: (...folders) => `Remove remote empty folders: ${folders.join(', ')}`,
+    script: sshScripts.SSH_CMD_BATCH_DELETE_EMPTY_DIR
+}
+
 const CONVERT_MKV_TO_MP4 = {
     title: 'Convert File Mkv To Mp4',
     descGenerator: (mkvFilePath, mp4FilePath) => `Convert file mkv to mp4: ${mkvFilePath} -> ${mp4FilePath}`,
@@ -53,6 +59,7 @@ export default {
     COPY_FILE_TO_MINIO,
     DOWNLOAD_FILE_TO_MINIO,
     REMOVE_REMOTE_FILE,
+    REMOVE_REMOTE_EMPTY_FOLDER,
     CONVERT_MKV_TO_MP4,
     CONVERT_FLV_TO_MP4,
     EXTRACT_MKV_SUBTITLE,

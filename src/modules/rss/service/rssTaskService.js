@@ -13,7 +13,7 @@ import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisode
 import { filterUserRssFavorites } from "../../account/service/rssFavoritesService.js";
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { resolveEpisodeSubtitle } from './rssSubtitleService.js';
-import { convertMkvToMp4, extractMkvSubtitles, removeRemoteFiles, scanFolderSubtitles } from '../../ssh/sshExecutorService.js';
+import { convertMkvToMp4, extractMkvSubtitles, removeRemoteEmptyFolders, removeRemoteFiles, scanFolderSubtitles } from '../../ssh/sshExecutorService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -213,7 +213,7 @@ async function resolveTaskEpisode(rssTask) {
                     }
                     if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
                         __log.info(`[RssTask] Task[${rssTask.id}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
-                        await removeRemoteFiles([subtitleFilePath])
+                        await removeRemoteEmptyFolders([subtitleFilePath])
                     } else {
                         __log.warn(`[RssTask] Task[${rssTask.id}] any extract subtitle resolved failed: ${subtitleFilePath}`)
                     }
