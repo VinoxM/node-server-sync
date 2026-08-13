@@ -6,7 +6,8 @@ import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { pushNotification } from "../../../api/sockets/notification.js";
 import { Tracer } from "../../../core/infra/tracer.js";
-import { convertMkvToMp4, moveRemoteFileToMinio, removeRemoteFiles } from "../../ssh/sshExecutorService.js";
+import { convertMkvToMp4, extractMkvSubtitles, moveRemoteFileToMinio, removeRemoteFiles, scanFolderSubtitles } from "../../ssh/sshExecutorService.js";
+import { resolveEpisodeSubtitle } from "./rssSubtitleService.js";
 
 const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS]
 
@@ -97,6 +98,37 @@ export async function retryFailedEpisode(failedEpisodeId) {
     const rssSubs = await rssRep.selectOneById(rssSubsId)
     if (!rssSubs) {
         __throwMessage('Rss subscribe not found.')
+    }
+
+    if (__env.get('rss.extractMkvSubtitle.enable', false) && ext === '.mkv') {
+        const mkvFileName = join(rootPath, fileName)
+        __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] episode file is mkv, ready to extract subtitles: ${mkvFileName}`)
+        const extractResult = await extractMkvSubtitles(mkvFileName)
+        if (extractResult >= 100) {
+            const subtitleCount = extractResult - 100
+            if (subtitleCount > 0) {
+                const subtitleFilePath = mkvFileName + '.subtitle'
+                __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
+                const subtitleFiles = await scanFolderSubtitles(subtitleFilePath)
+                if (subtitleFiles.length !== subtitleCount) {
+                    __log.warn(`[RssEpisode] Failed episode[${failedEpisodeId}] extracted subtitles scan failed: ${subtitleFilePath}`)
+                    __throwMessage('Extracted subtitles scan failed.')
+                }
+                let hasFailed = false;
+                for (const subtitleFile of subtitleFiles) {
+                    await resolveEpisodeSubtitle(rssTaskId, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, rssSubs.name, subtitleFile)
+                        || (hasFailed = true)
+                }
+                if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
+                    __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
+                    await removeRemoteFiles(subtitleFilePath)
+                } else {
+                    __log.warn(`[RssEpisode] Failed episode[${failedEpisodeId}] any extract subtitle resolved failed: ${subtitleFilePath}`)
+                }
+            }
+        } else {
+            __throwMessage('Extract file mkv subtitle failed.')
+        }
     }
 
     if (__env.get('rss.convertMkvToMp4.enable', false) && ext === '.mkv') {

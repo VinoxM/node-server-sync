@@ -205,7 +205,7 @@ class SSHExecutor {
             this.#idleTimer = null;
         }
 
-        const safeArgs = args.map(arg => `"${String(arg).replace(/"/g, '\\"')}"`).join(' ');
+        const safeArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`).join(' ');
         const fullCmd = `${scriptPath} ${safeArgs}`;
         const onData = options.onData ?? (data => __log.print(data));
 

@@ -36,11 +36,25 @@ const CONVERT_FLV_TO_MP4 = {
     script: sshScripts.SSH_CMD_FFMPEG_CONVERT_FLV_TO_MP4
 }
 
+const EXTRACT_MKV_SUBTITLE = {
+    title: `Extract mkv file's subtitles`,
+    descGenerator: (filePath) => `Extract mkv file's subtitles: ${filePath} -> ${filePath}.subtitle`,
+    script: sshScripts.SSH_CMD_FFMPEG_EXTRACT_MKV_SUBTITLES
+}
+
+const SCAN_SUBTITLES_JSON = {
+    title: `Scan folder's subtitle files`,
+    descGenerator: (filePath) => `Scan folder's subtitle files: ${filePath}`,
+    script: sshScripts.SSH_CMD_SCAN_SUBTITLES_JSON
+}
+
 export default {
     MOVE_FILE_TO_MINIO,
     COPY_FILE_TO_MINIO,
     DOWNLOAD_FILE_TO_MINIO,
     REMOVE_REMOTE_FILE,
     CONVERT_MKV_TO_MP4,
-    CONVERT_FLV_TO_MP4
+    CONVERT_FLV_TO_MP4,
+    EXTRACT_MKV_SUBTITLE,
+    SCAN_SUBTITLES_JSON
 }

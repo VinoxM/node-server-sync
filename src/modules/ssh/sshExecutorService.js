@@ -17,7 +17,7 @@ async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
     const { script, descGenerator, title } = executionOpt
     const desc = descGenerator(...sshArgs);
     try {
-        const { code } = await executor.exec(script, [...sshArgs], { desc, title });
+        const { code } = await executor.exec(script, [...sshArgs], { desc, title, onData: opts.onData });
         return parseInt(code)
     } catch (e) {
         __log.error(`Execute ssh script [${title}] failed.`, e.message ?? e)
@@ -48,4 +48,21 @@ export async function convertMkvToMp4(mkvFilePath, mp4FilePath, opts = {}) {
 
 export async function convertFlvToMp4(flvFilePath, mp4FilePath, opts = {}) {
     return executeSshScript(sshExecutorConst.CONVERT_FLV_TO_MP4, opts, flvFilePath, mp4FilePath)
+}
+
+export async function extractMkvSubtitles(mkvFilePath, opts = {}) {
+    return executeSshScript(sshExecutorConst.EXTRACT_MKV_SUBTITLE, opts, mkvFilePath)
+}
+
+export async function scanFolderSubtitles(filePath, opts = {}) {
+    let result = []
+    const onData = data => {
+        __log.print(data);
+        try {
+            result = JSON.parse(data)
+        } catch {
+        }
+    }
+    await executeSshScript(sshExecutorConst.SCAN_SUBTITLES_JSON, { ...opts, onData }, filePath)
+    return result
 }

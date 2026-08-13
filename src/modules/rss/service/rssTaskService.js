@@ -13,7 +13,7 @@ import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisode
 import { filterUserRssFavorites } from "../../account/service/rssFavoritesService.js";
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { resolveEpisodeSubtitle } from './rssSubtitleService.js';
-import { convertMkvToMp4, removeRemoteFiles } from '../../ssh/sshExecutorService.js';
+import { convertMkvToMp4, extractMkvSubtitles, removeRemoteFiles, scanFolderSubtitles } from '../../ssh/sshExecutorService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -189,6 +189,43 @@ async function resolveTaskEpisode(rssTask) {
             continue
         }
 
+        if (__env.get('rss.extractMkvSubtitle.enable', false) && ext === '.mkv') {
+            const mkvFileName = join(rootPath, fileName)
+            __log.info(`[RssTask] Task[${rssTask.id}] file episode file is mkv, ready to extract subtitles: ${mkvFileName}`)
+            const extractResult = await extractMkvSubtitles(mkvFileName)
+            if (extractResult >= 100) {
+                const subtitleCount = extractResult - 100
+                if (subtitleCount > 0) {
+                    const subtitleFilePath = mkvFileName + '.subtitle'
+                    __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
+                    const subtitleFiles = await scanFolderSubtitles(subtitleFilePath)
+                    if (subtitleFiles.length !== subtitleCount) {
+                        __log.warn(`[RssTask] Task[${rssTask.id}] extracted subtitles scan failed: ${subtitleFilePath}`)
+                        episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_SUBTITLE_FAILED
+                        await rssEpisodeRep.insertOneFailed(episodeFailed)
+                        failedCount++
+                        continue
+                    }
+                    let hasFailed = false;
+                    for (const subtitleFile of subtitleFiles) {
+                        await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile)
+                            || (hasFailed = true)
+                    }
+                    if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
+                        __log.info(`[RssTask] Task[${rssTask.id}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
+                        await removeRemoteFiles(subtitleFilePath)
+                    } else {
+                        __log.warn(`[RssTask] Task[${rssTask.id}] any extract subtitle resolved failed: ${subtitleFilePath}`)
+                    }
+                }
+            } else {
+                episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_SUBTITLE_FAILED
+                await rssEpisodeRep.insertOneFailed(episodeFailed)
+                failedCount++
+                continue
+            }
+        }
+
         if (__env.get('rss.convertMkvToMp4.enable', false) && ext === '.mkv') {
             const mp4FileName = fileName.substring(0, fileName.length - 4) + '.mp4'
             const mp4FilePath = join(rootPath, mp4FileName)
@@ -202,7 +239,7 @@ async function resolveTaskEpisode(rssTask) {
                 __log.info(`[RssTask] Task[${rssTask.id}] file episode file convert to mp4 success. Remove origin mkv file: ${originFilePath}`)
                 await removeRemoteFiles([originFilePath])
             } else {
-                episodeFailed.reason = EPISODE_FAILED_REASON.UNKNOWN
+                episodeFailed.reason = EPISODE_FAILED_REASON.CONVERT_MKV_TO_MP4_FAILED
                 await rssEpisodeRep.insertOneFailed(episodeFailed)
                 failedCount++
                 continue

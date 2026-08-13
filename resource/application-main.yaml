@@ -78,6 +78,8 @@ schedule:
 rss:
   convertMkvToMp4:
     enable: false
+  extractMkvSubtitle:
+    enable: false
   semanticSearch:
     similarity: 0.7
   subscribeHandler:
