@@ -129,6 +129,8 @@ export async function updateEpisodeSubtitle(body) {
     }
     if (__isNotEmptyArray(fonts)) {
         data.fonts = fonts.join(',')
+    } else if (__isNotBlank(fonts)) {
+        data.fonts = fonts
     }
     await rssSubtitleRep.updateSubtitleById(data)
 }
