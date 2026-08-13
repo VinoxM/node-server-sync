@@ -116,7 +116,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
                 }
                 let hasFailed = false;
                 for (const subtitleFile of subtitleFiles) {
-                    await resolveEpisodeSubtitle(rssTaskId, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, rssSubs.name, subtitleFile)
+                    await resolveEpisodeSubtitle(rssTaskId, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, rssSubs.name, subtitleFile, episode)
                         || (hasFailed = true)
                 }
                 if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {

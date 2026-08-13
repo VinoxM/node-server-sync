@@ -208,7 +208,7 @@ async function resolveTaskEpisode(rssTask) {
                     }
                     let hasFailed = false;
                     for (const subtitleFile of subtitleFiles) {
-                        await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile)
+                        await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile, episode)
                             || (hasFailed = true)
                     }
                     if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
