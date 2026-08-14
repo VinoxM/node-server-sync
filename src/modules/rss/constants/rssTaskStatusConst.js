@@ -15,6 +15,7 @@ export const EPISODE_STATUS = {
 }
 
 export const EPISODE_FAILED_REASON = {
+    EXTRACT_FONTS_FAILED: '-3',
     EXTRACT_SUBTITLE_FAILED: '-2',
     CONVERT_MKV_TO_MP4_FAILED: '-1',
     UNKNOWN: '0',

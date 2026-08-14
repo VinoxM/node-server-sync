@@ -3,6 +3,7 @@ import { initializeDB, getSqliteDB, getRedisClient } from "./core/database/index
 import { registerLogger, setupLoggerLevel, setupLoggerWorker } from "./core/logger/index.js";
 import { createContext } from "./core/context/index.js";
 import { evaluate } from 'mathjs';
+import { initializeSshScripts } from "./modules/ssh/sshScriptService.js";
 
 const globalUtils = {
     __notNull: obj => obj !== undefined && obj !== null,
@@ -112,6 +113,9 @@ export async function setupGlobal(rootPath) {
     await initializeDB();
     globalThis.__sqliteDB = getSqliteDB();
     globalThis.__redisClient = getRedisClient();
+
+    // initialize ssh scripts
+    await initializeSshScripts();
 }
 
 export async function reloadApplicationContext() {

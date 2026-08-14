@@ -1,0 +1,17 @@
+bash -c '
+set +H;
+ERR_FLAG=0;
+for path in "$@"; do
+    if [ -z "$path" ]; then
+        continue;
+    fi
+    clean_path="${path%/}"
+    if [ -z "$clean_path" ] || [ "$clean_path" = "." ] || [ "$clean_path" = ".." ] || [ "$clean_path" = "/" ]; then
+        echo "[Safety Block] Denied directory path: '''$path'''" >&2;
+        ERR_FLAG=1;
+        continue;
+    fi
+    rm -rf "$clean_path" 2>/dev/null || true;
+done;
+exit $ERR_FLAG;
+' --

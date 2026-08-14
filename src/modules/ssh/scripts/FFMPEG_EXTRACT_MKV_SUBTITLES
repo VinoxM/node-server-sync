@@ -1,0 +1,106 @@
+bash -c '
+set +H
+INPUT_FILE="$1"
+
+# 1. 检查输入参数及文件存在性
+if [ -z "$INPUT_FILE" ] || [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: Input file does not exist or invalid."
+    exit 1
+fi
+
+# 获取绝对路径（防止目录切换导致文件丢失）
+ABS_INPUT_FILE="$(readlink -f "$INPUT_FILE" 2>/dev/null || realpath "$INPUT_FILE" 2>/dev/null || echo "$INPUT_FILE")"
+
+FILE_DIR=$(dirname "$ABS_INPUT_FILE")
+FILE_NAME=$(basename "$ABS_INPUT_FILE")
+
+SUBTITLE_DIR="${FILE_DIR}/${FILE_NAME}.subtitle"
+mkdir -p "${SUBTITLE_DIR}"
+
+# 2. 读取所有字幕轨道信息
+mapfile -t TRACK_ROWS < <(ffprobe -v error -select_streams s -show_entries stream=index,codec_name:stream_tags=language,title -of csv "$ABS_INPUT_FILE")
+TRACK_COUNT=${#TRACK_ROWS[@]}
+
+# 如果无字幕流，清理空文件夹并退出
+if [ "$TRACK_COUNT" -eq 0 ]; then
+    rmdir "${SUBTITLE_DIR}" 2>/dev/null
+    echo "return []"
+    exit 100
+fi
+
+SUCCESS_COUNT=0
+JSON_ITEMS=()
+
+# 3. 逐轨提取字幕
+for row in "${TRACK_ROWS[@]}"; do
+    row=$(echo "$row" | tr -d "\r")
+    IFS="," read -r TYPE INDEX CODEC LANG TITLE <<< "$row"
+
+    if [[ ! "$INDEX" =~ ^[0-9]+$ ]]; then
+        continue
+    fi
+
+    [ -z "$LANG" ] && LANG="unk"
+
+    case "$CODEC" in
+        ass|ssa)
+            EXT="ass"
+            ;;
+        subrip)
+            EXT="srt"
+            ;;
+        webvtt)
+            EXT="vtt"
+            ;;
+        *)
+            continue
+            ;;
+    esac
+
+    SAFE_TITLE=""
+    if [ -n "$TITLE" ]; then
+        CLEANED_TITLE=$(echo "$TITLE" | sed "s/[\/\\:*?\"<>| ]/_/g" | sed "s/__*/_/g" | sed "s/^_//;s/_$//")
+        if [ -n "$CLEANED_TITLE" ]; then
+            SAFE_TITLE=".${CLEANED_TITLE}"
+        fi
+    fi
+
+    SUB_FILENAME="track${INDEX}.${LANG}${SAFE_TITLE}.${EXT}"
+    OUTPUT_FILE="${SUBTITLE_DIR}/${SUB_FILENAME}"
+
+    # 导出单轨字幕
+    if ffmpeg -v error -y -i "$ABS_INPUT_FILE" -map "0:${INDEX}" -c copy "$OUTPUT_FILE" >/dev/null 2>&1; then
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+
+        # 序列化为 JSON 对象 (仅收集文件名)
+        if command -v python3 >/dev/null 2>&1; then
+            ITEM_JSON=$(F_FILE="$SUB_FILENAME" python3 -c "import os, json
+print(json.dumps({\"file\": os.environ.get(\"F_FILE\")}))")
+        else
+            # awk 兜底转义
+            ITEM_JSON=$(awk -v f="$SUB_FILENAME" "BEGIN {
+                gsub(/\"/, \"\\\\\\\"\", f);
+                printf \"{\\\"file\\\":\\\"%s\\\"}\", f;
+            }")
+        fi
+
+        JSON_ITEMS+=("$ITEM_JSON")
+    fi
+done
+
+# 4. 结果判断与退出
+if [ "$SUCCESS_COUNT" -gt 0 ]; then
+    IFS=,
+    JSON_ARRAY="[${JSON_ITEMS[*]}]"
+    unset IFS
+
+    echo "return ${JSON_ARRAY}"
+    EXIT_CODE=$((SUCCESS_COUNT + 100))
+    exit ${EXIT_CODE}
+else
+    # 提取成功数为 0 时，清理空目录
+    rmdir "${SUBTITLE_DIR}" 2>/dev/null
+    echo "return []"
+    exit 100
+fi
+' --

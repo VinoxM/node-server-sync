@@ -1,0 +1,92 @@
+bash -c '
+set +H
+INPUT_FILE="$1"
+
+if [ -z "$INPUT_FILE" ] || [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: Input file does not exist or invalid."
+    exit 1
+fi
+
+ABS_INPUT_FILE="$(readlink -f "$INPUT_FILE" 2>/dev/null || realpath "$INPUT_FILE" 2>/dev/null || echo "$INPUT_FILE")"
+
+FONT_DIR="${INPUT_FILE}.font"
+mkdir -p "${FONT_DIR}"
+
+pushd "${FONT_DIR}" > /dev/null || exit 1
+
+ffmpeg -v error -y -dump_attachment:t "" -i "$ABS_INPUT_FILE" >/dev/null 2>&1
+
+shopt -s nullglob nocaseglob
+FONTS_FOUND=( *.ttf *.otf *.ttc *.woff *.woff2 )
+shopt -u nullglob nocaseglob
+
+FONT_COUNT=${#FONTS_FOUND[@]}
+
+if [ "$FONT_COUNT" -gt 0 ]; then
+    JSON_ITEMS=()
+
+    for f in "${FONTS_FOUND[@]}"; do
+        [ -f "$f" ] || continue
+
+        get_font_prop() {
+            local prop="$1"
+            if command -v fc-scan >/dev/null 2>&1; then
+                fc-scan --format "%{${prop}}\n" "$f" 2>/dev/null | head -n 1 | cut -d"," -f1 | tr -d "\r\n"
+            fi
+        }
+
+        V_FAMILY="$(get_font_prop family)"
+        V_STYLE="$(get_font_prop style)"
+        V_FULLNAME="$(get_font_prop fullname)"
+        V_POSTSCRIPT="$(get_font_prop postscriptname)"
+
+        if command -v python3 >/dev/null 2>&1; then
+            ITEM_JSON=$(F_FILE="$f" F_FAM="$V_FAMILY" F_STY="$V_STYLE" F_FULL="$V_FULLNAME" F_PS="$V_POSTSCRIPT" \
+            python3 -c "import os, json
+def g(k):
+    v = os.environ.get(k)
+    return v if v and v != \"(null)\" else None
+print(json.dumps({
+    \"file\": os.environ.get(\"F_FILE\"),
+    \"family\": g(\"F_FAM\"),
+    \"style\": g(\"F_STY\"),
+    \"fullName\": g(\"F_FULL\"),
+    \"postScriptName\": g(\"F_PS\")
+}))")
+        else
+            ITEM_JSON=$(awk -v f="$f" -v fam="$V_FAMILY" -v sty="$V_STYLE" -v full="$V_FULLNAME" -v ps="$V_POSTSCRIPT" "BEGIN {
+                gsub(/\"/, \"\\\\\\\"\", f);
+                
+                fmt = \"{\\\"file\\\":\\\"%s\\\"\";
+                fmt = fmt \",\\\"family\\\":\" (fam != \"\" && fam != \"(null)\" ? \"\\\"\" fam \"\\\"\" : \"null\");
+                fmt = fmt \",\\\"style\\\":\" (sty != \"\" && sty != \"(null)\" ? \"\\\"\" sty \"\\\"\" : \"null\");
+                fmt = fmt \",\\\"fullName\\\":\" (full != \"\" && full != \"(null)\" ? \"\\\"\" full \"\\\"\" : \"null\");
+                fmt = fmt \",\\\"postScriptName\\\":\" (ps != \"\" && ps != \"(null)\" ? \"\\\"\" ps \"\\\"\" : \"null\");
+                fmt = fmt \"}\";
+                
+                printf fmt, f;
+            }")
+        fi
+
+        JSON_ITEMS+=("$ITEM_JSON")
+    done
+
+    IFS=,
+    JSON_ARRAY="[${JSON_ITEMS[*]}]"
+    unset IFS
+
+    popd > /dev/null || exit 1
+
+    echo "return ${JSON_ARRAY}"
+    EXIT_CODE=$((FONT_COUNT + 100))
+    exit ${EXIT_CODE}
+
+else
+    popd > /dev/null || exit 1
+    
+    rmdir "${FONT_DIR}" 2>/dev/null
+    
+    echo "return []"
+    exit 100
+fi
+' --

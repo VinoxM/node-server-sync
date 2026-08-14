@@ -6,6 +6,7 @@ import rssSubtitleRep from '../repository/rssSubtitleRep.js';
 import { RSS_SUBTITLE_FILE_STATUS, RSS_SUBTITLE_STATUS } from '../constants/rssSubtitleStatusConst.js';
 import { pushNotification } from '../../../api/sockets/notification.js';
 import { copyRemoteFileToMinio, removeRemoteFiles } from '../../ssh/sshExecutorService.js';
+import rssFontsRep from '../repository/rssFontsRep.js';
 
 const rssSubtitleMatchers = new GetterContextSubscribe('RssSubtitleMatchers', () => __env.get('rss.subtitleMatchers', []))
 export function getRssSubtitleMatchers() {
@@ -44,7 +45,12 @@ function generateSubtitleTitle(fileName) {
 }
 
 export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath, season, animeName, simpleFileName, useEpisode = null) {
-    let result = false
+    const result = {
+        complete: false,
+        fileRemoved: false,
+        missingFonts: [],
+        subtitleId: null
+    }
     const ext = path.extname(fileName)
     if (!isFileExtSubtitle(ext)) return result;
     const simpleBaseName = path.basename(simpleFileName, ext)
@@ -54,7 +60,6 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         __log.warn(`[RSS Subtitle] Skip resolve episode subtitle, cause resolved. File path: ${filePath}`)
         return result;
     }
-    result = true;
     const episodeSubtitle = {
         taskId,
         subsId,
@@ -70,6 +75,7 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
     episodeSubtitle.title = generateSubtitleTitle(simpleBaseName)
     // insert episode subtitle
     const { lastId: subtitleId } = await rssSubtitleRep.insertOne(episodeSubtitle)
+    result.subtitleId = subtitleId
 
     if (!episodeSubtitle.minioLink) return result;
     // copy episode subtitle to minio
@@ -78,15 +84,21 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         __log.warn(`[RSS Subtitle] Upload subtitle[${subtitleId}] to minio failed.`)
         return result;
     }
-
     const deleted = await removeRemoteFiles([filePath])
-    deleted !== 0 || await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+    if (deleted) {
+        await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
+        result.fileRemoved = true
+    }
     if (ext === '.srt') {
         const newMinioLink = await convertMinioSrtToVtt(episodeSubtitle.minioLink)
         newMinioLink && await rssSubtitleRep.updateSubtitleMinioLinkById(subtitleId, newMinioLink)
     } else if (ext === '.ass') {
         const fonts = await getMinioAssFonts(episodeSubtitle.minioLink)
-        fonts && await rssSubtitleRep.updateSubtitleFontsById(subtitleId, fonts.join(','))
+        if (fonts) {
+            await rssSubtitleRep.updateSubtitleFontsById(subtitleId, fonts.join(','))
+            const existsFonts = await rssFontsRep.selectByTitles(fonts)
+            result.missingFonts = existsFonts.filter(f => !fonts.includes(f.title))
+        }
     }
     return result;
 }
@@ -168,6 +180,17 @@ export async function recalculateEpisodeSubtitleFonts(subtitleId) {
         const fonts = await getMinioAssFonts(minioLink)
         fonts && await rssSubtitleRep.updateSubtitleFontsById(subtitleId, fonts.join(','))
     }
+}
+
+export async function backfillSubtitleFonts(id, backfill) {
+    const keys = Object.keys(backfill)
+    if (keys.length === 0) return
+    const subtitle = await rssSubtitleRep.selectOneById(id)
+    if (!subtitle) return;
+    const fonts = String(subtitle?.fonts ?? '').split(',')
+    if (fonts.length === 0) return;
+    const mapped = fonts.map(f => keys.includes(f) ? backfill[f] : f)
+    await rssSubtitleRep.updateSubtitleFontsById(id, mapped.join(','))
 }
 
 async function deleteEpisodeSubtitleFileInternal(subtitle) {

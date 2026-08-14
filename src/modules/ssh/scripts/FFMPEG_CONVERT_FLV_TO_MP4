@@ -1,0 +1,12 @@
+bash -c '
+set +H
+IN="$1"; OUT="$2"
+if ffmpeg -y -loglevel error -i "$IN" -c:v copy -c:a aac -b:a 192k -movflags +faststart "$OUT"; then
+    echo "Convert Success"
+    exit 0
+else
+    echo "Convert Failed"
+    rm -f "$OUT"
+    exit 1
+fi
+' --

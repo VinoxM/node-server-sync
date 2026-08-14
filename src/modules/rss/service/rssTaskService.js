@@ -12,8 +12,12 @@ import rssTaskRep from "../repository/rssTaskRep.js";
 import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisodeService.js";
 import { filterUserRssFavorites } from "../../account/service/rssFavoritesService.js";
 import { pushNotification } from '../../../api/sockets/notification.js';
-import { resolveEpisodeSubtitle } from './rssSubtitleService.js';
-import { convertMkvToMp4, extractMkvSubtitles, removeRemoteEmptyFolders, removeRemoteFiles, scanFolderSubtitles } from '../../ssh/sshExecutorService.js';
+import { backfillSubtitleFonts, resolveEpisodeSubtitle } from './rssSubtitleService.js';
+import {
+    convertMkvToMp4, extractMkvFonts, extractMkvSubtitles,
+    removeRemoteEmptyFolders, removeRemoteFiles
+} from '../../ssh/sshExecutorService.js';
+import { insertFont, matchSubtitleFont } from './rssFontService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -81,7 +85,7 @@ export async function updateTaskStatus(uuid, status) {
     switch (status) {
         case TASK_STATUS.RESOLVING:
             try {
-                return await resolveTaskEpisode(rssTask);
+                return await singleResolveTaskEpisode(rssTask);
             } catch (error) {
                 pushNotification(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`)
                 throw error
@@ -94,6 +98,15 @@ export async function updateTaskStatus(uuid, status) {
             __log.info(`[RssTask] Update task status: Partially Complete.`)
             break;
     }
+}
+
+let singleResolve = Promise.resolve();
+async function singleResolveTaskEpisode(rssTask) {
+    const nextPromise = singleResolve
+        .catch(() => { })
+        .then(() => resolveTaskEpisode(rssTask));
+    singleResolve = nextPromise;
+    return nextPromise;
 }
 
 async function resolveTaskEpisode(rssTask) {
@@ -192,37 +205,54 @@ async function resolveTaskEpisode(rssTask) {
         if (__env.get('rss.extractMkvSubtitle.enable', false) && ext === '.mkv') {
             const mkvFileName = join(rootPath, fileName)
             __log.info(`[RssTask] Task[${rssTask.id}] file episode file is mkv, ready to extract subtitles: ${mkvFileName}`)
-            const extractResult = await extractMkvSubtitles(mkvFileName)
-            if (extractResult >= 100) {
-                const subtitleCount = extractResult - 100
-                if (subtitleCount > 0) {
-                    const subtitleFilePath = mkvFileName + '.subtitle'
-                    __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
-                    const subtitleFiles = await scanFolderSubtitles(subtitleFilePath)
-                    if (subtitleFiles.length !== subtitleCount) {
-                        __log.warn(`[RssTask] Task[${rssTask.id}] extracted subtitles scan failed: ${subtitleFilePath}`)
-                        episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_SUBTITLE_FAILED
-                        await rssEpisodeRep.insertOneFailed(episodeFailed)
-                        failedCount++
-                        continue
-                    }
-                    let hasFailed = false;
-                    for (const subtitleFile of subtitleFiles) {
-                        await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile, episode)
-                            || (hasFailed = true)
-                    }
-                    if (!hasFailed && (await scanFolderSubtitles(subtitleFilePath)).length === 0) {
-                        __log.info(`[RssTask] Task[${rssTask.id}] all extract subtitle resolved, remove empty folder: ${subtitleFilePath}`)
-                        await removeRemoteEmptyFolders([subtitleFilePath])
-                    } else {
-                        __log.warn(`[RssTask] Task[${rssTask.id}] any extract subtitle resolved failed: ${subtitleFilePath}`)
-                    }
-                }
-            } else {
+            const { result: extractSubtitles, code: extractSubtitleCode } = await extractMkvSubtitles(mkvFileName)
+            if (extractSubtitleCode < 100) {
                 episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_SUBTITLE_FAILED
                 await rssEpisodeRep.insertOneFailed(episodeFailed)
                 failedCount++
+                __log.warn(`[RssTask] Task[${rssTask.id}] episode file extract subtitle failed.`)
                 continue
+            }
+            // extract subtitles
+            const subtitleCount = extractSubtitles.length
+            __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
+            if (subtitleCount > 0) {
+                const subtitleFilePath = mkvFileName + '.subtitle'
+                // extract fonts
+                const { result: extractFonts, code: extractFontCode } = await extractMkvFonts(mkvFileName)
+                if (extractFontCode < 100) {
+                    episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_FONTS_FAILED
+                    await rssEpisodeRep.insertOneFailed(episodeFailed)
+                    failedCount++
+                    __log.warn(`[RssTask] Task[${rssTask.id}] episode file extract fonts failed.`)
+                    continue
+                }
+                const fontsFilePath = mkvFileName + '.font'
+                __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${extractFonts.length} fonts: ${fontsFilePath}`)
+                // resolve subtitles
+                let hasFailed = false;
+                const missingFonts = new Set();
+                for (const { file: subtitleFile } of extractSubtitles) {
+                    const resolveResult = await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile, episode)
+                    if (!resolveResult.fileRemoved) {
+                        hasFailed = true
+                    } else if (resolveResult.missingFonts.length > 0) {
+                        const backfillFonts = {}
+                        for (const missingFont of resolveResult.missingFonts) {
+                            const matchFont = matchSubtitleFont(missingFont, extractFonts)
+                            if (matchFont && await insertFont(matchFont.fontName, matchFont.file, fontsFilePath)) {
+                                backfillFonts[missingFont] = matchFont.fontName
+                            }
+                        }
+                        await backfillSubtitleFonts(resolveResult.subtitleId, backfillFonts)
+                    }
+                }
+                if (!hasFailed) {
+                    __log.info(`[RssTask] Task[${rssTask.id}] all extract subtitle resolved, remove folders:`, subtitleFilePath, fontsFilePath)
+                    await removeRemoteEmptyFolders([subtitleFilePath, fontsFilePath])
+                } else {
+                    __log.warn(`[RssTask] Task[${rssTask.id}] any extract subtitle resolved failed: ${subtitleFilePath}`)
+                }
             }
         }
 
