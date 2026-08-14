@@ -231,12 +231,12 @@ async function resolveTaskEpisode(rssTask) {
                 __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${extractFonts.length} fonts: ${fontsFilePath}`)
                 // resolve subtitles
                 let hasFailed = false;
-                const missingFonts = new Set();
                 for (const { file: subtitleFile } of extractSubtitles) {
                     const resolveResult = await resolveEpisodeSubtitle(id, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, animeName, subtitleFile, episode)
                     if (!resolveResult.fileRemoved) {
                         hasFailed = true
                     } else if (resolveResult.missingFonts.length > 0) {
+                        __log.info(`[RssTask] Task[${rssTask.id}] subtitle missing fonts:`, ...resolveResult.missingFonts)
                         const backfillFonts = {}
                         for (const missingFont of resolveResult.missingFonts) {
                             const matchFont = matchSubtitleFont(missingFont, extractFonts)

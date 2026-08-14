@@ -129,7 +129,6 @@ export async function retryFailedEpisode(failedEpisodeId) {
 
             // resolve subtitles
             let hasFailed = false;
-            const missingFonts = new Set();
             for (const { file: subtitleFile } of subtitleFiles) {
                 const resolveResult = await resolveEpisodeSubtitle(rssTaskId, rssSubsId, subtitleFile, subtitleFilePath, rssSubs.season, rssSubs.name, subtitleFile, episode)
                 if (!resolveResult.fileRemoved) {
