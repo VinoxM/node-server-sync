@@ -97,7 +97,9 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         if (fonts) {
             await rssSubtitleRep.updateSubtitleFontsById(subtitleId, fonts.join(','))
             const existsFonts = await rssFontsRep.selectByTitles(fonts)
+            console.log('fonts', fonts, 'exists fonts', existsFonts)
             result.missingFonts = existsFonts.filter(f => !fonts.includes(f.title))
+            console.log('missingFonts', result.missingFonts)
         }
     }
     return result;
