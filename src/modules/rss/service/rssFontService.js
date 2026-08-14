@@ -1,7 +1,7 @@
 import path, { join } from "path"
 import { getMinioClient } from "../../../core/instance/minioClient.js";
-import { copyRemoteFileToMinio } from "../../ssh/sshExecutorService";
-import rssFontsRep from "../repository/rssFontsRep";
+import { copyRemoteFileToMinio } from "../../ssh/sshExecutorService.js";
+import rssFontsRep from "../repository/rssFontsRep.js";
 
 async function uploadFileToMinio(resourcePath, minioLink) {
     const client = getMinioClient()
