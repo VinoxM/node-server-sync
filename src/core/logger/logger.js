@@ -32,6 +32,13 @@ function generateStdLevelPrefix(stdLevelPrefix) {
     return ''
 }
 
+function generateTraceStd(traceId) {
+    if (isBlankString(traceId) || traceId === '-') {
+        return ''
+    }
+    return ` [${traceId}]`
+}
+
 /**
  * Class declares
  */
@@ -73,10 +80,10 @@ class LoggerLevel {
 const LOGGER_LEVEL_PRINTER = new Map([
     [LoggerLevel.instance.ORIGIN, (msgArr) => console.log(...msgArr)],
     [LoggerLevel.instance.LOG, (msgArr) => console.log(`>`, ...msgArr)],
-    [LoggerLevel.instance.ERROR, (msgArr, timestamp, stdPrefix = '') => console.error(`${generateLogNowFormat(timestamp)}[${stdPrefix}ERROR]`, ...msgArr)],
-    [LoggerLevel.instance.WARN, (msgArr, timestamp, stdPrefix = '') => console.warn(`${generateLogNowFormat(timestamp)}[${stdPrefix}WARN ]`, ...msgArr)],
-    [LoggerLevel.instance.INFO, (msgArr, timestamp, stdPrefix = '') => console.log(`${generateLogNowFormat(timestamp)}[${stdPrefix}INFO ]`, ...msgArr)],
-    [LoggerLevel.instance.DEBUG, (msgArr, timestamp, stdPrefix = '') => console.log(`${generateLogNowFormat(timestamp)}[${stdPrefix}DEBUG]`, ...msgArr)],
+    [LoggerLevel.instance.ERROR, (msgArr, timestamp, stdPrefix = '', traceId) => console.error(`${generateLogNowFormat(timestamp)}[${stdPrefix}ERROR]${generateTraceStd(traceId)}`, ...msgArr)],
+    [LoggerLevel.instance.WARN, (msgArr, timestamp, stdPrefix = '', traceId) => console.warn(`${generateLogNowFormat(timestamp)}[${stdPrefix}WARN ]${generateTraceStd(traceId)}`, ...msgArr)],
+    [LoggerLevel.instance.INFO, (msgArr, timestamp, stdPrefix = '', traceId) => console.log(`${generateLogNowFormat(timestamp)}[${stdPrefix}INFO ]${generateTraceStd(traceId)}`, ...msgArr)],
+    [LoggerLevel.instance.DEBUG, (msgArr, timestamp, stdPrefix = '', traceId) => console.log(`${generateLogNowFormat(timestamp)}[${stdPrefix}DEBUG]${generateTraceStd(traceId)}`, ...msgArr)],
 ])
 
 class Logger {
@@ -148,11 +155,11 @@ class LogHandler {
     #handleLog(level, ...message) {
         const timestamp = Date.now()
         const msgArr = this.#formatMessage(message)
+        const traceId = Tracer.getTraceId()
         if (this.#shouldPrint(level, message)) {
-            LOGGER_LEVEL_PRINTER.get(level)?.(msgArr, timestamp, this.#stdLevelPrefix)
+            LOGGER_LEVEL_PRINTER.get(level)?.(msgArr, timestamp, this.#stdLevelPrefix, traceId)
         }
         if (this.#logWorker.ready) {
-            const traceId = Tracer.getTraceId()
             this.#logWorker.log(level.label, msgArr.join(' '), timestamp, traceId)
         }
         const logger = this.#loggerMapping.get(level)
