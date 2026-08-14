@@ -63,14 +63,12 @@ export default {
         return __sqliteDB.update(sql, [episode, id], null, dbName);
     },
     updateSubtitleById: (data) => {
-        const sql = `UPDATE rss_episode_subtitle SET episode=?,title=?,fonts=?,minio_link=?,root_path=?,file_name=? WHERE id=?`
+        const sql = `UPDATE rss_episode_subtitle SET episode=?,title=?,fonts=?,minio_link=? WHERE id=?`
         return __sqliteDB.update(sql, [
             data.episode ?? null,
             data.title ?? null,
             data.fonts ?? null,
             data.minioLink ?? null,
-            data.rootPath,
-            data.fileName,
             data.id
         ], null, dbName)
     },

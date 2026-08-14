@@ -196,7 +196,7 @@ export async function backfillSubtitleFonts(id, backfill) {
 async function deleteEpisodeSubtitleFileInternal(subtitle) {
     // check episode subtitle file status 
     const fileStatus = subtitle.fileStatus
-    if (fileStatus !== RSS_SUBTITLE_FILE_STATUS.EXISTS) return 1
+    if (fileStatus === RSS_SUBTITLE_FILE_STATUS.REMOVED) return 0
     const rootPath = subtitle.rootPath;
     const fileName = subtitle.fileName;
     if (__isAnyBlank(rootPath, fileName)) return 1
