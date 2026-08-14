@@ -118,11 +118,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
             // extract fonts
             const { result: extractFonts, code: extractFontCode } = await extractMkvFonts(mkvFileName)
             if (extractFontCode < 100) {
-                episodeFailed.reason = EPISODE_FAILED_REASON.EXTRACT_FONTS_FAILED
-                await rssEpisodeRep.insertOneFailed(episodeFailed)
-                failedCount++
-                __log.warn(`[RssEpisode] Failed episode[${failedEpisodeId}] episode file extract fonts failed.`)
-                continue
+                __throwMessage('Extract file mkv fonts failed.')
             }
             const fontsFilePath = mkvFileName + '.font'
             __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] episode file extracted ${extractFonts.length} fonts: ${fontsFilePath}`)
