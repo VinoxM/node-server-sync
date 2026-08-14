@@ -85,7 +85,7 @@ export async function resolveEpisodeSubtitle(taskId, subsId, fileName, rootPath,
         return result;
     }
     const deleted = await removeRemoteFiles([filePath])
-    if (deleted) {
+    if (deleted === 0) {
         await rssSubtitleRep.updateSubtitleFileStatusById(subtitleId, RSS_SUBTITLE_FILE_STATUS.REMOVED)
         result.fileRemoved = true
     }
