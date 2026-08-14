@@ -134,6 +134,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
                 if (!resolveResult.fileRemoved) {
                     hasFailed = true
                 } else if (resolveResult.missingFonts.length > 0) {
+                    __log.info(`[RssEpisode] Failed episode[${failedEpisodeId}] subtitle missing fonts:`, ...resolveResult.missingFonts)
                     const backfillFonts = {}
                     for (const missingFont of resolveResult.missingFonts) {
                         const matchFont = matchSubtitleFont(missingFont, extractFonts)
