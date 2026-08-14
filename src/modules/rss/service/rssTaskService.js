@@ -18,6 +18,7 @@ import {
     removeRemoteEmptyFolders, removeRemoteFiles
 } from '../../ssh/sshExecutorService.js';
 import { insertFont, matchSubtitleFont } from './rssFontService.js';
+import { Tracer } from '../../../core/infra/tracer.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP']
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE]
@@ -101,12 +102,11 @@ export async function updateTaskStatus(uuid, status) {
 }
 
 let singleResolve = Promise.resolve();
-async function singleResolveTaskEpisode(rssTask) {
-    const nextPromise = singleResolve
-        .catch(() => { })
-        .then(() => resolveTaskEpisode(rssTask));
-    singleResolve = nextPromise;
-    return nextPromise;
+function singleResolveTaskEpisode(rssTask) {
+    const store = Tracer.getStore();
+    const currentTask = singleResolve.then(() => Tracer.run(store, () => resolveTaskEpisode(rssTask)));
+    singleResolve = currentTask.catch(() => { });
+    return currentTask;
 }
 
 async function resolveTaskEpisode(rssTask) {
