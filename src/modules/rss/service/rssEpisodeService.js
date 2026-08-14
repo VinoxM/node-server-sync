@@ -6,7 +6,11 @@ import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { pushNotification } from "../../../api/sockets/notification.js";
 import { Tracer } from "../../../core/infra/tracer.js";
-import { convertMkvToMp4, extractMkvSubtitles, moveRemoteFileToMinio, removeRemoteEmptyFolders, removeRemoteFiles, scanFolderSubtitles } from "../../ssh/sshExecutorService.js";
+import {
+    convertMkvToMp4, extractMkvSubtitles,
+    moveRemoteFileToMinio, removeRemoteEmptyFolders,
+    removeRemoteFiles
+} from "../../ssh/sshExecutorService.js";
 import { backfillSubtitleFonts, resolveEpisodeSubtitle } from "./rssSubtitleService.js";
 import { insertFont, matchSubtitleFont } from "./rssFontService.js";
 
