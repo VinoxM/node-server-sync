@@ -215,9 +215,9 @@ async function resolveTaskEpisode(rssTask) {
             }
             // extract subtitles
             const subtitleCount = extractSubtitles.length
-            __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
             if (subtitleCount > 0) {
                 const subtitleFilePath = mkvFileName + '.subtitle'
+                __log.info(`[RssTask] Task[${rssTask.id}] episode file extracted ${subtitleCount} subtitles: ${subtitleFilePath}`)
                 // extract fonts
                 const { result: extractFonts, code: extractFontCode } = await extractMkvFonts(mkvFileName)
                 if (extractFontCode < 100) {
