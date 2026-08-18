@@ -12,16 +12,13 @@ const needSecret = () => 'mAou5820.authorization'
 export default {
     basePath: "/auth",
     "/register": {
-        disabled: true,
         method: POST,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['uname', 'password']),
         preHandle: req => decryptionBodyKeys(req, ['password']),
         callback: async req => registerAccount(req.body.uname, req.body.password)
-
     },
     '/resetPassword': {
-        disabled: true,
         method: POST,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['uname', 'password', 'newPassword']),
