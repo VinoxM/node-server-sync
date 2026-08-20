@@ -125,7 +125,7 @@ class QdrantClient extends ContextSubscribe {
      * @returns {Promise<string[]>}
      */
     async listCollections() {
-        const result = await this.#getClient().listCollections();
+        const result = await this.#getClient().getCollections();
         __log.debug(`[QdrantClient] listCollections count=${result.collections.length}`);
         return result.collections.map(c => c.name);
     }
@@ -257,7 +257,7 @@ class QdrantClient extends ContextSubscribe {
     async search(collectionName, query, opts = {}) {
         const vector = Array.isArray(query) ? query : await this.embed(query);
         __log.debug(`[QdrantClient] search collection=${collectionName} limit=${opts.limit ?? 10} threshold=${opts.scoreThreshold}`);
-        const result = await this.#getClient().search(collectionName, {
+        const result = await this.#getClient().query(collectionName, {
             vector,
             limit: opts.limit ?? 10,
             offset: opts.offset,
