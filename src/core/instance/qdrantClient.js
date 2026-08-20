@@ -258,7 +258,7 @@ class QdrantClient extends ContextSubscribe {
         const vector = Array.isArray(query) ? query : await this.embed(query);
         __log.debug(`[QdrantClient] search collection=${collectionName} limit=${opts.limit ?? 10} threshold=${opts.scoreThreshold}`);
         const result = await this.#getClient().query(collectionName, {
-            vector,
+            query: vector,
             limit: opts.limit ?? 10,
             offset: opts.offset,
             filter: opts.filter,
@@ -266,8 +266,9 @@ class QdrantClient extends ContextSubscribe {
             with_vector: opts.withVector ?? false,
             score_threshold: opts.scoreThreshold,
         });
-        __log.debug(`[QdrantClient] search result count=${result.length}`);
-        return result;
+        const points = result.points ?? [];
+        __log.debug(`[QdrantClient] search result count=${points.length}`);
+        return points;
     }
 
     /**
