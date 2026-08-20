@@ -36,6 +36,7 @@ class QdrantClient extends ContextSubscribe {
             https: parseInt(opts.port) === 443,
             apiKey: opts.apiKey
         })
+        __log.info(`[QdrantClient] initialized host=${opts.host} port=${opts.port} https=${parseInt(opts.port) === 443}`);
     }
 
     // ─── Embedding ───────────────────────────────────────────────
