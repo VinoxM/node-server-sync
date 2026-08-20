@@ -1,4 +1,3 @@
-import { embedTransformer } from "../../../core/instance/transformer.js";
 import { RSS_SUBSCRIBE_SYNC_STATUS } from "../constants/rssSubscribeConsts.js";
 
 const callbackIfKeyAbsent = (callback, data) => {

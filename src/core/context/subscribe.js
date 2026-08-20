@@ -61,7 +61,7 @@ export class GetterContextSubscribe extends ContextSubscribe {
 
     async #executeGetter() {
         const epoch = ++this.#currentEpoch;
-        const res = this.#getter?.();
+        const res = this.#getter?.(this.#value);
         if (res instanceof Promise) {
             try {
                 const val = await res;

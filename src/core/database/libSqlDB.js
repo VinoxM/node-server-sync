@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { AsyncExecutor as Executor } from '../infra/asyncExecutor.js'
 import { Tracer } from '../infra/tracer.js'
-import { embedTransformer } from '../instance/transformer.js'
+import { extractTextEmbedding } from '../../common/utils/transformUtil.js'
 
 const defaultOptions = { print: false, resultMap: null }
 
@@ -271,7 +271,7 @@ export class SqliteDB {
         if (!tableName || !embedColumn || !embedStr) {
             throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
         }
-        const embedValue = await embedTransformer.extract(embedStr);
+        const embedValue = await extractTextEmbedding(embedStr);
         const vectorStr = JSON.stringify(embedValue);
         const distanceFn = `vector_distance_cos(t.${embedColumn}, ${vectorFunc}(?))` + (vectorFunc === 'vector1bit' ? '/1024' : '');
         let whereClause = `(1 - ${distanceFn}) >= ?`;
@@ -446,7 +446,7 @@ class TransactionLibSqlDB {
         if (!tableName || !embedColumn || !embedStr) {
             throw new Error('vectorSearch: tableName, embedColumn and embedStr are required');
         }
-        const embedValue = await embedTransformer.extract(embedStr);
+        const embedValue = await extractTextEmbedding(embedStr);
         const vectorStr = JSON.stringify(embedValue);
         const distanceFn = `vector_distance_cos(t.${embedColumn}, ${vectorFunc}(?))` + (vectorFunc === 'vector1bit' ? '/1024' : '');
         let whereClause = `(1 - ${distanceFn}) >= ?`;

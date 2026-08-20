@@ -117,17 +117,16 @@ export class ApplicationContext {
 }
 
 function getActives(context) {
-    const result = [];
+    const result = new Set();
     const args = __args;
-    let activeStr = "";
-    if (args.hasOwnProperty("active") && __isNotBlank(args.active)) {
-        activeStr = String(args.active).trim();
-    } else {
-        const active = getItem(context, "profiles.active", null);
-        if (__isNotBlank(active)) {
-            activeStr = String(active).trim();
-        }
+    const active = getItem(context, "profiles.active", null);
+    if (__isNotBlank(active)) {
+        const activeStr = String(active).trim();
+        activeStr.length > 0 && activeStr.split(',').forEach(s => s.trim().length > 0 && result.add(s.trim()))
     }
-    activeStr.length > 0 && result.push(...activeStr.split(",").map((s) => s.trim()));
-    return result;
+    if (args.hasOwnProperty("active") && __isNotBlank(args.active)) {
+        const activeStr = String(args.active).trim();
+        activeStr.length > 0 && activeStr.split(',').forEach(s => s.trim().length > 0 && result.add(s.trim()))
+    }
+    return Array.from(result);
 }

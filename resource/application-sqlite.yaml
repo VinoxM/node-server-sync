@@ -164,6 +164,133 @@ sqlite:
             CONSTRAINT `idx_rss_fonts_title` UNIQUE (`title`)
           );
           CREATE INDEX `idx_rss_fonts_object_size` ON rss_fonts(`object_size`);
+    anime:
+      - tableName: subjects
+        DDL: |
+          CREATE TABLE subjects (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+            `bangumi_id` INTEGER NOT NULL,
+            `name` TEXT NOT NULL,
+            `name_cn` TEXT DEFAULT NULL,
+            `name_alias` TEXT DEFAULT NULL,
+            `platform` TEXT,
+            `air_date` TEXT,
+            `summary` TEXT,
+            `summary_cn` TEXT,
+            `total_episodes` INTEGER DEFAULT 0,
+            `cover` TEXT,
+            `meta_tags` TEXT,
+            `staff` TEXT,
+            `characters` TEXT,
+            `create_time` DATETIME,
+            `update_time` DATETIME,
+            CONSTRAINT `idx_subjects_bangumi_id` UNIQUE (`bangumi_id`)
+          );
+          CREATE INDEX idx_subjects_air_date ON subjects (air_date);
+      - tableName: rss_subscribe
+        DDL: |
+          CREATE TABLE rss_subscribe (
+            `id` INTEGER PRIMARY KEY NOT NULL,
+            `subject_id` INTEGER NOT NULL,
+            `season` TEXT NOT NULL,
+            `start_time` DATETIME DEFAULT NULL,
+            `url` TEXT DEFAULT NULL,
+            `regex` TEXT NOT NULL,
+            `fin` VARCHAR(1) DEFAULT 'N',
+            CONSTRAINT `idx_rss_subscribe_subject_id` UNIQUE (`subject_id`)
+          );
+      - tableName: rss_result
+        DDL: |
+          CREATE TABLE rss_result (
+            `id` integer PRIMARY KEY NOT NULL,
+            `pid` integer NOT NULL,
+            `title` varchar(500) NOT NULL,
+            `torrent` varchar(100) NOT NULL,
+            `pub_date` varchar(100) DEFAULT NULL,
+            `hide` integer NOT NULL DEFAULT 0,
+            `tracker` varchar(5000),
+            `episode` varchar(10) DEFAULT NULL,
+            `up_date` varchar(100) DEFAULT NULL,
+            `sort` integer NOT NULL DEFAULT 0,
+            CONSTRAINT `idx_pid_title` UNIQUE (`pid`, `title`)
+          );
+      - tableName: rss_tracker
+        DDL: |
+          CREATE TABLE rss_tracker (
+            `id` integer PRIMARY KEY NOT NULL,
+            `host` varchar(100) NOT NULL,
+            CONSTRAINT `idx_host` UNIQUE (`host`)
+          );
+      - tableName: rss_torrent_task
+        DDL: |
+          CREATE TABLE rss_torrent_task (
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            `rss_result_id` integer NOT NULL,
+            `torrent_uuid` varchar(12) DEFAULT NULL,
+            `torrent_hash` varchar(256) DEFAULT NULL,
+            `status` varchar(1) NOT NULL,
+            CONSTRAINT `idx_rss_result_id` UNIQUE (`rss_result_id`)
+          );
+          CREATE INDEX `idx_rss_tt_subs_id` ON rss_torrent_task(`rss_subs_id`);
+      - tableName: rss_episode
+        DDL: |
+          CREATE TABLE rss_episode (
+            `id` integer PRIMARY KEY NOT NULL,
+            `rss_task_id` integer NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            `episode` varchar(10) NOT NULL,
+            `minio_link` varchar(500) DEFAULT NULL,
+            `status` varchar(1) NOT NULL,
+            `object_size` text DEFAULT NULL,
+            CONSTRAINT `idx_rss_id_episode` UNIQUE (`rss_subs_id`, `episode`)
+          );
+          CREATE INDEX `idx_rss_ep_task_id` ON rss_episode(`rss_task_id`);
+          CREATE INDEX `idx_rss_ep_object_size` ON rss_episode(`object_size`);
+      - tableName: rss_episode_failed
+        DDL: |
+          CREATE TABLE rss_episode_failed (
+            `id` integer PRIMARY KEY NOT NULL,
+            `rss_task_id` integer NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            `episode` varchar(10) DEFAULT NULL,
+            `minio_link` varchar(500) DEFAULT NULL,
+            `root_path` varchar(500) NOT NULL,
+            `file_name` varchar(500) NOT NULL,
+            `reason` varchar(1) NOT NULL,
+            `create_time` datetime NOT NULL
+          );
+          CREATE INDEX `idx_rss_epf_subs_id` ON rss_episode_failed(`rss_subs_id`);
+          CREATE INDEX `idx_rss_epf_task_id` ON rss_episode_failed(`rss_task_id`);
+      - tableName: rss_episode_subtitle
+        DDL: |
+          CREATE TABLE rss_episode_subtitle (
+            `id` integer PRIMARY KEY NOT NULL,
+            `rss_task_id` integer NOT NULL,
+            `rss_subs_id` integer NOT NULL,
+            `title` text DEFAULT NULL,
+            `episode` varchar(10) DEFAULT NULL,
+            `minio_link` varchar(500) DEFAULT NULL,
+            `root_path` varchar(500) NOT NULL,
+            `file_name` varchar(500) NOT NULL,
+            `fonts` text DEFAULT NULL,
+            `status` integer NOT NULL,
+            `file_status` integer NOT NULL,
+            `object_size` text DEFAULT NULL
+          );
+          CREATE INDEX `idx_rss_ep_st_subs_id` ON rss_episode_subtitle(`rss_subs_id`);
+          CREATE INDEX `idx_rss_ep_st_task_id` ON rss_episode_subtitle(`rss_task_id`);
+          CREATE INDEX `idx_rss_ep_st_object_size` ON rss_episode_subtitle(`object_size`);
+      - tableName: rss_fonts
+        DDL: |
+          CREATE TABLE rss_fonts (
+            `id` integer PRIMARY KEY NOT NULL,
+            `title` text NOT NULL,
+            `minio_link` text DEFAULT NULL,
+            `object_size` text DEFAULT NULL,
+            CONSTRAINT `idx_rss_fonts_title` UNIQUE (`title`)
+          );
+          CREATE INDEX `idx_rss_fonts_object_size` ON rss_fonts(`object_size`);
     kuro:
       - tableName: kuro_community_account
         DDL: |
@@ -219,7 +346,7 @@ sqlite:
             CONSTRAINT `idx_media_opts_label` UNIQUE (`label`)
           );
       - tableName: favorites
-        DDL: | 
+        DDL: |
           CREATE TABLE favorites (
             `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `user_id` integer NOT NULL,

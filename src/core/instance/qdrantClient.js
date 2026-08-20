@@ -1,6 +1,6 @@
 import { ContextSubscribe } from "../context/subscribe.js";
 import { QdrantClient as QdrantApiClient } from '@qdrant/js-client-rest';
-import { embedTransformer } from "./transformer.js";
+import { extractTextEmbedding } from "../../common/utils/transformUtil.js";
 
 class QdrantClient extends ContextSubscribe {
     static instance = new QdrantClient()
@@ -46,7 +46,7 @@ class QdrantClient extends ContextSubscribe {
      * @returns {Promise<number[]>}
      */
     async embed(text) {
-        return embedTransformer.extract(text);
+        return extractTextEmbedding(text);
     }
 
     /**
