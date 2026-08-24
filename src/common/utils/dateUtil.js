@@ -26,7 +26,7 @@ export function dateFormat(d, formatStr, is30Hours = false) {
         .replace("ms", millSeconds);
 }
 
-const getCurSeason = () => {
+export function getCurSeason() {
     let now = new Date();
     if (now.getHours() < 6) {
         now.setDate(now.getDate() - 1);
@@ -34,6 +34,14 @@ const getCurSeason = () => {
     let month = now.getMonth() + 1;
     month = (Math.ceil(month / 3) - 1) * 3 + 1;
     return [now.getFullYear() + '', String(month).padStart(2, '0')];
+}
+
+export function getNextSeason(season) {
+    const toSeason = season ?? getCurSeason();
+    const [year, month] = toSeason;
+    const date = new Date(`${year}-${month}-01`);
+    date.setMonth(date.getMonth() + 3);
+    return [date.getFullYear() + '', String(date.getMonth() + 1).padStart(2, '0')];
 }
 
 export function dateFormatForDB(dateStr) {

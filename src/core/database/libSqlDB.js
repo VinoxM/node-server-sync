@@ -75,14 +75,55 @@ export class SqliteDB {
         }
     }
 
-    async #execBatch(sql, options = defaultOptions, dbName) {
+    async #execBatch(batchArgs = [], options = defaultOptions, dbName) {
+        if (!batchArgs || batchArgs.length === 0) {
+            return { rows: 0 };
+        }
+
+        if (!dbName) {
+            dbName = this.#defaultDbName;
+        }
+        const client = await this.#connect(dbName);
+
+        const printer = getPrinter(options)
+        printer(`===> Preparing batch execution of ${batchArgs.length} statements.`);
+        const batchedArgs = batchArgs.map(({ sql, params }) => {
+            printer(`===> Preparing: ${sql}`);
+            const parameters = tryResolveParams(params)
+            tryPrintParams(parameters, printer)
+            return { sql, args: parameters }
+        })
+        const context = Tracer.getStore()
+
+        try {
+            const resSet = await client.batch(batchedArgs, options?.mode || 'write');
+            const res = { rows: 0, lastId: undefined, results: [] };
+            resSet.forEach(result => {
+                const rowsAffected = result.rowsAffected || 0;
+                const lastInsertRowid = result.lastInsertRowid ? Number(result.lastInsertRowid) : undefined;
+                res.rows += rowsAffected;
+                if (lastInsertRowid !== undefined) {
+                    res.lastId = lastInsertRowid;
+                }
+                res.results.push({ rows: rowsAffected, lastId: lastInsertRowid });
+            });
+            Tracer.run(context, () => {
+                printer(`<=== Total: ${res.rows}`);
+                printer(`<=== Batch executed ${resSet.length} statements.`);
+            });
+            return res;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async #execMulti(sql, options = defaultOptions, dbName) {
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
         const client = await this.#connect(dbName);
         const printer = getPrinter(options)
         printer(`===> Preparing: ${sql}`);
-        const context = Tracer.getStore()
         await client.executeMultiple(sql);
     }
 
@@ -132,7 +173,7 @@ export class SqliteDB {
                 }
                 const tableCreate = () => {
                     __log.info(`[Create Table] ${tableName}`)
-                    this.#execBatch(DDL, null, dbName).then(() => {
+                    this.#execMulti(DDL, null, dbName).then(() => {
                         tableImport();
                     }).catch(ex => {
                         __log.error(`[Create Error] ${tableName}. Cause: ${ex.message}`)
@@ -180,7 +221,7 @@ export class SqliteDB {
             __log.info("[Sql Script] execute & analyze over.");
         } catch (err) {
             __log.error(`[Sql Script] execute error. Cause: ${err.message}`);
-            await client.execute('ROLLBACK;').catch(() => {});
+            await client.execute('ROLLBACK;').catch(() => { });
         }
     }
 
@@ -229,6 +270,10 @@ export class SqliteDB {
 
     update(sql, params, options, dbName) {
         return this.#exec(sql, params, options, dbName);
+    }
+
+    updateBatch(batchArgs, options, dbName) {
+        return this.#execBatch(batchArgs, options, dbName);
     }
 
     selectAll(sql, params, options, dbName) {
@@ -378,13 +423,7 @@ class TransactionLibSqlDB {
     }
 
     async execute(sql) {
-        const context = Tracer.getStore()
-        try {
-            await this.#tx.executeMultiple(sql);
-            Tracer.run(context, () => { });
-        } catch (err) {
-            throw err;
-        }
+        await this.#tx.executeMultiple(sql);
     }
 
     async beginTransaction(callback) {

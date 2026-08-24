@@ -31,6 +31,10 @@ export default {
         title: 'Download File To Minio',
         descGenerator: (sourceUrl, minioLink) => `Download file to minio, ${sourceUrl} ==> ${minioLink}`
     },
+    MINIO_DOWNLOAD_SCRIPT_WITH_PROXY: {
+        title: 'Download File To Minio With Proxy',
+        descGenerator: (sourceUrl, minioLink) => `Download file to minio, ${sourceUrl} ==> ${minioLink}`
+    },
     MINIO_MOVE_SCRIPT: {
         title: 'Move File To Minio',
         descGenerator: (sourceFile, minioLink) => `Move file to minio, ${sourceFile} ==> ${minioLink}`

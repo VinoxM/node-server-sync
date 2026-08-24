@@ -116,7 +116,7 @@ async function mapConcurrent(items, limit, fn) {
  * @param {string} fullText - 待翻译的日文长文本
  * @returns {Promise<string>} - 拼接完成的中文文本
  */
-export const translateJaToZh = async (fullText) => {
+const translateJaToZh = async (fullText) => {
     if (!fullText || !fullText.trim()) return '';
     const chunks = splitTextIntoChunks(fullText);
     __log.debug(`[Sakura] Original text split into ${chunks.length} chunks for concurrent translation...`);

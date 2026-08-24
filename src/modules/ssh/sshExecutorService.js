@@ -34,7 +34,9 @@ export async function copyRemoteFileToMinio(sourceFile, minioLink, opts = {}) {
 }
 
 export async function downloadFileToMinio(sourceUrl, minioLink, opts = {}) {
-    return executeSshScript(sshExecutorConst.MINIO_DOWNLOAD_SCRIPT, opts, sourceUrl, minioLink)
+    const { useProxy, ...otherOpts } = opts
+    const script = useProxy ? sshExecutorConst.MINIO_DOWNLOAD_SCRIPT_WITH_PROXY : sshExecutorConst.MINIO_DOWNLOAD_SCRIPT
+    return executeSshScript(script, otherOpts, sourceUrl, minioLink)
 }
 
 export async function removeRemoteFiles(files, opts = {}) {

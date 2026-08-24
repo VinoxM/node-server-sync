@@ -75,6 +75,9 @@ schedule:
   biliveStreamAutoSync:
     enable: true
     corn: 0 0 4 * * *
+  bangumiImagesSync:
+    enable: true
+    corn: 0 0 0/3 * * *
 rss:
   convertMkvToMp4:
     enable: false
@@ -184,6 +187,13 @@ statistics:
           sizeColumn: object_size
           matchers:
             - status = 3
+    - dbName: anime
+      tables:
+        - tableName: bangumi_images
+          linkColumn: minio_link
+          sizeColumn: object_size
+          matchers:
+            - status = 2
   bucketUsage:
     statQueryBatch: 10
     backfillBatch: 100

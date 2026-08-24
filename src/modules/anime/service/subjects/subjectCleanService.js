@@ -1,8 +1,7 @@
-import { translateJaToZh } from "../../../common/utils/translateUtil.js";
-import { GetterContextSubscribe } from "../../../core/context/subscribe.js";
-import { MATCHERS, STAFF_TAG_CLEAN } from "../constants/subjectTagConstant.js";
-import subjectsRep from "../repository/subjectsRep.js";
-import { bangumiApi } from "./bangumiApiService.js";
+import { GetterContextSubscribe } from "../../../../core/context/subscribe.js";
+import { MATCHERS, STAFF_TAG_CLEAN } from "../../constants/subjectTagConstant.js";
+import { bangumiApi } from "../bangumi/bangumiApiService.js";
+import { generateActorImageLink, generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "../bangumi/bangumiImagesService.js";
 
 function getQuarterStartMonth(month) {
     if (month >= 1 && month <= 3) return '01';
@@ -97,29 +96,48 @@ function getStaffFromSubjectInfoBox(infoBox = []) {
     return results;
 }
 
+function ensureImageStorageLink(images, image, link) {
+    if (__isAnyBlank(image, link)) return image;
+    images.push({ image, link });
+    return link;
+}
+
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角']
-async function getCharactersBySubjectId(subjectId) {
+async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
     const results = []
+    const images = []
     const characters = await bangumiApi.getSubjectCharacters(subjectId);
-    if (!characters || !Array.isArray(characters)) return results
+    if (!characters || !Array.isArray(characters)) {
+        __log.warn(`[Bangumi Clean] Subject[${subjectId}] empty characters.`)
+        return { results, images };
+    }
+    __log.info(`[Bangumi Clean] Subject[${subjectId}] get ${characters.length} characters.`)
     for (const character of characters) {
         if (!CHARACTERS_RELATION_INCLUDES.includes(character.relation)) continue;
         const summary = character.summary || '';
-        const summaryCN = await translateJaToZh(summary)
+        // const summaryCN = await translateJaToZh(summary)
+        const characterImage = ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id))
+        const characterActors = character.actors ?? [];
+        const actors = [];
+        for (const actor of characterActors) {
+            const actorImage = ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id))
+            actors.push({ name: actor.name, image: actorImage, id: actor.id })
+        }
         const result = {
-            image: character?.images?.large || '',
+            id: character.id,
+            image: characterImage,
             name: character.name || '',
             summary,
-            summaryCN,
             relation: character.relation || '',
-            actors: (character.actors ?? []).map(a => ({ name: a.name, image: a.images?.large || '' }))
+            actors
         }
-        results.push(result)
+        results.push(result);
+        await Promise.resolve(resolve => setTimeout(resolve, fetchDelay))
     }
-    return results
+    return { results, images };
 }
 
-export async function cleanBangumiSubject(subject) {
+export async function cleanBangumiSubject(subject, fetchDelay) {
     if (!subject || !subject.id) return;
     const season = getSeasonForSubject(subject);
     if (!season) {
@@ -129,22 +147,24 @@ export async function cleanBangumiSubject(subject) {
     const infoBox = subject['infobox']
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
-    const characters = await getCharactersBySubjectId(subject.id);
-    const summaryCN = await translateJaToZh(subject.summary);
-    const data = {
+    // const summaryCN = await translateJaToZh(subject.summary);
+    const { results: characters, images } = await getCharactersBySubjectId(subject.id, fetchDelay);
+    const cover = ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
+    await putImageStorageLinkBatch(images);
+    return {
         bangumiId: subject.id,
         name: subject.name,
         nameCN: subject.name_cn,
         nameAlias: JSON.stringify(alias),
         platform: subject.platform,
         airDate: subject.date,
+        season,
         summary: subject.summary,
-        summaryCN,
+        // summaryCN,
         totalEpisodes: subject.total_episodes,
-        cover: subject.images?.large || subject.image,
+        cover,
         metaTags: JSON.stringify(subject.meta_tags ?? []),
         staff: JSON.stringify(staff),
         characters: JSON.stringify(characters)
     }
-    return { subject: data, season }
 }

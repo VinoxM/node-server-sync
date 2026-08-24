@@ -69,7 +69,7 @@ class ApiServer {
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
-            const { method: m, callback, disabled, ignoreAccessPrint = false } = config;
+            const { method: m, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
             if (disabled) {
                 continue;
             }
@@ -77,8 +77,8 @@ class ApiServer {
             if (methodSupport.indexOf(method) === -1) {
                 continue;
             }
-            const tracePrefix = generateRequestTracePrefix(method, key)
-            server[method](key, (req, res) => {
+            const mappingKey = pathRegex ? new RegExp(key) : key;
+            server[method](mappingKey, (req, res) => {
                 const doRequest = () => {
                     ignoreAccessPrint || __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
                     const requestData = { req, res, config };
@@ -94,6 +94,7 @@ class ApiServer {
                 if (config?.ignoreTrace) {
                     doRequest()
                 } else {
+                    const tracePrefix = generateRequestTracePrefix(method, req.url || key)
                     const traceId = Tracer.generateTraceId(tracePrefix)
                     if (config?.maybeStream) {
                         Tracer.run({ traceId, response: res }, doRequest)
@@ -153,7 +154,7 @@ class ApiServer {
 
 function resolve(obj, { req, res, config }) {
     Tracer.clearStreamHeartbeat();
-    if (res.destroyed || res.writableEnded || config?.ignoreReturn) return;
+    if (res.destroyed || res.writableEnded || config?.ignoreReturn || res.__customPiped) return;
     const result = {
         code: 0,
         message: 'Success.'

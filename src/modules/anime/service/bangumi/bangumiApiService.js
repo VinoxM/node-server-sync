@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import { GetterContextSubscribe } from '../../../core/context/subscribe.js'
+import { GetterContextSubscribe } from '../../../../core/context/subscribe.js'
 
 function resolveResponse(response) {
     return response.data
@@ -36,6 +36,9 @@ const bangumiApiGetter = new GetterContextSubscribe('BangumiApi', () => {
 })
 
 export const bangumiApi = {
+    searchSubjects: (dateRange, offset, limit) => bangumiApiGetter.getValue().post(`/v0/search/subjects?limit=${limit}&offset=${offset}`, {
+        filter: { tag: ['日本'], air_date: [`>=${dateRange[0]}`, `<${dateRange[1]}`], type: [2] }
+    }).then(resolveResponse).catch(rejectError),
     getSubject: (subjectId) => bangumiApiGetter.getValue().get(`/v0/subjects/${subjectId}`).then(resolveResponse).catch(rejectError),
     getSubjectCharacters: (subjectId) => bangumiApiGetter.getValue().get(`/v0/subjects/${subjectId}/characters`).then(resolveResponse).catch(rejectError)
 }

@@ -38,12 +38,9 @@ sqlite:
             `origin_type` varchar(20) DEFAULT NULL,
             `type_tag` varchar(100) DEFAULT NULL,
             `broadcast` varchar(100) DEFAULT NULL,
-            `name_vector` F8_BLOB(1024) DEFAULT NULL,
+            `sync_status` INTEGER NOT NULL DEFAULT -1,
             CONSTRAINT `idx_name` UNIQUE (`name`),
             CONSTRAINT `idx_season_cover` UNIQUE (`season`, `cover`)
-          );
-          CREATE INDEX rss_subscribe_name_vector_idx ON rss_subscribe (
-            libsql_vector_idx(name_vector, 'metric=cosine', 'compress_neighbors=float8')
           );
         sqlScript: "@/resource/script/rss_subscribe.sql"
         forceImport: false
@@ -175,6 +172,7 @@ sqlite:
             `name_alias` TEXT DEFAULT NULL,
             `platform` TEXT,
             `air_date` TEXT,
+            `season` TEXT NOT NULL,
             `summary` TEXT,
             `summary_cn` TEXT,
             `total_episodes` INTEGER DEFAULT 0,
@@ -182,22 +180,24 @@ sqlite:
             `meta_tags` TEXT,
             `staff` TEXT,
             `characters` TEXT,
+            `hide` INTEGER NOT NULL DEFAULT 0,
             `create_time` DATETIME,
             `update_time` DATETIME,
             CONSTRAINT `idx_subjects_bangumi_id` UNIQUE (`bangumi_id`)
           );
           CREATE INDEX idx_subjects_air_date ON subjects (air_date);
+          CREATE INDEX idx_subjects_season ON subjects (season);
       - tableName: rss_subscribe
         DDL: |
           CREATE TABLE rss_subscribe (
             `id` INTEGER PRIMARY KEY NOT NULL,
-            `subject_id` INTEGER NOT NULL,
-            `season` TEXT NOT NULL,
+            `bangumi_id` INTEGER NOT NULL,
             `start_time` DATETIME DEFAULT NULL,
             `url` TEXT DEFAULT NULL,
-            `regex` TEXT NOT NULL,
-            `fin` VARCHAR(1) DEFAULT 'N',
-            CONSTRAINT `idx_rss_subscribe_subject_id` UNIQUE (`subject_id`)
+            `regex` TEXT DEFAULT NULL,
+            `fin` INTEGER NOT NULL DEFAULT 0,
+            `goon` INTEGER NOT NULL DEFAULT 0,
+            CONSTRAINT `idx_rss_subscribe_bangumi_id` UNIQUE (`bangumi_id`)
           );
       - tableName: rss_result
         DDL: |
@@ -291,6 +291,18 @@ sqlite:
             CONSTRAINT `idx_rss_fonts_title` UNIQUE (`title`)
           );
           CREATE INDEX `idx_rss_fonts_object_size` ON rss_fonts(`object_size`);
+      - tableName: bangumi_images
+        DDL: |
+          CREATE TABLE bangumi_images (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+            `link` text NOT NULL,
+            `minio_link` text NOT NULL,
+            `origin_url` text NOT NULL,
+            `status` INTEGER NOT NULL DEFAULT 0,
+            `object_size` text DEFAULT NULL,
+            CONSTRAINT `idx_bangumi_images_link_key` UNIQUE (`link`)
+          );
+          CREATE INDEX `idx_bangumi_images_object_size` ON bangumi_images(`object_size`);
     kuro:
       - tableName: kuro_community_account
         DDL: |
