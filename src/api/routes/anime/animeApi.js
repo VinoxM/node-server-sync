@@ -19,15 +19,16 @@ export default {
         method: POST,
         needSecret,
         callback: req => {
+            const forceUpdate = req.body.force === 'true' || Boolean(req.body.force)
             if (__isNotBlank(req.body.season)) {
                 /^[0-9]{4}-[01|04|07|10]$/.test(req.body.season) || __throwMessage('Invalid season.');
                 const [year, month] = req.body.season.split('-');
                 const startDate = `${year}-${month}-01`;
                 const [nextYear, nextMonth] = getNextSeason([year, month]);
                 const endDate = `${nextYear}-${nextMonth}-01`;
-                return pullAnimeSubjects([startDate, endDate]);
+                return pullAnimeSubjects([startDate, endDate], forceUpdate);
             }
-            return pullCurrentSeasonAnime()
+            return pullCurrentSeasonAnime(forceUpdate)
         }
     },
     /** Images Static Resource */

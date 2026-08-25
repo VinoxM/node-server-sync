@@ -4,17 +4,17 @@ import subscribeRep from "../../repository/subscribeRep.js";
 import { cleanBangumiSubject } from "./subjectCleanService.js";
 import { fetchSubjectsByAirDate } from "./subjectFetchService.js";
 
-export async function pullCurrentSeasonAnime() {
+export async function pullCurrentSeasonAnime(forceUpdate = false) {
     const [year, month] = getCurSeason();
     const startDate = `${year}-${month}-01`;
     const [nextYear, nextMonth] = getNextSeason();
     const endDate = `${nextYear}-${nextMonth}-01`;
     const dateRange = [startDate, endDate];
-    const result = await pullAnimeSubjects(dateRange);
+    const result = await pullAnimeSubjects(dateRange, forceUpdate);
     return result;
 }
 
-export async function pullAnimeSubjects(dateRange) {
+export async function pullAnimeSubjects(dateRange, forceUpdate = false) {
     __log.info(`[SubjectPull] Pulling anime subjects for date range: [${dateRange[0]}, ${dateRange[1]})`);
     const subjects = await fetchSubjectsByAirDate(dateRange, { limit: 20, delayMs: 500 });
     const cleanedSubjects = []
@@ -22,7 +22,7 @@ export async function pullAnimeSubjects(dateRange) {
         const cleanSubject = await cleanBangumiSubject(subject);
         cleanedSubjects.push(cleanSubject)
     }
-    const { inserted, updated } = await upsertCleanedSubjects(cleanedSubjects);
+    const { inserted, updated } = await upsertCleanedSubjects(cleanedSubjects, forceUpdate);
     __log.info(`[SubjectPull] Pulled date range [${dateRange[0]}, ${dateRange[1]}] anime subjects:`,
         `Fetched ${subjects.length}, Inserted ${inserted}, Updated ${updated}`);
     return {
