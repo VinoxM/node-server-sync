@@ -50,6 +50,8 @@ api:
       - /rss/task/*
       - /media/*
       - /rss/v2/getRssCardFailedViews
+      - /anime/images/*
+      - /anime/calendar
 sse:
   disabled:
     - barrage
