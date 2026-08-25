@@ -136,7 +136,7 @@ export default {
         return __sqliteDB.update(`UPDATE subjects SET hide=? WHERE id=?`, [hide, id], null, dbName);
     },
     selectVisibleBySeason: (season) => {
-        const sql = `SELECT t.id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, rs.fin, rs.start_time, `
+        const sql = `SELECT t.id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
             + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
             + `CASE WHEN julianday('now') - julianday(rr.pub_date) < 1 then 1 else 0 end hasNew `

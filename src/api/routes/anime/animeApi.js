@@ -43,7 +43,7 @@ export default {
             await getActorImage(actorId, res)
         }
     },
-    "/images/subject/cover/(\\d+)$": {
+    "/images/subject/(\\d+)/cover$": {
         pathRegex: true,
         method: GET,
         ignoreSecret: true,

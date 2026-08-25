@@ -72,7 +72,7 @@ async function pushImageToStorage(image, minioLink) {
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
     if (__isBlank(suitableMinioLink)) return false;
     try {
-        await client.getObjectStat(suitableMinioLink);
+        await client.getObjectStat(minioLink);
         return true;
     } catch (err) {
         if (err.code === 'NotFound' || err.statusCode === 404) {
