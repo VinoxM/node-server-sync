@@ -37,3 +37,27 @@ export function formatFileSize(bytes, decimals = 2) {
 
     return `${parseFloat(result.toFixed(dm))} ${sizes[i]}`;
 }
+
+/**
+ * 将毫秒数转换为易读的时间描述字符串
+ * @param {number} ms - 需转换的毫秒数
+ * @returns {string} 格式化后的时间描述 (如: "2天2小时2分1秒")
+ */
+export function formatDuration(ms) {
+    // 基础边界判断
+    if (typeof ms !== 'number' || isNaN(ms) || ms < 0) return '0s';
+    if (ms < 1000) return `${Math.floor(ms)}ms`;
+
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / (1000 * 60)) % 60);
+    const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+
+    return parts.join('') || '0s';
+}

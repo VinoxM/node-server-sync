@@ -1,4 +1,4 @@
-import { formatFileSize } from "../../../common/utils/humanUtil.js";
+import { formatDuration } from "../../../common/utils/humanUtil.js";
 import { getMinioClient, splitMinioLink } from "../../../core/instance/minioClient.js";
 import objectSizeHelperRep from "../repository/objectSizeHelperRep.js";
 import storageSummaryRep from "../repository/storageSummaryRep.js";
@@ -31,6 +31,7 @@ export async function storageSummaryDimensions() {
     const totalSize = Array.from(bucketUsage.values()).reduce(sumSize, '0')
     const dimensions = { bucketUsage: Object.fromEntries(bucketUsage.entries()) }
     await storageSummaryRep.insertOne(totalCount, totalSize, dimensions);
+    await doStaticsHouseKeep();
 }
 
 export async function getLatestStorageSummary() {
@@ -138,6 +139,21 @@ async function updateUnprocessedBatch(dbName, tableName, sizeColumn, data = []) 
     }, dbName);
     result && __log.info(`[Bucket Usage] Execute database[${dbName}:${tableName}] backfill unprocessed objects size success. Resolved: ${data.length}`)
     return result
+}
+
+const EXPIRED_LIMITED = 1000 * 60 * 60 * 24 * 7
+async function doStaticsHouseKeep() {
+    const option = __env.get('statistics.houseKeep', { enable: false });
+    if (!option.enable) return;
+    const expire = __env.getEvaluate('statistics.houseKeep.expire', 0);
+    if (expire < EXPIRED_LIMITED) {
+        __log.warn(`[Statistics House Keep] Option expire ${expire} less than limited: ${EXPIRED_LIMITED}, house keep skipped.`);
+        return;
+    }
+    const expireStr = formatDuration(expire)
+    __log.info(`[Statistics House Keep] Ready to delete expired data from ${expireStr} ago.`);
+    const { rows } = await storageSummaryRep.deleteExpiredData(expire);
+    __log.info(`[Statistics House Keep] Cleaned up ${rows} data records dating back ${expireStr} from the present.`);
 }
 
 async function getStorageObjectStat(minioLink) {

@@ -96,6 +96,15 @@ function getStaffFromSubjectInfoBox(infoBox = []) {
     return results;
 }
 
+const SHORT_ANIME_INCLUDES = ['泡面', '泡面番']
+function getPlatformFromSubject(subject) {
+    const { platform, tags } = subject
+    if (tags.some(t => SHORT_ANIME_INCLUDES.includes(t.name)) && platform === 'TV') {
+        return 'TV_Short';
+    }
+    return platform;
+}
+
 function ensureImageStorageLink(images, image, link) {
     if (__isAnyBlank(image, link)) return image;
     images.push({ image, link });
@@ -137,18 +146,26 @@ async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
     return { results, images };
 }
 
-export async function cleanBangumiSubject(subject, fetchDelay) {
+export async function cleanBangumiSubject(subject, options = {}) {
     if (!subject || !subject.id) return;
     const season = getSeasonForSubject(subject);
     if (!season) {
         __log.warn(`[Bangumi Clean] Subject[${subject.id}] cannot get season, skipped.`);
         return;
     }
+    const { fetchDelay, skipCharacter = false } = options
     const infoBox = subject['infobox']
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
+    const platform = getPlatformFromSubject(subject);
     // const summaryCN = await translateJaToZh(subject.summary);
-    const { results: characters, images } = await getCharactersBySubjectId(subject.id, fetchDelay);
+    const images = []
+    const characters = []
+    if (!skipCharacter) {
+        const charactersResult = await getCharactersBySubjectId(subject.id, fetchDelay);
+        images.push(...charactersResult.images);
+        characters.push(...charactersResult.results);
+    }
     const cover = ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
     await putImageStorageLinkBatch(images);
     return {
@@ -156,7 +173,7 @@ export async function cleanBangumiSubject(subject, fetchDelay) {
         name: subject.name,
         nameCN: subject.name_cn,
         nameAlias: JSON.stringify(alias),
-        platform: subject.platform,
+        platform,
         airDate: subject.date,
         season,
         summary: subject.summary,
@@ -165,6 +182,7 @@ export async function cleanBangumiSubject(subject, fetchDelay) {
         cover,
         metaTags: JSON.stringify(subject.meta_tags ?? []),
         staff: JSON.stringify(staff),
-        characters: JSON.stringify(characters)
+        characters: JSON.stringify(characters),
+        nsfw: Boolean(subject.nsfw) ? 1 : 0
     }
 }

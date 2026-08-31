@@ -25,3 +25,8 @@ export const BANGUMI_IMAGES_STATUS = {
     PENDING: 1,
     COMPLETE: 2
 }
+
+export const SUBJECT_NSFW_VALUE = {
+    NO: 0,
+    YES: 1
+}

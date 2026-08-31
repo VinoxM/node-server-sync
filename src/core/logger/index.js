@@ -22,3 +22,7 @@ export function setupLoggerWorker(savePath) {
 export function setupLoggerLevel(loggerLevel = LOGGER_LEVEL.INFO) {
     logHandler.setLoggerLevel(loggerLevel)
 }
+
+export async function destroyLogger() {
+    await logHandler.close();
+}

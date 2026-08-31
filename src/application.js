@@ -1,4 +1,4 @@
-import { setupGlobal } from './support.js';
+import { tryStartApplication } from './support.js';
 import { join } from 'path';
 import { startServer } from './api/index.js';
 import { startSchedule } from './jobs/schedule/index.js';
@@ -10,8 +10,7 @@ import { tokenBucket } from './core/instance/tokenBucket.js';
 import { initializeMinioClient } from './core/instance/minioClient.js';
 import { doMigrations } from './modules/migrations/migrationsService.js';
 
-(async () => {
-    await setupGlobal(join(import.meta.dirname, "../"));
+tryStartApplication(join(import.meta.dirname, "../"), async () => {
     await doMigrations();
     initializeAuthTokenStore();
     await startServer();
@@ -21,4 +20,4 @@ import { doMigrations } from './modules/migrations/migrationsService.js';
     await sseInitialize();
     initializeMinioClient();
     await startSchedule();
-})();
+})

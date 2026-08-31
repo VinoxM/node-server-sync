@@ -181,6 +181,7 @@ sqlite:
             `staff` TEXT,
             `characters` TEXT,
             `hide` INTEGER NOT NULL DEFAULT 0,
+            `nsfw` INTEGER NOT NULL DEFAULT 0,
             `create_time` DATETIME,
             `update_time` DATETIME,
             CONSTRAINT `idx_subjects_bangumi_id` UNIQUE (`bangumi_id`)
@@ -210,7 +211,6 @@ sqlite:
             `hide` integer NOT NULL DEFAULT 0,
             `tracker` varchar(5000),
             `episode` varchar(10) DEFAULT NULL,
-            `up_date` varchar(100) DEFAULT NULL,
             `sort` integer NOT NULL DEFAULT 0,
             CONSTRAINT `idx_pid_title` UNIQUE (`pid`, `title`)
           );

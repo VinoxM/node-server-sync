@@ -8,5 +8,10 @@ export default {
     selectLatest: () => {
         const sql = `SELECT id, total_count, total_size, dimensions, summary_at FROM storage_summary ORDER BY id DESC LIMIT 1`
         return __sqliteDB.selectOne(sql, [], null, dbName)
+    },
+    deleteExpiredData: (expire) => {
+        const expiredTimestamp = Date.now() - expire;
+        const sql = `DELETE FROM storage_summary WHERE summary_at < ?`;
+        return __sqliteDB.delete(sql, [expiredTimestamp], null, dbName);
     }
 }

@@ -31,5 +31,9 @@ export default {
         const sql = `SELECT id, link, minio_link FROM bangumi_images WHERE link=? AND status=?`;
         const params = [link, BANGUMI_IMAGES_STATUS.COMPLETE];
         return __sqliteDB.selectOne(sql, params, null, dbName);
+    },
+    deleteByLinkLikely: link => {
+        const sql = `DELETE FROM bangumi_images WHERE link LIKE ?`
+        return __sqliteDB.delete(sql, [`${link}%`], null, dbName);
     }
 }

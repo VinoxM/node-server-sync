@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "node ./src/application.js --active=main,sqlite,dev",
+        "temp": "node ./temporary/application.js --active=main,sqlite,dev --temporary",
         "normal": "node ./src/application.js"
     },
     "author": "",

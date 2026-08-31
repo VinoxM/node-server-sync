@@ -4,8 +4,9 @@ function getFolderScripts(folder, recursive = false) {
     const folderStack = [folder];
     const resultFiles = [];
     while (folderStack.length > 0) {
-        const folder_ = folderStack.pop()
-        fs.readdirSync(__join(folder_)).forEach(f => {
+        const folder_ = __join(folderStack.pop())
+        const dirFiles = fs.existsSync(folder_) ? fs.readdirSync(folder_) : []
+        dirFiles.forEach(f => {
             const fileName = __join(folder_, f);
             if (fs.lstatSync(fileName).isDirectory()) {
                 if (recursive) folderStack.push(fileName);

@@ -30,7 +30,10 @@ export async function putImageStorageLinkBatch(images) {
         minioLink: generateImageBucketLink(image, link),
         originUrl: image
     }))
-    return bangumiImagesRep.insertBatch(dataList);
+    if (dataList.length > 0) {
+        return bangumiImagesRep.insertBatch(dataList);
+    }
+    return { rows: 0 }
 }
 
 function generateImageBucketLink(image, link) {

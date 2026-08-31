@@ -42,7 +42,7 @@ class ApiServer {
 
     addApiFilters(apiFilters) {
         if (this.#server || __isEmptyArray(apiFilters)) return;
-        this.#apiFilters = apiFilters
+        this.#apiFilters.push(...apiFilters)
     }
 
     addApiMapping(mapping) {
@@ -60,7 +60,7 @@ class ApiServer {
 
     addWsChannels(wsChannels) {
         if (this.#wsServer || __isEmptyArray(wsChannels)) return;
-        this.#wsChannels = wsChannels;
+        this.#wsChannels.push(...wsChannels);
     }
 
     #initApiServer() {

@@ -22,13 +22,19 @@ async function getSocketChannels() {
     }).then(() => getConnections())
 }
 
-export async function startServer() {
+export async function startServer(options = {}) {
     const instance = apiServer;
     if (instance.ready()) return Promise.resolve();
     instance.initialize();
     const apiFilters = await getApiFilters();
     instance.addApiFilters(apiFilters);
+    if (__isNotEmptyArray(options.apiFilters)) {
+        instance.addApiFilters(options.apiFilters);
+    }
     await importFolderScripts("@/src/api/routes", true, mapping => instance.addApiMapping(mapping.default));
+    if (__isNotEmptyArray(options.apiMapping)) {
+        options.apiMapping.forEach(mapping => instance.addApiMapping(mapping.default));
+    }
     const wsChannels = await getSocketChannels();
     instance.addWsChannels(wsChannels);
     await instance.start();

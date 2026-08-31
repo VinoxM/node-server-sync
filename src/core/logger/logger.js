@@ -192,6 +192,10 @@ class LogHandler {
         })
         Object.assign(globalThis, { [propertyName]: Object.freeze(globalLog) })
     }
+
+    async close() {
+        await this.#logWorker.close();
+    }
 }
 
 class LogWorker {

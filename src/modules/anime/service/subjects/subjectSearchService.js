@@ -9,7 +9,10 @@ function handleSearch(data) {
     }
     return list.map(obj => {
         const { startTime } = obj;
-        let date = new Date(startTime);
+        let date = new Date(startTime)
+        if (startTime === 0 || startTime === null || startTime === undefined) {
+            date = new Date(obj.season + '-01')
+        }
         let startDate = `${date.getFullYear()}${(date.getMonth() + 1 + '').padStart(2, '0')}${(date.getDate() + '').padStart(2, '0')}`;
         let hours = date.getHours();
         let minutes = date.getMinutes();
@@ -17,9 +20,10 @@ function handleSearch(data) {
             date.setDate(date.getDate() - 1);
             hours += 24;
         }
-        let updateTime = `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;        
+        let updateTime = `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
         const isTV = obj.platform === 'TV' || JSON.parse(obj.metaTags || '[]').includes?.('TV');
-        let type = `${obj.isShort ?? 0}${isTV ? 0 : 1}`;
+        const isShort = obj.platform === 'TV_Short';
+        let type = `${isShort ? 1 : 0}${(isTV || isShort) ? 0 : 1}`;
         let status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
         return {
             Z: obj.nameCN, // name
@@ -33,13 +37,13 @@ function handleSearch(data) {
             U: obj.id, // id
             R: obj.count, // epCount
             G: obj.goon, // goon
+            A: obj.totalEpisodes,
         }
     })
 }
 
-
 export async function getAnimeCalendar() {
     const season = getCurSeason();
     const { rows, data } = await subjectsRep.selectVisibleBySeason(season.join('-'));
-    return handleSearch(data);
+    return rows > 0 ? handleSearch(data) : [];
 }

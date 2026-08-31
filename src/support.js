@@ -1,6 +1,6 @@
 import { join as pathJoin } from "path";
 import { initializeDB, getSqliteDB, getRedisClient } from "./core/database/index.js";
-import { registerLogger, setupLoggerLevel, setupLoggerWorker } from "./core/logger/index.js";
+import { destroyLogger, registerLogger, setupLoggerLevel, setupLoggerWorker } from "./core/logger/index.js";
 import { createContext } from "./core/context/index.js";
 import { evaluate } from 'mathjs';
 import { initializeSshScripts } from "./modules/ssh/sshScriptService.js";
@@ -58,12 +58,13 @@ function getProcessArgs() {
             }
         }
     })
-    return result;
+    result.has = key => key in result
+    return Object.freeze(result);
 }
 
 let applicationContext = null;
 
-export async function setupGlobal(rootPath) {
+async function setupGlobal(rootPath) {
     if (applicationContext !== null) return
 
     globalThis.__dirname = rootPath
@@ -115,7 +116,22 @@ export async function setupGlobal(rootPath) {
     globalThis.__redisClient = getRedisClient();
 
     // initialize ssh scripts
-    await initializeSshScripts();
+    initializeSshScripts();
+}
+
+async function beforeDestroy() {
+    await destroyLogger();
+}
+
+export async function tryStartApplication(rootPath, callback) {
+    await setupGlobal(rootPath);
+    try {
+        await callback();
+    } catch (ex) {
+        __log.print(ex);
+        await beforeDestroy();
+        process.exit(0);
+    }
 }
 
 export async function reloadApplicationContext() {
