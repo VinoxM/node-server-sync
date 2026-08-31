@@ -309,11 +309,12 @@ class QdrantClient extends ContextSubscribe {
     async delete(collectionName, opts = {}) {
         const idCount = opts.ids?.length ?? 0;
         __log.info(`[QdrantClient] delete collection=${collectionName} ids=${idCount} filter=${!!opts.filter}`);
+        const { ids, filter, ...rest } = opts;
         const result = await this.#getClient().delete(collectionName, {
             wait: true,
-            points: opts.ids ? opts.ids.map(id => ({ id })) : undefined,
-            filter: opts.filter,
-            ...opts,
+            points: ids,
+            filter,
+            ...rest,
         });
         return result;
     }
