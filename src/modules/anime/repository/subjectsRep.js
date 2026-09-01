@@ -1,4 +1,3 @@
-import { updateSubscribeBangumiId } from "../../../../temporary/modules/anime/diffSubject.js";
 import { SUBJECT_HIDE_VALUE, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
@@ -87,6 +86,13 @@ export default {
     selectOneById: id => {
         return __sqliteDB.selectOne(`SELECT ${FULL_COLUMNS.join(',')} FROM subjects WHERE id=?`, [id], null, dbName);
     },
+    selectOneByIdForView: id => {
+        const sql = `SELECT ${FULL_COLUMNS.map(c => 't.' + c).join(',')}, `
+            + `rs.id AS subsId, rs.start_time, rs.fin FROM subjects t `
+            + `INNER JOIN rss_subscribe rs ON rs.bangumi_id = t.bangumi_id `
+            + `WHERE t.id=? AND t.hide=?`
+        return __sqliteDB.selectOne(sql, [id, SUBJECT_HIDE_VALUE.NO], null, dbName);
+    },
     updateSubjectHide: (hide, id, originHide) => {
         return __sqliteDB.update(`UPDATE subjects SET hide=? WHERE id=? AND hide=?`, [hide, id, originHide], null, dbName);
     },
@@ -98,7 +104,7 @@ export default {
     },
     // search
     selectVisibleBySeason: (season) => {
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, rs.fin, rs.start_time, `
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, rs.id AS subsId, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
             + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
             + `CASE WHEN julianday('now') - julianday(MAX(rr.pub_date)) < 1 then 1 else 0 end hasNew `

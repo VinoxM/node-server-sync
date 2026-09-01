@@ -18,7 +18,7 @@ export const encryptData = str => aesCrypto.encrypt(str)
 
 export const decryptData = str => aesCrypto.decrypt(str)
 
-export const decodeAuthorization = async req => {
+export const decodeAuthorization = async (req, ignoreError = false) => {
     if (req.userInfo) return req.userInfo
     const token = getRequestTokenHash(req)
     try {
@@ -27,7 +27,7 @@ export const decodeAuthorization = async req => {
         if (__isNotBlank(token) && await verifyToken(token, decode => {
             if (decode.clientId === clientId) {
                 userInfo = decode
-            } else {
+            } else if(!ignoreError) {
                 __throwMessage(`Invalid token.`)
             }
         })) {

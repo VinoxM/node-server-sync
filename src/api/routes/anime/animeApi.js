@@ -1,8 +1,10 @@
 import apiMethodConst from "../../../common/constants/apiMethodConst.js";
 import { getNextSeason } from "../../../common/utils/dateUtil.js";
+import { checkQueryKeyNotBlank } from "../../../common/utils/preCheckUtil.js";
 import { getActorImage, getSubjectCharacterImage, getSubjectCover } from "../../../modules/anime/service/bangumi/bangumiImagesService.js";
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from "../../../modules/anime/service/subjects/subjectPullService.js";
-import { getAnimeCalendar } from "../../../modules/anime/service/subjects/subjectSearchService.js";
+import { getAnimeCalendar, getAnimeInformation } from "../../../modules/anime/service/subjects/subjectSearchService.js";
+import { decodeAuthorization } from "../../../modules/authorization/authorizationService.js";
 
 const { GET, POST } = apiMethodConst;
 
@@ -14,6 +16,15 @@ export default {
         method: GET,
         needSecret,
         callback: () => getAnimeCalendar()
+    },
+    "/information": {
+        method: GET,
+        needSecret,
+        preCheck: req => checkQueryKeyNotBlank(req, 'id'),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req, 1)
+            return getAnimeInformation(req.query.id, userInfo)
+        }
     },
     "/pullAnime": {
         method: POST,

@@ -30,3 +30,7 @@ export const SUBJECT_NSFW_VALUE = {
     NO: 0,
     YES: 1
 }
+
+export const SUBJECT_PLATFORM_IS_SHORT = 'TV_Short'
+
+export const SUBJECT_PLATFORM_DEFAULT = 'TV'

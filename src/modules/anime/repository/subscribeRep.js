@@ -63,7 +63,7 @@ export default {
         return __sqliteDB.delete(sql, [bangumiId], null, dbName);
     },
     selectByBangumiId: (bangumiId) => {
-        const sql = `SELECT * FROM rss_subscribe WHERE bangumi_id = ?`;
+        const sql = `SELECT ${FULL_COLUMNS.join(",")} FROM rss_subscribe WHERE bangumi_id = ?`;
         return __sqliteDB.selectOne(sql, [bangumiId], null, dbName);
     },
     updateFinByBangumiId: (bangumiId, fin) => {

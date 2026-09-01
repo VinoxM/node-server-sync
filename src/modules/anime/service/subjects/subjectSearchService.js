@@ -1,4 +1,8 @@
 import { getCurSeason } from "../../../../common/utils/dateUtil.js";
+import rssEpisodeRep from "../../../rss/repository/rssEpisodeRep.js";
+import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "../../constants/subjectConstant.js";
+import rssResultRep from "../../repository/rssResultRep.js";
+import rssTrackerRep from "../../repository/rssTrackerRep.js";
 import subjectsRep from "../../repository/subjectsRep.js";
 
 function handleSearch(data) {
@@ -34,7 +38,7 @@ function handleSearch(data) {
             S: status, // status. enum: 0-not start/1-broadcasting/2-fin
             E: obj.latestEp, // lastEp
             N: obj.hasNew, // hasNew. enum: 0, 1
-            U: obj.id, // id
+            U: obj.id + ":" + obj.subsId, // id
             R: obj.count, // epCount
             G: obj.goon, // goon
             A: obj.totalEpisodes,
@@ -46,4 +50,54 @@ export async function getAnimeCalendar() {
     const season = getCurSeason();
     const { rows, data } = await subjectsRep.selectVisibleBySeason(season.join('-'));
     return rows > 0 ? handleSearch(data) : [];
+}
+
+export async function getAnimeInformation(id, userInfo) {
+    const subject = await subjectsRep.selectOneByIdForView(id);
+    subject || __throwMessage('Anime not exists.');
+    const {
+        subsId, nameAlias, platform, metaTags, staff, characters,
+        hide, nsfw, updateTime, createTime, fin, summaryCN, season,
+        ...rest
+    } = subject;
+    const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;
+    const results = await getRssResultsByRssSubscribeId(subsId);
+    let episodes = undefined;
+    if (userInfo) {
+        episodes = await getRssEpisodesByRssSubscribeId(subsId);
+    }
+    if (__isNotEmptyArray(episodes)) {
+        episodes = episodes.map(ep => ({ id: ep.id, episode: ep.episode, status: ep.status }))
+            .toSorted((a, b) => a.episode - b.episode);
+    }
+    return {
+        ...rest,
+        subsId,
+        nameAlias: JSON.parse(nameAlias ?? '[]'),
+        platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
+        metaTags: JSON.parse(metaTags ?? '[]'),
+        staff: JSON.parse(staff ?? '[]'),
+        characters: JSON.parse(characters ?? '[]'),
+        isShort,
+        fin: Boolean(fin),
+        results,
+        episodes
+    }
+}
+
+async function getRssResultsByRssSubscribeId(rssSubsId) {
+    const results = []
+    const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId);
+    for (const item of data) {
+        const { tracker, ...result } = item;
+        const trackers = await rssTrackerRep.selectHostsByIds((item.tracker ?? '').split(','))
+        const torrent = [item.torrent, trackers.join('&tr=')].join('&tr=');
+        result.torrent = 'magnet:?xt=urn:btih:' + torrent;
+        results.push(result)
+    }
+    return results;
+}
+
+async function getRssEpisodesByRssSubscribeId(rssSubsId) {
+    return rssEpisodeRep.selectBySubsId(rssSubsId).then(({ data }) => data);
 }
