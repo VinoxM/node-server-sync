@@ -51,6 +51,11 @@ function verifyJWT(token) {
     }
 }
 
+/**
+ * 
+ * @param {string} token 
+ * @returns {import('@types/authorizationTypes.d.ts').UserInfo} 用户信息
+ */
 function decodeJWT(token) {
     try {
         const { iat, exp, ...decode } = jwt.decode(token, secretKey())

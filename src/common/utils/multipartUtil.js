@@ -1,5 +1,20 @@
 import { StringDecoder } from 'string_decoder';
 
+/**
+ * 解析 multipart/form-data 二进制数据流
+ * @param {Buffer} buffer - 原始请求体 Buffer 数据
+ * @param {string} boundary - multipart 请求头中的 boundary 分隔标识
+ * @returns {{
+ *   files: Array<{
+ *     field: string,
+ *     originalname: string,
+ *     mimetype: string,
+ *     size: number,
+ *     data: Buffer
+ *   }>,
+ *   fields: Record<string, string>
+ * }} 解析出的文件列表与普通字段键值对对象
+ */
 export function parseMultipart(buffer, boundary) {
     const parts = buffer.toString('binary').split(`--${boundary}`);
     const fields = {};

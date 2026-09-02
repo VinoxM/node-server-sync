@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@types/*": [
+        "./types/*"
+      ],
+      "#*": [
+        "./src/*"
+      ],
+      "#utils/*": [
+        "./src/common/utils/*"
+      ],
+      "#constants/*": [
+        "./src/common/constants/*"
+      ]
+    },
+    // "checkJs": true
+  },
+  "include": [
+    "src/**/*",
+    "types/**/*",
+    "temporary/**/*"
+  ]
+}

@@ -1,41 +1,61 @@
 import { ContextSubscribe } from "../context/subscribe.js";
 import { QdrantClient as QdrantApiClient } from '@qdrant/js-client-rest';
-import { extractTextEmbedding } from "../../common/utils/transformUtil.js";
+import { extractTextEmbedding } from "#utils/transformUtil.js";
 
+/**
+ * Qdrant 向量数据库客户端管理器 (单例模式)
+ * 封装了文本语义向量化 (Embedding)、集合管理、分批 Upsert、向量语义检索与过滤查询
+ */
 class QdrantClient extends ContextSubscribe {
-    static instance = new QdrantClient()
+    /** @type {QdrantClient} 单例实例 */
+    static instance = new QdrantClient();
+
+    /** @type {number} 向量默认维度 (1024) */
     static DIMENSION = 1024;
 
-    /** @type {QdrantApiClient | null} */
+    /** @type {number} 单次 upsert 最大 point 数，防止请求 body 超限 */
+    static UPSERT_BATCH_SIZE = 100;
+
+    /** @type {QdrantApiClient | null} 官方 Qdrant 客户端底层实例 */
     #client = null;
 
     constructor() {
-        super("QdrantClient", () => this.#init(true), true)
+        super("QdrantClient", () => this.#init(true), true);
     }
 
-    /** @returns {QdrantApiClient} */
+    /**
+     * 获取或初始化底层 Qdrant 客户端
+     * @returns {QdrantApiClient}
+     */
     #getClient() {
         this.#init();
         if (!this.#client) throw new Error('QdrantClient not initialized');
         return this.#client;
     }
 
+    /**
+     * 清理客户端实例
+     */
     #clean() {
         this.#client = null;
     }
 
+    /**
+     * 从全局配置读取并初始化 Qdrant Client
+     * @param {boolean} [force=false] - 是否强制重新初始化
+     */
     #init(force = false) {
         this.doSubscribe();
         if (this.#client !== null && !force) return;
         this.#clean();
-        const opts = __env.get('qdrant.client')
+        const opts = __env.get('qdrant.client');
         if (!opts) return;
         this.#client = new QdrantApiClient({
             host: opts.host,
             port: opts.port,
             https: parseInt(opts.port) === 443,
             apiKey: opts.apiKey
-        })
+        });
         __log.info(`[QdrantClient] initialized host=${opts.host} port=${opts.port} https=${parseInt(opts.port) === 443}`);
     }
 
@@ -43,8 +63,8 @@ class QdrantClient extends ContextSubscribe {
 
     /**
      * 将文本转换为 1024 维语义向量
-     * @param {string} text
-     * @returns {Promise<number[]>}
+     * @param {string} text - 待转换文本
+     * @returns {Promise<number[]>} 1024 维特征向量
      */
     async embed(text) {
         return extractTextEmbedding(text);
@@ -52,18 +72,18 @@ class QdrantClient extends ContextSubscribe {
 
     /**
      * 将文本列表批量转换为向量
-     * @param {string[]} texts
-     * @returns {Promise<number[][]>}
+     * @param {string[]} texts - 文本列表
+     * @returns {Promise<number[][]>} 向量数组
      */
     async embedBatch(texts) {
         return Promise.all(texts.map(t => this.embed(t)));
     }
 
     /**
-     * 将 payload 中指定字段提取并转为向量，返回 [vector, payload]
-     * @param {object} payload
-     * @param {string} [textField] - 用于生成向量的文本字段，默认 'text'
-     * @returns {Promise<[number[], object]>}
+     * 将 payload 中指定字段提取并转为向量，返回 `[vector, payload]`
+     * @param {Record<string, any>} payload - 携带业务属性的对象
+     * @param {string} [textField='text'] - 用于生成向量的文本属性键名
+     * @returns {Promise<[number[], Record<string, any>]>}
      */
     async embedPayload(payload, textField = 'text') {
         const text = payload[textField];
@@ -75,10 +95,10 @@ class QdrantClient extends ContextSubscribe {
     // ─── Collection ──────────────────────────────────────────────
 
     /**
-     * 确保集合存在（不存在则自动创建）
-     * @param {string} name
-     * @param {object} [extraOpts]
-     * @returns {Promise<boolean>} true=已存在, false=新建
+     * 确保指定名称的集合存在（若不存在则根据 1024 维度自动创建 Cosine 集合）
+     * @param {string} name - 集合名称
+     * @param {Record<string, any>} [extraOpts={}] - 额外创建选项
+     * @returns {Promise<boolean>} true 表示集合已存在，false 表示新建
      */
     async ensureCollection(name, extraOpts = {}) {
         const exists = await this.collectionExists(name);
@@ -97,7 +117,7 @@ class QdrantClient extends ContextSubscribe {
 
     /**
      * 判断集合是否存在
-     * @param {string} name
+     * @param {string} name - 集合名
      * @returns {Promise<boolean>}
      */
     async collectionExists(name) {
@@ -110,8 +130,8 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 获取集合信息
-     * @param {string} name
+     * 获取集合详情信息
+     * @param {string} name - 集合名
      * @returns {Promise<object>}
      */
     async getCollectionInfo(name) {
@@ -121,7 +141,7 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 列出所有集合
+     * 列出所有已创建的集合名称列表
      * @returns {Promise<string[]>}
      */
     async listCollections() {
@@ -131,8 +151,8 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 删除集合
-     * @param {string} name
+     * 删除指定集合
+     * @param {string} name - 集合名
      * @returns {Promise<boolean>}
      */
     async deleteCollection(name) {
@@ -142,11 +162,11 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 创建 payload 字段索引，加速 filter 查询
-     * @param {string} collectionName
+     * 创建 payload 字段索引，以加速 filter 过滤查询
+     * @param {string} collectionName - 集合名
      * @param {string} fieldName - 字段名
      * @param {"keyword"|"integer"|"float"|"geo"|"text"|"bool"|"datetime"|"uuid"|object} [fieldSchema="keyword"] - 索引类型或带参 schema
-     * @param {{ wait?: boolean, timeout?: number }} [opts]
+     * @param {{ wait?: boolean, timeout?: number }} [opts={}] - 额外选项
      * @returns {Promise<{ result?: { status: string, operation_id?: number }, status?: string }>}
      */
     async createPayloadIndex(collectionName, fieldName, fieldSchema = 'keyword', opts = {}) {
@@ -162,18 +182,11 @@ class QdrantClient extends ContextSubscribe {
 
     // ─── Points CRUD ─────────────────────────────────────────────
 
-    // ─── Batch config ────────────────────────────────────────────
-
-    /** 单次 upsert 最大 point 数，防止请求 body 超限（nginx 默认 1MB） */
-    static UPSERT_BATCH_SIZE = 100;
-
-    // ─── Upsert ──────────────────────────────────────────────────
-
     /**
-     * 写入/更新 points（自动分批，防止请求体过大）
-     * @param {string} collectionName
-     * @param {Array<{ id: number|string, vector?: number[], payload?: object }>} points
-     * @param {{ wait?: boolean, batchSize?: number }} [opts]
+     * 写入/更新 points（自动按 batchSize 分批请求，防止包体超限）
+     * @param {string} collectionName - 集合名
+     * @param {Array<{ id: number|string, vector?: number[], payload?: object }>} points - 数据点列表
+     * @param {{ wait?: boolean, batchSize?: number }} [opts={}] - 批量选项
      * @returns {Promise<Array<{ ids: (number|string)[], status: string, operation_id?: number }>>}
      */
     async upsert(collectionName, points, opts = {}) {
@@ -201,10 +214,10 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 写入带 payload 的 point，自动从指定字段生成向量
-     * @param {string} collectionName
-     * @param {{ id: number|string, payload: object, textField?: string }} item
-     * @param {{ wait?: boolean }} [opts]
+     * 写入带 payload 的单条 point，自动根据 textField 提取文本并生成向量
+     * @param {string} collectionName - 集合名
+     * @param {{ id: number|string, payload: object, textField?: string }} item - 待插入项
+     * @param {{ wait?: boolean }} [opts] - 选项
      * @returns {Promise<object>}
      */
     async upsertWithEmbed(collectionName, item, opts = {}) {
@@ -218,12 +231,10 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 批量写入带 payload 的 points，自动从指定字段生成向量。
-     * - 模型推理串行执行（最多1个并发），避免服务器卡死
-     * - upsert 自动分批，防止请求体过大
-     * @param {string} collectionName
-     * @param {Array<{ id: number|string, payload: object, textField?: string }>} items
-     * @param {{ wait?: boolean }} [opts]
+     * 批量写入带 payload 的 points（串行单并发模型推理避免资源卡死，写入自动分批）
+     * @param {string} collectionName - 集合名
+     * @param {Array<{ id: number|string, payload: object, textField?: string }>} items - 待插入项数组
+     * @param {{ wait?: boolean }} [opts] - 选项
      * @returns {Promise<object[]>}
      */
     async upsertBatchWithEmbed(collectionName, items, opts = {}) {
@@ -241,9 +252,9 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 语义搜索
-     * @param {string} collectionName
-     * @param {string|number[]} query - 文本（自动转向量）或原始向量
+     * 向量语义搜索
+     * @param {string} collectionName - 集合名
+     * @param {string|number[]} query - 查询文本（自动转向量）或原始向量数组
      * @param {{
      *   limit?: number,
      *   offset?: number,
@@ -251,8 +262,8 @@ class QdrantClient extends ContextSubscribe {
      *   withPayload?: boolean,
      *   withVector?: boolean,
      *   scoreThreshold?: number,
-     * }} [opts]
-     * @returns {Promise<object[]>}
+     * }} [opts] - 搜索条件与配置
+     * @returns {Promise<object[]>} 匹配的 Points 结果数组
      */
     async search(collectionName, query, opts = {}) {
         const vector = Array.isArray(query) ? query : await this.embed(query);
@@ -272,15 +283,15 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 分页遍历 points
-     * @param {string} collectionName
+     * 分页遍历集合中的 points
+     * @param {string} collectionName - 集合名
      * @param {{
      *   filter?: object,
      *   limit?: number,
      *   offset?: number,
      *   withPayload?: boolean,
      *   withVector?: boolean,
-     * }} [opts]
+     * }} [opts] - 分页与过滤选项
      * @returns {Promise<object>}
      */
     async scroll(collectionName, opts = {}) {
@@ -297,13 +308,13 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 通过 ID 或 filter 删除 points
-     * @param {string} collectionName
+     * 根据 ID 列表或 Filter 条件删除 points
+     * @param {string} collectionName - 集合名
      * @param {{
      *   ids?: (number|string)[],
      *   filter?: object,
      *   wait?: boolean,
-     * }} opts
+     * }} opts - 删除参数
      * @returns {Promise<object>}
      */
     async delete(collectionName, opts = {}) {
@@ -320,10 +331,10 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 根据 ID 检索 points
-     * @param {string} collectionName
-     * @param {(number|string)[]} ids
-     * @param {{ withPayload?: boolean, withVector?: boolean }} [opts]
+     * 根据 ID 列表检索 points
+     * @param {string} collectionName - 集合名
+     * @param {(number|string)[]} ids - ID 列表
+     * @param {{ withPayload?: boolean, withVector?: boolean }} [opts] - 选项
      * @returns {Promise<object[]>}
      */
     async retrieve(collectionName, ids, opts = {}) {
@@ -337,9 +348,9 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 统计 points 数量
-     * @param {string} collectionName
-     * @param {object} [filter]
+     * 统计符合条件的 points 数量
+     * @param {string} collectionName - 集合名
+     * @param {object} [filter] - 过滤条件
      * @returns {Promise<number>}
      */
     async count(collectionName, filter) {
@@ -352,9 +363,9 @@ class QdrantClient extends ContextSubscribe {
     }
 
     /**
-     * 批量更新 points（替换 payload 和 vector）
-     * @param {string} collectionName
-     * @param {Array<{ id: number|string, vector?: number[], payload?: object }>} points
+     * 批量更新 points
+     * @param {string} collectionName - 集合名
+     * @param {Array<{ id: number|string, vector?: number[], payload?: object }>} points - 点数据列表
      * @returns {Promise<object[]>}
      */
     async update(collectionName, points) {
@@ -362,4 +373,5 @@ class QdrantClient extends ContextSubscribe {
     }
 }
 
+/** Qdrant 客户端全局单例入口 */
 export const qdrantClient = QdrantClient.instance;

@@ -1,10 +1,17 @@
-import { ipBlocker } from "../../core/instance/ipBlocker.js";
-import { getRequestRealIp } from "../../common/utils/requestUtil.js";
-import { GetterContextSubscribe } from "../../core/context/subscribe.js";
+import { ipBlocker } from "#core/instance/ipBlocker.js";
+import { getRequestRealIp } from "#utils/requestUtil.js";
+import { GetterContextSubscribe } from "#core/context/subscribe.js";
+import { defineFilter } from "#utils/defineUtil.js";
 
-const ipBlockIgnoreRegex = new GetterContextSubscribe('ipBlockIgnore', () => __env.get("api.ipBlocker.blockIgnore", []).map(r => new RegExp(r)))
+/** 订阅 IP 封禁器忽略检查的 API 路径正则列表 */
+const ipBlockIgnoreRegex = new GetterContextSubscribe('ipBlockIgnore', () => __env.get("api.ipBlocker.blockIgnore", []).map(r => new RegExp(r)));
 
-export default {
+/**
+ * 恶意 IP 拦截与封禁过滤器
+ * 优先级: -110
+ * 作用: 检测请求真实 IP 是否已被 ipBlocker 拦截器封禁，已被封禁的 IP 将直接切断连接
+ */
+export default defineFilter({
     order: -110,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         if (!ipBlocker.ready()) {
@@ -20,4 +27,4 @@ export default {
             }
         }
     }
-}
+});

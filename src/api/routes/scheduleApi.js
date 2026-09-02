@@ -1,14 +1,15 @@
-import apiBodyConst from '../../common/constants/apiBodyConst.js';
-import apiMethodConst from '../../common/constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank } from '../../common/utils/preCheckUtil.js';
-import { cancelJob, emitJob, startSchedule } from '../../jobs/schedule/index.js';
+import apiBodyConst from '#constants/apiBodyConst.js';
+import apiMethodConst from '#constants/apiMethodConst.js';
+import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
+import { defineRoutes } from '#utils/defineUtil.js';
+import { cancelJob, emitJob, startSchedule } from '#jobs/scheduleDispatcher.js';
 
 const { POST } = apiMethodConst;
 const { JOB_NAME } = apiBodyConst;
 
-const needSecret = () => "mAou5820.schedule"
+const needSecret = () => "mAou5820.schedule";
 
-export default {
+export default defineRoutes({
     basePath: "/schedule",
     "/restartJobs": {
         method: POST,
@@ -33,7 +34,7 @@ export default {
         preCheck: (req) => checkBodyKeyNotBlank(req, JOB_NAME),
         callback: (req) => {
             const jobName = req.body[JOB_NAME];
-            return emitJob(jobName)
+            return emitJob(jobName);
         }
     }
-}
+});

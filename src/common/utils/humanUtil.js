@@ -1,7 +1,7 @@
 /**
- * 格式化文件大小
- * @param {number|string|bigint} bytes 字节大小
- * @param {number} decimals 小数点后保留位数
+ * 将字节大小格式化为易读的容量描述字符串 (如 "1.25 MB", "500 KB")
+ * @param {number|string|bigint} bytes - 字节大小
+ * @param {number} [decimals=2] - 小数点后保留位数
  * @returns {string} 格式化后的描述字符串
  */
 export function formatFileSize(bytes, decimals = 2) {
@@ -39,9 +39,9 @@ export function formatFileSize(bytes, decimals = 2) {
 }
 
 /**
- * 将毫秒数转换为易读的时间描述字符串
+ * 将毫秒数转换为易读的时间持续时长描述字符串 (如 "2d3h4m5s", "500ms")
  * @param {number} ms - 需转换的毫秒数
- * @returns {string} 格式化后的时间描述 (如: "2天2小时2分1秒")
+ * @returns {string} 格式化后的时间描述字符串
  */
 export function formatDuration(ms) {
     // 基础边界判断

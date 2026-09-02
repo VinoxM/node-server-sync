@@ -1,4 +1,5 @@
 import { getCurSeason } from "../../../../common/utils/dateUtil.js";
+import { filterUserRssFavoritesWithUid } from "../../../account/service/rssFavoritesService.js";
 import rssEpisodeRep from "../../../rss/repository/rssEpisodeRep.js";
 import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "../../constants/subjectConstant.js";
 import rssResultRep from "../../repository/rssResultRep.js";
@@ -100,4 +101,14 @@ async function getRssResultsByRssSubscribeId(rssSubsId) {
 
 async function getRssEpisodesByRssSubscribeId(rssSubsId) {
     return rssEpisodeRep.selectBySubsId(rssSubsId).then(({ data }) => data);
+}
+
+/**
+ * 
+ * @param {UserInfo} userInfo 
+ * @returns 
+ */
+async function getUserFavoritesSubscriptions(userInfo) {
+    if (!userInfo) return [];
+    filterUserRssFavoritesWithUid(userInfo.id)
 }

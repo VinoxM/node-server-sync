@@ -58,28 +58,28 @@ sse:
 schedule:
   rssSubscribe:
     enable: true
-    corn: 0 7/30 * * * *
+    cron: 0 7/30 * * * *
   clashSubscribe:
     enable: true
-    corn: 0 0 0/12 * * *
+    cron: 0 0 0/12 * * *
   ipBlockerClean:
     enable: true
-    corn: 0 0/10 * * * *
+    cron: 0 0/10 * * * *
   kuroGameSign:
     enable: true
-    corn: 0 0 0 * * *
+    cron: 0 0 0 * * *
   storageSummary:
     enable: true
-    corn: 0 0 0/2 * * *
+    cron: 0 0 0/2 * * *
   rssSubscribeVector:
     enable: true
-    corn: 0 30 0/2 * * *
+    cron: 0 30 0/2 * * *
   biliveStreamAutoSync:
     enable: true
-    corn: 0 0 4 * * *
+    cron: 0 0 4 * * *
   bangumiImagesSync:
     enable: true
-    corn: 0 0 0/3 * * *
+    cron: 0 0 0/3 * * *
 rss:
   convertMkvToMp4:
     enable: false

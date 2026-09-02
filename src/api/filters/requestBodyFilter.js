@@ -1,14 +1,16 @@
 import iconv from 'iconv-lite';
 import { parse as contentTypeParse } from 'content-type';
 import { parse as queryStringParse } from 'querystring';
-import { parseMultipart } from '../../common/utils/multipartUtil.js';
-import { GetterContextSubscribe } from '../../core/context/subscribe.js';
-import apiMethodConst from '../../common/constants/apiMethodConst.js';
-import apiContentTypeConst from '../../common/constants/apiContentTypeConst.js';
+import { parseMultipart } from '#utils/multipartUtil.js';
+import { GetterContextSubscribe } from '#core/context/subscribe.js';
+import apiMethodConst from '#constants/apiMethodConst.js';
+import apiContentTypeConst from '#constants/apiContentTypeConst.js';
+import { defineFilter } from '#utils/defineUtil.js';
 
 const { POST } = apiMethodConst;
 const { TYPE_JSON, TYPE_FORM, TYPE_TEXT, TYPE_MULTIPART } = apiContentTypeConst;
 
+/** 请求体解析策略映射 */
 const PARSE_STRATEGIES = {
     [TYPE_JSON]: (buffer, charset) => JSON.parse(iconv.decode(buffer, charset || 'utf8')),
     [TYPE_FORM]: (buffer, charset) => queryStringParse(iconv.decode(buffer, charset || 'utf8')),
@@ -20,10 +22,18 @@ const PARSE_STRATEGIES = {
     }
 };
 
+/** 默认请求体最大限制 (5MB) */
 const defaultRequestBodyLimit = 5 * 1024 * 1024;
+
+/** 订阅全局请求体体积上限配置 */
 const requestBodyLimit = new GetterContextSubscribe('RequestBodyLimit', () => __env.getEvaluate('api.requestBodyLimit', defaultRequestBodyLimit));
 
-export default {
+/**
+ * 请求体解析过滤器
+ * 优先级: -60
+ * 作用: 拦截 POST 请求流数据，根据 Content-Type 解析为 JSON / Form / Text / Multipart，并挂载到 `req.body` 与 `req.files`
+ */
+export default defineFilter({
     order: -60,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         if (req.method !== POST) return resolve({ req, res, config });
@@ -72,4 +82,4 @@ export default {
             reject({ code: -8, msg: 'Stream Error', error: err });
         });
     }
-}
+});

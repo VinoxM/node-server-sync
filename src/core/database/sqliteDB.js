@@ -1,6 +1,8 @@
 /**
- * Deprecated
+ * @file sqliteDB.js
+ * @deprecated 该基于 sqlite3 的实现已废弃，项目中已全面改用 `libSqlDB.js` (基于 @libsql/client 实现)
  */
+
 import sqlite3 from 'sqlite3'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { AsyncExecutor as Executor } from '../infra/asyncExecutor.js'
@@ -12,6 +14,10 @@ function getPrinter(options) {
     return options?.print ? __log.info : __log.debug
 }
 
+/**
+ * SQLite 数据库操作类 (sqlite3 驱动)
+ * @deprecated 已废弃，请改用 `libSqlDB.js` 中的 `SqliteDB`
+ */
 export class SqliteDB {
     #schema = {};
     #defaultDbName;
@@ -253,6 +259,9 @@ export class SqliteDB {
     }
 }
 
+/**
+ * @deprecated 已废弃，请改用 `libSqlDB.js` 中的 `TransactionLibSqlDB`
+ */
 class TransactionSqliteDB {
     #connection;
     #transactionOver = false;

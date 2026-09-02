@@ -1,19 +1,45 @@
-import { workerData, parentPort } from 'worker_threads'
-import fs from 'fs'
-import path from 'path'
+import { workerData, parentPort } from 'worker_threads';
+import fs from 'fs';
+import path from 'path';
 
+/**
+ * 判断字符串是否非空
+ * @param {any} str - 目标字符串
+ * @returns {boolean}
+ */
 function isNotBlank(str) {
     return str !== null && str !== undefined && ("" + str).trim() !== "";
 }
 
+/**
+ * 字符左侧补齐
+ * @param {any} str - 原始文本
+ * @param {number} [maxLength=2] - 目标长度
+ * @param {string} [fillString='0'] - 填充字符
+ * @returns {string}
+ */
 function padStart(str, maxLength = 2, fillString = '0') {
     return (str + "").padStart(maxLength, fillString);
 }
 
+/**
+ * 字符右侧补齐
+ * @param {any} str - 原始文本
+ * @param {number} [maxLength=2] - 目标长度
+ * @param {string} [fillString='0'] - 填充字符
+ * @returns {string}
+ */
 function padEnd(str, maxLength = 2, fillString = '0') {
     return (str + "").padEnd(maxLength, fillString);
 }
 
+/**
+ * 日期格式化工具
+ * @param {Date} d - 日期对象
+ * @param {string} [formatStr] - 格式化模板
+ * @param {boolean} [is30Hours=false] - 是否采用 30 小时制
+ * @returns {string}
+ */
 function dateFormat(d, formatStr, is30Hours = false) {
     const dateCopy = new Date(d.getTime());
     const flag = is30Hours && dateCopy.getHours() < 6;
@@ -35,56 +61,96 @@ function dateFormat(d, formatStr, is30Hours = false) {
         .replace("ms", millSeconds);
 }
 
+/**
+ * 格式化日志输出专用时间字符串 (yyyy/MM/dd HH:mm:ss.ms)
+ * @param {Date|number} [d] - 时间对象或毫秒数
+ * @returns {string}
+ */
 function dateFormatForLog(d) {
     const date = d ? new Date(d) : new Date();
     return dateFormat(date, "yyyy/MM/dd HH:mm:ss.ms");
 }
 
+/**
+ * 将日志结构体转换为单行格式化字符串
+ * @param {{ timestamp: number, level: string, message: string, traceId?: string }} logEntry - 日志记录
+ * @param {number} [stdMaxLen=5] - 级别标签对齐宽度
+ * @returns {string}
+ */
 function convertLogMessage({ timestamp, level, message, traceId }, stdMaxLen = 5) {
-    let str = ''
-    const traceStr = traceId && traceId !== '-' ? ` [${traceId}]` : ''
+    let str = '';
+    const traceStr = traceId && traceId !== '-' ? ` [${traceId}]` : '';
     switch (level) {
         case 'origin':
-            str = message
+            str = message;
             break;
         case 'print':
-            str = `[${dateFormatForLog(timestamp)}] >${traceStr} ${message}`
+            str = `[${dateFormatForLog(timestamp)}] >${traceStr} ${message}`;
             break;
         case 'initialized':
-            str = `\r\n ------ Started: ${dateFormatForLog(timestamp)} ------ \r\n`
+            str = `\r\n ------ Started: ${dateFormatForLog(timestamp)} ------ \r\n`;
             break;
         case 'closed':
-            str = `\r\n ------ Stopped: ${dateFormatForLog(timestamp)} ------ \r\n`
+            str = `\r\n ------ Stopped: ${dateFormatForLog(timestamp)} ------ \r\n`;
             break;
         default:
-            str = `[${dateFormatForLog(timestamp)}] [${padEnd(String(level).toLocaleUpperCase(), stdMaxLen, ' ')}]${traceStr} ${message}`
+            str = `[${dateFormatForLog(timestamp)}] [${padEnd(String(level).toLocaleUpperCase(), stdMaxLen, ' ')}]${traceStr} ${message}`;
     }
-    return str
+    return str;
 }
 
+/**
+ * 后台日志工作线程核心处理器（负责批量异步写文件与日志滚动轮转）
+ */
 class AdvancedLogger {
-    #logFile
-    #maxFileSize
-    #maxFiles
-    #flushInterval
-    #buffer = []
-    #stats
-    #initialized = false
-    #flushTimer = null
-    #stdMaxLen = 5
+    /** @type {string} 目标日志文件绝对路径 */
+    #logFile;
 
+    /** @type {number} 单个日志文件最大字节数上限 (超出触发轮转) */
+    #maxFileSize;
+
+    /** @type {number} 最大历史轮转文件保留个数 */
+    #maxFiles;
+
+    /** @type {number} 缓冲区定期刷盘间隔时间 (毫秒) */
+    #flushInterval;
+
+    /** @type {Array<{ timestamp: number, level: string, message: string, traceId?: string }>} 内存日志待写缓冲区 */
+    #buffer = [];
+
+    /** @type {{ logsWritten: number, bytesWritten: number, rotations: number }} 运行统计计数器 */
+    #stats;
+
+    /** @type {boolean} 是否已初始化 */
+    #initialized = false;
+
+    /** @type {NodeJS.Timeout|null} 定时刷盘定时器 */
+    #flushTimer = null;
+
+    /** @type {number} 日志级别右填充宽度 */
+    #stdMaxLen = 5;
+
+    /**
+     * @param {Object} options - 初始化选项
+     * @param {string} options.basePath - 存储目录
+     * @param {string} options.fileName - 文件名
+     * @param {number} options.maxFileSize - 单文件最大大小
+     * @param {number} options.maxFiles - 最大历史文件数
+     * @param {number} options.flushInterval - 刷盘间隔 (毫秒)
+     * @param {number} options.stdMaxLen - 级别对齐宽度
+     */
     constructor(options) {
-        const { fileName, stdMaxLen } = options
-        this.#logFile = path.join(options.basePath, fileName)
-        this.#stdMaxLen = stdMaxLen
-        this.#maxFileSize = options.maxFileSize
-        this.#maxFiles = options.maxFiles
-        this.#flushInterval = options.flushInterval
+        const { fileName, stdMaxLen } = options;
+        this.#logFile = path.join(options.basePath, fileName);
+        this.#stdMaxLen = stdMaxLen;
+        this.#maxFileSize = options.maxFileSize;
+        this.#maxFiles = options.maxFiles;
+        this.#flushInterval = options.flushInterval;
         this.#stats = {
             logsWritten: 0,
             bytesWritten: 0,
             rotations: 0
-        }
+        };
         this.#initialize();
     }
 
@@ -93,6 +159,14 @@ class AdvancedLogger {
         this.#initialized = true;
     }
 
+    /**
+     * 写入一条日志到缓冲区，缓冲区超过 1000 条时自动触发即时刷盘
+     * @param {string} message - 日志内容
+     * @param {string} level - 日志级别
+     * @param {number} [timestamp] - 时间戳
+     * @param {string} [traceId='-'] - TraceId
+     * @returns {Promise<void>}
+     */
     async log(message, level, timestamp, traceId = '-') {
         const entry = {
             timestamp: timestamp ?? new Date().getTime(),
@@ -106,6 +180,10 @@ class AdvancedLogger {
         }
     }
 
+    /**
+     * 强制将内存缓冲区中的日志批量写入磁盘
+     * @returns {Promise<void>}
+     */
     async flush() {
         if (this.#buffer.length === 0) return;
         const entries = this.#buffer.splice(0, this.#buffer.length);
@@ -125,6 +203,10 @@ class AdvancedLogger {
         }
     }
 
+    /**
+     * 检查当前日志文件大小并在超限时触发文件滚动
+     * @returns {Promise<void>}
+     */
     async #checkAndRotate() {
         try {
             const stats = fs.statSync(this.#logFile);
@@ -135,6 +217,10 @@ class AdvancedLogger {
         }
     }
 
+    /**
+     * 滚动轮转日志文件 (如 logger.log -> logger.1.log -> logger.2.log)
+     * @returns {Promise<void>}
+     */
     async #rotateLog() {
         const ext = path.extname(this.#logFile);
         const base = path.basename(this.#logFile, ext);
@@ -158,8 +244,11 @@ class AdvancedLogger {
         });
     }
 
+    /**
+     * 启动定时刷盘定时器
+     */
     #startFlushTimer() {
-        this.#clearFlushTimer()
+        this.#clearFlushTimer();
         this.#flushTimer = setInterval(async () => {
             try {
                 await this.flush();
@@ -169,12 +258,19 @@ class AdvancedLogger {
         }, this.#flushInterval);
     }
 
+    /**
+     * 清除定时刷盘定时器
+     */
     #clearFlushTimer() {
         if (this.#flushTimer) {
             clearInterval(this.#flushTimer);
         }
     }
 
+    /**
+     * 获取 Worker 写入统计指标
+     * @returns {{ logsWritten: number, bytesWritten: number, rotations: number, bufferSize: number, initialized: boolean }}
+     */
     getStats() {
         return {
             ...this.#stats,
@@ -183,8 +279,12 @@ class AdvancedLogger {
         };
     }
 
+    /**
+     * 停止定时器并完成最后一次刷盘
+     * @returns {Promise<void>}
+     */
     async close() {
-        this.#clearFlushTimer()
+        this.#clearFlushTimer();
         await this.flush();
     }
 }

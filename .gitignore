@@ -1,10 +1,8 @@
 node_modules
-package-lock.json
 db/
 .idea
 /static/*
 log/
-.vscode
 test/*
 test*
 temporary/*
@@ -15,5 +13,4 @@ package-temp.json
 *.db-shm
 *.db-wal
 resource/application-dev.yaml
-jsconfig.json
 models/

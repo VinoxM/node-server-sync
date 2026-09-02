@@ -3,11 +3,15 @@ import axios from 'axios';
 // Sakura 接口服务地址 (K3s 集群内 Service 域名)
 const SAKURA_API_URL = 'http://sakura-service.llama.svc.cluster.local/v1/chat/completions';
 
+/**
+ * 获取 Sakura 大模型翻译服务的 API URL
+ * @returns {string} 服务 API 地址
+ */
 function getSakuraApiUrl() {
     return __env.get("down-stream.sakura.url", SAKURA_API_URL);
 }
 
-// 配置参数
+// 翻译模型配置参数
 const CONFIG = {
     maxChunkChars: 800,      // 单个 Text Chunk 最大字符数 (建议 500~1000 字)
     concurrency: 2,          // 并发请求数 (取决于服务器 CPU/GPU 负载能力)
@@ -18,8 +22,8 @@ const CONFIG = {
 /**
  * 文本切分器：将长文本按段落/句子切分为安全大小的 Chunk 数组
  * @param {string} text - 原始日文长文本
- * @param {number} maxLen - 单个 Chunk 最大字数
- * @returns {string[]}
+ * @param {number} [maxLen=CONFIG.maxChunkChars] - 单个 Chunk 最大字数
+ * @returns {string[]} 切分后的文本块数组
  */
 function splitTextIntoChunks(text, maxLen = CONFIG.maxChunkChars) {
     // 1. 优先按双换行或单换行（段落）初步切分
@@ -63,9 +67,9 @@ function splitTextIntoChunks(text, maxLen = CONFIG.maxChunkChars) {
 }
 
 /**
- * 单块文本翻译 API 调用
+ * 单块文本翻译 API 调用（调用下游 Sakura LLM 接口）
  * @param {string} chunk - 切分后的短文本
- * @returns {Promise<string>}
+ * @returns {Promise<string>} 翻译后的中文文本
  */
 async function translateChunk(chunk) {
     try {
@@ -93,7 +97,12 @@ async function translateChunk(chunk) {
 }
 
 /**
- * 带有并发控制的异步任务池
+ * 带有并发控制的异步任务池映射
+ * @template T, R
+ * @param {T[]} items - 待处理项数组
+ * @param {number} limit - 最大并发数量
+ * @param {(item: T, index: number) => Promise<R>} fn - 异步映射处理函数
+ * @returns {Promise<R[]>} 处理结果数组
  */
 async function mapConcurrent(items, limit, fn) {
     const results = new Array(items.length);
@@ -112,11 +121,11 @@ async function mapConcurrent(items, limit, fn) {
 }
 
 /**
- * 自动切分并批量翻译长文本主函数
+ * 自动切分并批量并发翻译日文长文本为中文（基于 Sakura 大语言模型）
  * @param {string} fullText - 待翻译的日文长文本
- * @returns {Promise<string>} - 拼接完成的中文文本
+ * @returns {Promise<string>} 拼接完成的中文文本
  */
-const translateJaToZh = async (fullText) => {
+export const translateJaToZh = async (fullText) => {
     if (!fullText || !fullText.trim()) return '';
     const chunks = splitTextIntoChunks(fullText);
     __log.debug(`[Sakura] Original text split into ${chunks.length} chunks for concurrent translation...`);

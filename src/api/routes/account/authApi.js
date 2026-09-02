@@ -1,15 +1,16 @@
-import apiMethodConst from '../../../common/constants/apiMethodConst.js';
-import { checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
-import { decryptionBodyKeys } from '../../../common/utils/preHandleUtil.js';
-import { getRequestTokenHash } from '../../../common/utils/requestUtil.js';
-import { registerAccount, resetPassword, userLogin, userLogout } from '../../../modules/account/service/accountService.js';
-import { decodeAuthorization, verifyClient } from '../../../modules/authorization/authorizationService.js';
+import { defineRoutes } from '#utils/defineUtil.js';
+import apiMethodConst from '#constants/apiMethodConst.js';
+import { checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
+import { decryptionBodyKeys } from '#utils/preHandleUtil.js';
+import { getRequestTokenHash } from '#utils/requestUtil.js';
+import { registerAccount, resetPassword, userLogin, userLogout } from '#modules/account/service/accountService.js';
+import { decodeAuthorization, verifyClient } from '#modules/authorization/authorizationService.js';
 
 const { POST } = apiMethodConst
 
 const needSecret = () => 'mAou5820.authorization'
 
-export default {
+export default defineRoutes({
     basePath: "/auth",
     "/register": {
         method: POST,
@@ -50,4 +51,4 @@ export default {
         needAuth: true,
         callback: req => decodeAuthorization(req).then(userInfo => userInfo?.uname)
     }
-}
+})

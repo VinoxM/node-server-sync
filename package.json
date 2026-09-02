@@ -3,6 +3,11 @@
     "version": "1.0.0",
     "main": "index.js",
     "type": "module",
+    "imports": {
+        "#*": "./src/*",
+        "#utils/*": "./src/common/utils/*",
+        "#constants/*": "./src/common/constants/*"
+    },
     "scripts": {
         "dev": "node ./src/application.js --active=main,sqlite,dev",
         "temp": "node ./temporary/application.js --active=main,sqlite,dev --temporary",
