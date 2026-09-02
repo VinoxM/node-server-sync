@@ -1,14 +1,28 @@
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import kuroRep from '../repository/kuroRep.js';
-import { generateFixedString, generateUUID } from '../../../common/utils/cryptoUtil.js';
-import { AsyncExecutor } from '../../../core/infra/asyncExecutor.js';
+import { generateFixedString, generateUUID } from "#utils/cryptoUtil.js";
+import { AsyncExecutor } from "#core/infra/asyncExecutor.js";
 
+/**
+ * 保存或更新库洛账户信息与签到游戏配置
+ * @param {Object} accountData
+ * @param {string|number} accountData.uid - 库洛用户 ID
+ * @param {string} accountData.token - 库洛 Token
+ * @param {string} [accountData.signGames=''] - 签到游戏 ID 列表字符串
+ * @returns {Promise<void>}
+ */
 async function saveKuroAccount({ uid, token, signGames = '' }) {
     await kuroRep.insertOrUpdateAccount({ uid, token });
     await kuroRep.insertOrUpdateSignGames({ uid, games: signGames });
 }
 
+/**
+ * 构造库洛社区活动/WebView 专用通用请求头
+ * @param {string|number} uid - 库洛用户 ID
+ * @param {string} token - 用户 Token
+ * @returns {Record<string, string>}
+ */
 const generateCommonHeaders = (uid, token) => {
     const kuroUid = uid + '';
     return {
@@ -30,9 +44,16 @@ const generateCommonHeaders = (uid, token) => {
         'accept-encoding': 'gzip, deflate, br, zstd',
         'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
         priority: 'u=1, i'
-    }
-}
+    };
+};
 
+/**
+ * 构造库洛官方原生 App 客户端 API 请求头
+ * @param {string|number} uid - 库洛用户 ID
+ * @param {string|null} [token] - 可选的 Token
+ * @param {boolean} [needUUID=false] - 是否注入唯一 distinct_id
+ * @returns {Record<string, string>}
+ */
 const generateDefaultHeaders = (uid, token, needUUID) => {
     const kuroUid = uid + '';
     let headers = {
@@ -49,16 +70,25 @@ const generateDefaultHeaders = (uid, token, needUUID) => {
         "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
         "accept-encoding": "gzip",
         "User-Agent": "okhttp/3.11.0"
-    }
+    };
     if (token) {
-        headers = { ...headers, token, Cookie: `user_token=${token}` }
+        headers = { ...headers, token, Cookie: `user_token=${token}` };
     }
     if (needUUID) {
-        headers = { ...headers, distinct_id: generateUUID(kuroUid) }
+        headers = { ...headers, distinct_id: generateUUID(kuroUid) };
     }
     return headers;
-}
+};
 
+/**
+ * 库洛手机短信验证码 SDK 登录
+ * @param {Object} loginParam
+ * @param {string|number} loginParam.uid - 账户 UID
+ * @param {string} loginParam.mobile - 手机号
+ * @param {string} loginParam.code - 短信验证码
+ * @param {string} [loginParam.signGames='3'] - 默认签到游戏 ID (默认 '3' 鸣潮)
+ * @returns {Promise<void>}
+ */
 const kuroSDKLogin = ({ uid, mobile, code, signGames = '3' }) => {
     const url = "https://api.kurobbs.com/user/sdkLogin";
     const headers = generateDefaultHeaders(uid, null, true);
@@ -67,7 +97,7 @@ const kuroSDKLogin = ({ uid, mobile, code, signGames = '3' }) => {
         devCode: headers.devCode,
         gameList: "",
         mobile
-    }
+    };
     return new Promise((resolve, reject) => {
         axios.post(url, data, { headers }).then(({ data: res }) => {
             if (res.code === 200) {
@@ -77,16 +107,22 @@ const kuroSDKLogin = ({ uid, mobile, code, signGames = '3' }) => {
                 reject({ msg: res.msg });
             }
         }).catch(reject);
-    })
-}
+    });
+};
 
+/**
+ * 库洛 Token 凭证免密登录绑定
+ * @param {string} token - 库洛 JWT Token
+ * @param {string} [signGames='3'] - 默认签到游戏 ID
+ * @returns {Promise<void>}
+ */
 const kuroTokenLogin = (token, signGames = '3') => {
     let uid;
     try {
         const { userId } = jwtDecode(token);
         uid = userId;
     } catch (error) {
-        return Promise.reject({ msg: 'token decode failed.' })
+        return Promise.reject({ msg: 'token decode failed.' });
     }
     const url = "https://api.kurobbs.com/user/mineV2";
     const headers = generateDefaultHeaders(uid, token, true);
@@ -99,13 +135,24 @@ const kuroTokenLogin = (token, signGames = '3') => {
                 reject({ msg: res.msg });
             }
         }).catch(reject);
-    })
-}
+    });
+};
 
+/**
+ * 退出登录并删除指定 UID 的库洛凭据
+ * @param {string|number} uid - 库洛用户 ID
+ * @returns {Promise<null>}
+ */
 const kuroLogout = (uid) => {
     return kuroRep.deleteAccountByUid(uid).then(() => null);
-}
+};
 
+/**
+ * 更新指定用户的自动签到游戏配置
+ * @param {string|number} uid - 库洛用户 ID
+ * @param {string} signGames - 游戏 ID 列表字符串 (如 '3,2')
+ * @returns {Promise<null>}
+ */
 const kuroSignGameUpdate = async (uid, signGames) => {
     const exists = await kuroRep.selectTokenByUid(uid);
     if (exists) {
@@ -113,8 +160,15 @@ const kuroSignGameUpdate = async (uid, signGames) => {
     } else {
         return Promise.reject({ msg: `not login.` });
     }
-}
+};
 
+/**
+ * 获取用户在指定游戏下的角色与服务器列表
+ * @param {string|number} uid - 库洛用户 ID
+ * @param {string} token - 库洛 Token
+ * @param {number|string} [gameId=3] - 游戏 ID (3 表示鸣潮)
+ * @returns {Promise<{ serverId: string, roleId: string }>} 角色信息
+ */
 const kuroGameRoleList = (uid, token, gameId = 3) => {
     const url = "https://api.kurobbs.com/user/role/findRoleList";
     const headers = generateDefaultHeaders(uid, token, false);
@@ -123,7 +177,7 @@ const kuroGameRoleList = (uid, token, gameId = 3) => {
         axios.post(url, data, { headers }).then(({ data: res }) => {
             if (res.code === 200) {
                 if (res.data.length > 0) {
-                    resolve({ serverId: res.data[0].serverId, roleId: res.data[0].roleId })
+                    resolve({ serverId: res.data[0].serverId, roleId: res.data[0].roleId });
                 } else {
                     reject({ msg: "未找到可签到角色" });
                 }
@@ -131,9 +185,16 @@ const kuroGameRoleList = (uid, token, gameId = 3) => {
                 reject({ msg: res.msg });
             }
         }).catch(reject);
-    })
-}
+    });
+};
 
+/**
+ * 为单个用户在指定库洛游戏中执行每日签到
+ * @param {string|number} uid - 库洛用户 ID
+ * @param {string} [token_] - 可选的 Token (缺省自动从数据库读取)
+ * @param {number|string} [gameId=3] - 游戏 ID (3 表示鸣潮)
+ * @returns {Promise<void>}
+ */
 const kuroGameSign = (uid, token_, gameId = 3) => {
     return new Promise(async (resolve, reject) => {
         let token = token_;
@@ -144,7 +205,7 @@ const kuroGameSign = (uid, token_, gameId = 3) => {
                 __log.info(e.message);
             }
         }
-        if (!token) reject({ msg: `account token not found: ${uid}` })
+        if (!token) reject({ msg: `account token not found: ${uid}` });
         kuroGameRoleList(uid, token, gameId).then(({ serverId, roleId }) => {
             const url = "https://api.kurobbs.com/encourage/signIn/v2";
             const headers = generateCommonHeaders(uid, token);
@@ -154,7 +215,7 @@ const kuroGameSign = (uid, token_, gameId = 3) => {
                 roleId,
                 userId: uid,
                 reqMonth: String(new Date().getMonth() + 1).padStart(2, '0')
-            }
+            };
             axios.post(url, data, { headers }).then(({ data: res }) => {
                 if (res.code === 200) {
                     resolve();
@@ -163,15 +224,19 @@ const kuroGameSign = (uid, token_, gameId = 3) => {
                 }
             }).catch(reject);
         }).catch(reject);
-    })
-}
+    });
+};
 
+/**
+ * 批量为所有已绑定的库洛账户执行全部游戏自动签到 (利用 AsyncExecutor 并发控制)
+ * @returns {Promise<{ handleCount: number, errorCount: number, reasons: string[] }>} 签到统计汇总结果
+ */
 const kuroGameSignAll = () => {
     return new Promise(async (resolve, reject) => {
         let handleCount = 0;
         let errorCount = 0;
         const reasons = [];
-        let accounts = { rows: 0 };
+        let accounts = { rows: 0, data: [] };
         try {
             accounts = await kuroRep.selectAllSignAccount();
         } catch (e) {
@@ -187,7 +252,7 @@ const kuroGameSignAll = () => {
         Array.from(data).forEach(obj => {
             const { gameIds, ...newObj } = obj;
             gameIds && (gameIds + '').split(',').forEach(gameId => arr.push({ gameId: gameId.trim(), ...newObj }));
-        })
+        });
         const executor = new AsyncExecutor(completed, reject);
         arr.forEach(obj => {
             const { uid, token, gameId } = obj;
@@ -202,12 +267,12 @@ const kuroGameSignAll = () => {
                     errorCount++;
                     reasons.push(`${uid} => ${e.msg ?? e.message}`);
                     resolve_();
-                })
-            })
-        })
+                });
+            });
+        });
         executor.start();
-    })
-}
+    });
+};
 
 export {
     kuroSDKLogin,
@@ -216,4 +281,4 @@ export {
     kuroSignGameUpdate,
     kuroGameSign,
     kuroGameSignAll
-}
+};
