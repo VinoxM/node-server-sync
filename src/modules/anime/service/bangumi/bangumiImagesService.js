@@ -1,45 +1,72 @@
-import { getMinioClient } from "../../../../core/instance/minioClient.js";
+import { getMinioClient } from "#core/instance/minioClient.js";
 import { downloadFileToMinio } from "../../../ssh/sshExecutorService.js";
 import { BANGUMI_IMAGES_STATUS, SUBJECT_MINIO_BUCKET } from "../../constants/subjectConstant.js";
 import bangumiImagesRep from "../../repository/bangumiImagesRep.js";
 import path from 'path';
 
+/**
+ * 生成声优头像相对存储路径
+ * @param {number|string} actorId - 声优 ID
+ * @returns {string}
+ */
 export function generateActorImageLink(actorId) {
-    return `/actor/${actorId}`
+    return `/actor/${actorId}`;
 }
 
+/**
+ * 生成角色立绘相对存储路径
+ * @param {number|string} subjectId - 番剧 ID
+ * @param {number|string} characterId - 角色 ID
+ * @returns {string}
+ */
 export function generateCharacterImageLink(subjectId, characterId) {
-    return `/subject/${subjectId}/character/${characterId}`
+    return `/subject/${subjectId}/character/${characterId}`;
 }
 
+/**
+ * 生成番剧封面图相对存储路径
+ * @param {number|string} subjectId - 番剧 ID
+ * @returns {string}
+ */
 export function generateSubjectCoverLink(subjectId) {
-    return `/subject/${subjectId}/cover`
+    return `/subject/${subjectId}/cover`;
 }
 
 function tryImageType(image) {
     try {
-        return path.extname(new URL(image).pathname)
+        return path.extname(new URL(image).pathname);
     } catch {
-        return '.jpg'
+        return '.jpg';
     }
 }
 
+/**
+ * 批量注册待持久化到 MinIO 的图片链接
+ * @param {Array<{ image: string, link: string }>} images - 图片原始 URL 与相对链接列表
+ * @returns {Promise<ExecResult|{ rows: number }>}
+ */
 export async function putImageStorageLinkBatch(images) {
     const dataList = images.map(({ image, link }) => ({
         link,
         minioLink: generateImageBucketLink(image, link),
         originUrl: image
-    }))
+    }));
     if (dataList.length > 0) {
         return bangumiImagesRep.insertBatch(dataList);
     }
-    return { rows: 0 }
+    return { rows: 0 };
 }
 
 function generateImageBucketLink(image, link) {
     return '/' + SUBJECT_MINIO_BUCKET + link + tryImageType(image);
 }
 
+/**
+ * 注册单条图片待同步链接
+ * @param {string} image - 原始网络图片 URL
+ * @param {string} link - 相对存储路径
+ * @returns {Promise<string>} 相对路径
+ */
 export async function putImageStorageLink(image, link) {
     if (__isAnyBlank(image, link)) return image;
     const bucketLink = generateImageBucketLink(image, link);
@@ -47,13 +74,18 @@ export async function putImageStorageLink(image, link) {
     return link;
 }
 
-const PUSH_IMAGE_SCHEDULE_LIMIT = 500
+const PUSH_IMAGE_SCHEDULE_LIMIT = 500;
+
+/**
+ * 定时任务：扫描待同步 (PREPARED) 的 Bangumi 图片并下载转存至 MinIO
+ * @returns {Promise<void>}
+ */
 export async function pushImageToStorageSchedule() {
     const { rows, data } = await bangumiImagesRep.selectPreparedImagesWithLimit(PUSH_IMAGE_SCHEDULE_LIMIT);
     if (rows === 0) return;
     __log.info(`[Bangumi Images] Found need to synchronize images:`, rows);
-    const completeIds = new Set()
-    const failedIds = new Set()
+    const completeIds = new Set();
+    const failedIds = new Set();
     for (const { id, originUrl, minioLink } of data) {
         const pending = await bangumiImagesRep.updatePreparedImagePending(id);
         if (pending.rows === 0) continue;
@@ -79,8 +111,8 @@ async function pushImageToStorage(image, minioLink) {
         return true;
     } catch (err) {
         if (err.code === 'NotFound' || err.statusCode === 404) {
-            const code = await downloadFileToMinio(image, suitableMinioLink, { useProxy: true })
-            return code === 0
+            const code = await downloadFileToMinio(image, suitableMinioLink, { useProxy: true });
+            return code === 0;
         }
         __log.error(`[Bangumi Images] Get minio object stat failed. MinioLink: ${suitableMinioLink}, Cause:`, err.message || err);
     }
@@ -97,11 +129,11 @@ async function getBangumiImages(link, res) {
         const stat = await client.getObjectStat(minioLink);
         res.setHeader('Content-Type', stat.metaData['content-type'] || 'image/jpeg');
         res.setHeader('Content-Length', stat.size);
-        res.setHeader('Cache-Control', 'public, max-age=2592000')
+        res.setHeader('Cache-Control', 'public, max-age=2592000');
         const dataStream = await client.getObject(minioLink);
         dataStream.pipe(res);
         dataStream.on('error', (err) => {
-            __log.error(`[Bangumi Image] Read minio object stream failed. Cause:`, err.message || err)
+            __log.error(`[Bangumi Image] Read minio object stream failed. Cause:`, err.message || err);
             if (!res.headersSent) {
                 res.status(500).send('Server error.');
             }
@@ -111,22 +143,41 @@ async function getBangumiImages(link, res) {
         if (err.code === 'NotFound' || err.statusCode === 404) {
             __throwMessage('Not found.', -404, 404);
         }
-        __log.error(`[Bangumi Image] Get minio object failed. Cause:`, err.message || err)
+        __log.error(`[Bangumi Image] Get minio object failed. Cause:`, err.message || err);
         __throwMessage('Not found.', -404, 404);
     }
 }
 
+/**
+ * 流式响应声优头像图片
+ * @param {number|string} actorId - 声优 ID
+ * @param {ApiResponse} res - HTTP 响应流
+ * @returns {Promise<void>}
+ */
 export async function getActorImage(actorId, res) {
     const link = generateActorImageLink(actorId);
-    await getBangumiImages(link, res)
+    await getBangumiImages(link, res);
 }
 
+/**
+ * 流式响应番剧封面图片
+ * @param {number|string} subjectId - 番剧 ID
+ * @param {ApiResponse} res - HTTP 响应流
+ * @returns {Promise<void>}
+ */
 export async function getSubjectCover(subjectId, res) {
     const link = generateSubjectCoverLink(subjectId);
-    await getBangumiImages(link, res)
+    await getBangumiImages(link, res);
 }
 
+/**
+ * 流式响应番剧角色立绘图片
+ * @param {number|string} subjectId - 番剧 ID
+ * @param {number|string} characterId - 角色 ID
+ * @param {ApiResponse} res - HTTP 响应流
+ * @returns {Promise<void>}
+ */
 export async function getSubjectCharacterImage(subjectId, characterId, res) {
     const link = generateCharacterImageLink(subjectId, characterId);
-    await getBangumiImages(link, res)
+    await getBangumiImages(link, res);
 }

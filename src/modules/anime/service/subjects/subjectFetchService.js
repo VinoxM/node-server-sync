@@ -1,15 +1,15 @@
 import { bangumiApi } from "../bangumi/bangumiApiService.js";
 
 /**
- * Fetches subjects from Bangumi Search API within an air date range.
+ * 根据指定放送日期范围循环分页拉取 Bangumi 动画条目列表
  * 
- * @param {[string, string]} airDateRange - Array of [startDate, endDate] (e.g., ['2026-07-01', '2026-10-01'])
- * @param {object} [options] - Optional configurations
- * @param {number} [options.limit=50] - Number of subjects per request
- * @param {string} [options.userAgent] - Custom User-Agent header
+ * @param {[string, string]} airDateRange - 起止日期范围元组（如 `['2026-07-01', '2026-10-01']`）
+ * @param {object} [options] - 配置选项
+ * @param {number} [options.limit=50] - 单次拉取条目数
+ * @param {string} [options.userAgent] - 自定义 User-Agent
  * @param {string} [options.token] - Bangumi Access Token
- * @param {number} [options.delayMs=500] - Delay in milliseconds between page requests to avoid rate limits
- * @returns {Promise<Array<object>>} Array of fetched subjects
+ * @param {number} [options.delayMs=500] - 请求间隔延时 (毫秒)
+ * @returns {Promise<Array<object>>} 拉取到的原始条目列表
  */
 export async function fetchSubjectsByAirDate(airDateRange, options = {}) {
     if (!Array.isArray(airDateRange) || airDateRange.length !== 2) {

@@ -1,5 +1,9 @@
 import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE } from "../constants/subjectConstant.js";
 
+/**
+ * subjects 表字段与实体属性映射配置列表
+ * @type {Array<{ property: string, column: string, defaultValue?: () => any }>}
+ */
 export const SUBJECT_RESULT_MAP = [
     { property: 'id', column: 'id' },
     { property: 'bangumiId', column: 'bangumi_id' },
@@ -20,8 +24,13 @@ export const SUBJECT_RESULT_MAP = [
     { property: 'nsfw', column: 'nsfw', defaultValue: () => SUBJECT_NSFW_VALUE.NO },
     { property: 'updateTime', column: 'update_time', defaultValue: () => new Date() },
     { property: 'createTime', column: 'create_time', defaultValue: () => new Date() }
-]
+];
 
+/**
+ * 将实体属性名称列表转换为数据库物理列名列表
+ * @param {string[]} [properties=[]] - 属性名数组 (如 ['nameCN', 'summary'])
+ * @returns {string[]} 数据库物理列名数组 (如 ['name_cn', 'summary'])
+ */
 export function convertPropertiesToCloumns(properties = []) {
     const result = [];
     for (const property of properties) {

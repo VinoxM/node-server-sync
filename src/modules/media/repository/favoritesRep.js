@@ -57,7 +57,7 @@ export default {
     /**
      * 删除指定创作者的所有收藏关联记录
      * @param {number} authorId - 创作者 ID
-     * @param {any} [transactionDB] - 可选的事务连接
+     * @param {TransactionDB} [transactionDB] - 可选的事务连接
      * @returns {Promise<ExecResult>}
      */
     deleteByAuthorId: (authorId, transactionDB) => {

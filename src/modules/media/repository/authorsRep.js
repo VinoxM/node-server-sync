@@ -137,7 +137,7 @@ export default {
     /**
      * 删除指定的创作者并清理其内存缓存
      * @param {number} authorId - 创作者 ID
-     * @param {any} [transactionDB] - 可选的事务连接
+     * @param {TransactionDB} [transactionDB] - 可选的事务连接
      * @returns {Promise<{ rows: number }>}
      */
     deleteOne: async (authorId, transactionDB) => {
@@ -160,7 +160,7 @@ export default {
     /**
      * 查询指定分类下没有任何视频关联的空创作者 ID 列表
      * @param {number} categoryId - 分类 ID
-     * @param {any} [transactionDB] - 事务连接
+     * @param {TransactionDB} [transactionDB] - 可选的事务连接
      * @returns {Promise<QueryResult<{ id: number }>>}
      */
     selectEmptyVideoAuthors: (categoryId, transactionDB) => {

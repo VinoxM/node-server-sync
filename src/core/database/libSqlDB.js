@@ -512,7 +512,7 @@ export class SqliteDB {
 }
 
 /**
- * 事务操作客户端（在独立事务生命周期内运行）
+ * 事务操作客户端（在独立事务生命周期内运行，仅供内部实例化）
  */
 class TransactionLibSqlDB {
     #client;

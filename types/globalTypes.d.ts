@@ -5,6 +5,86 @@ import type { ContextSubscribe } from "../src/core/context/subscribe.js";
 export { };
 
 declare global {
+    /**
+     * SQLite / LibSQL 事务操作客户端接口定义（在事务内部生命周期可用，禁止外部 new 实例化）
+     */
+    interface TransactionLibSqlDB {
+        /**
+         * 事务内插入数据记录
+         * @param sql - 插入 SQL 语句
+         * @param params - 绑定参数
+         * @param options - 操作配置选项
+         */
+        insert(sql: string, params?: any[], options?: DbOptions): Promise<ExecResult>;
+
+        /**
+         * 事务内删除数据记录
+         * @param sql - 删除 SQL 语句
+         * @param params - 绑定参数
+         * @param options - 操作配置选项
+         */
+        delete(sql: string, params?: any[], options?: DbOptions): Promise<ExecResult>;
+
+        /**
+         * 事务内更新数据记录
+         * @param sql - 更新 SQL 语句
+         * @param params - 绑定参数
+         * @param options - 操作配置选项
+         */
+        update(sql: string, params?: any[], options?: DbOptions): Promise<ExecResult>;
+
+        /**
+         * 事务内查询多条记录
+         * @param sql - 查询 SQL 语句
+         * @param params - 绑定参数
+         * @param options - 操作配置选项
+         */
+        selectAll<T = any>(sql: string, params?: any[], options?: DbOptions): Promise<QueryResult<T>>;
+
+        /**
+         * 事务内查询单条记录
+         * @param sql - 查询 SQL 语句
+         * @param params - 绑定参数
+         * @param options - 操作配置选项
+         */
+        selectOne<T = any>(sql: string, params?: any[], options?: DbOptions): Promise<T | null>;
+
+        /**
+         * 事务内执行多语句原始 SQL 脚本
+         * @param sql - 多语句 SQL 文本
+         */
+        execute(sql: string): Promise<void>;
+
+        /**
+         * 事务内执行向量相似度检索
+         * @param options - 向量检索参数
+         */
+        vectorSearch<T = any>(options: {
+            tableName: string;
+            embedColumn: string;
+            embedStr: string;
+            similarity?: number;
+            limit?: number;
+            selectColumns?: string[];
+            extraWhere?: string;
+            whereParams?: any[];
+            indexName?: string;
+            vectorFunc?: string;
+            options?: DbOptions;
+        }): Promise<QueryResult<T>>;
+
+        /**
+         * 开启并管理事务生命周期
+         * @param callback - 事务内部执行回调
+         */
+        beginTransaction<R = any>(callback: (tx: TransactionLibSqlDB) => Promise<R>): Promise<R>;
+    }
+
+    /**
+     * 事务操作客户端类型别名（与 TransactionLibSqlDB 等价）
+     */
+    type TransactionDB = TransactionLibSqlDB;
+
     interface ProcessArgs {
         [key: string]: any;
         /** 判断是否存在指定命令行参数 */

@@ -1,6 +1,6 @@
-import { getCurSeason } from "../../../../common/utils/dateUtil.js";
-import { filterUserRssFavoritesWithUid } from "../../../account/service/rssFavoritesService.js";
-import rssEpisodeRep from "../../../rss/repository/rssEpisodeRep.js";
+import { getCurSeason } from "#utils/dateUtil.js";
+import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
+import rssEpisodeRep from "../../repository/rssEpisodeRep.js";
 import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "../../constants/subjectConstant.js";
 import rssResultRep from "../../repository/rssResultRep.js";
 import rssTrackerRep from "../../repository/rssTrackerRep.js";
@@ -14,9 +14,9 @@ function handleSearch(data) {
     }
     return list.map(obj => {
         const { startTime } = obj;
-        let date = new Date(startTime)
+        let date = new Date(startTime);
         if (startTime === 0 || startTime === null || startTime === undefined) {
-            date = new Date(obj.season + '-01')
+            date = new Date(obj.season + '-01');
         }
         let startDate = `${date.getFullYear()}${(date.getMonth() + 1 + '').padStart(2, '0')}${(date.getDate() + '').padStart(2, '0')}`;
         let hours = date.getHours();
@@ -43,16 +43,26 @@ function handleSearch(data) {
             R: obj.count, // epCount
             G: obj.goon, // goon
             A: obj.totalEpisodes,
-        }
-    })
+        };
+    });
 }
 
+/**
+ * 获取当前季度的全量番剧放送日历数据
+ * @returns {Promise<Array<import('@types/animeTypes.d.ts').AnimeCalendarItem>>}
+ */
 export async function getAnimeCalendar() {
     const season = getCurSeason();
     const { rows, data } = await subjectsRep.selectVisibleBySeason(season.join('-'));
     return rows > 0 ? handleSearch(data) : [];
 }
 
+/**
+ * 根据番剧 ID 获取前台展示用的完整番剧详情（含别名、Staff、角色声优、RSS 抓取结果与已入库剧集）
+ * @param {number} id - 番剧 ID
+ * @param {UserInfo} [userInfo] - 当前登录用户信息 (用于加载已入库剧集)
+ * @returns {Promise<any>}
+ */
 export async function getAnimeInformation(id, userInfo) {
     const subject = await subjectsRep.selectOneByIdForView(id);
     subject || __throwMessage('Anime not exists.');
@@ -83,18 +93,18 @@ export async function getAnimeInformation(id, userInfo) {
         fin: Boolean(fin),
         results,
         episodes
-    }
+    };
 }
 
 async function getRssResultsByRssSubscribeId(rssSubsId) {
-    const results = []
+    const results = [];
     const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId);
     for (const item of data) {
         const { tracker, ...result } = item;
-        const trackers = await rssTrackerRep.selectHostsByIds((item.tracker ?? '').split(','))
+        const trackers = await rssTrackerRep.selectHostsByIds((item.tracker ?? '').split(','));
         const torrent = [item.torrent, trackers.join('&tr=')].join('&tr=');
         result.torrent = 'magnet:?xt=urn:btih:' + torrent;
-        results.push(result)
+        results.push(result);
     }
     return results;
 }
@@ -104,11 +114,11 @@ async function getRssEpisodesByRssSubscribeId(rssSubsId) {
 }
 
 /**
- * 
- * @param {UserInfo} userInfo 
- * @returns 
+ * 过滤当前用户收藏的 RSS 订阅列表
+ * @param {UserInfo} userInfo - 用户信息
+ * @returns {Promise<any[]>}
  */
 async function getUserFavoritesSubscriptions(userInfo) {
     if (!userInfo) return [];
-    filterUserRssFavoritesWithUid(userInfo.id)
+    return filterUserRssFavoritesWithUid(userInfo.id);
 }

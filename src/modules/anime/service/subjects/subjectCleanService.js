@@ -1,4 +1,4 @@
-import { GetterContextSubscribe } from "../../../../core/context/subscribe.js";
+import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { MATCHERS, STAFF_TAG_CLEAN } from "../../constants/subjectTagConstant.js";
 import { bangumiApi } from "../bangumi/bangumiApiService.js";
 import { generateActorImageLink, generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "../bangumi/bangumiImagesService.js";
@@ -60,45 +60,45 @@ function getSeasonForSubject(subject) {
     return tagSeason || dateSeason || null;
 }
 
-const NAME_ALIAS_INCLUDES = ['别名']
+const NAME_ALIAS_INCLUDES = ['别名'];
 function getAliasFromSubjectInfoBox(infoBox = []) {
-    const results = []
-    if (!infoBox || !Array.isArray(infoBox)) return results
+    const results = [];
+    if (!infoBox || !Array.isArray(infoBox)) return results;
     for (const info of infoBox) {
         if (NAME_ALIAS_INCLUDES.includes(info.key)) {
             if (Array.isArray(info.value)) {
-                results.push(...info.value.map(o => o.v ?? o))
+                results.push(...info.value.map(o => o.v ?? o));
             } else {
-                results.push(info.value)
+                results.push(info.value);
             }
         }
-    }
-    return results
-}
-
-const staffFiltersGetter = new GetterContextSubscribe('SubjectStaffFilter', () => {
-    const filters = []
-    STAFF_TAG_CLEAN.forEach((v, i) => filters.push({ matchers: v.matchers, label: v.label, type: v.type || 'matchFirst' }))
-    return filters
-})
-
-function getStaffFromSubjectInfoBox(infoBox = []) {
-    const results = []
-    if (!infoBox || !Array.isArray(infoBox)) return results
-    const filters = staffFiltersGetter.getValue() || []
-    for (const { matchers, label, type } of filters) {
-        if (!matchers || !Array.isArray(matchers)) continue;
-        const matcherFunc = MATCHERS[type]
-        if (!matcherFunc || typeof matcherFunc !== 'function') continue;
-        const result = matcherFunc(infoBox, matchers, label)
-        result && results.push(result)
     }
     return results;
 }
 
-const SHORT_ANIME_INCLUDES = ['泡面', '泡面番']
+const staffFiltersGetter = new GetterContextSubscribe('SubjectStaffFilter', () => {
+    const filters = [];
+    STAFF_TAG_CLEAN.forEach((v) => filters.push({ matchers: v.matchers, label: v.label, type: v.type || 'matchFirst' }));
+    return filters;
+});
+
+function getStaffFromSubjectInfoBox(infoBox = []) {
+    const results = [];
+    if (!infoBox || !Array.isArray(infoBox)) return results;
+    const filters = staffFiltersGetter.getValue() || [];
+    for (const { matchers, label, type } of filters) {
+        if (!matchers || !Array.isArray(matchers)) continue;
+        const matcherFunc = MATCHERS[type];
+        if (!matcherFunc || typeof matcherFunc !== 'function') continue;
+        const result = matcherFunc(infoBox, matchers, label);
+        result && results.push(result);
+    }
+    return results;
+}
+
+const SHORT_ANIME_INCLUDES = ['泡面', '泡面番'];
 function getPlatformFromSubject(subject) {
-    const { platform, tags } = subject
+    const { platform, tags } = subject;
     if (tags.some(t => SHORT_ANIME_INCLUDES.includes(t.name)) && platform === 'TV') {
         return 'TV_Short';
     }
@@ -111,26 +111,25 @@ function ensureImageStorageLink(images, image, link) {
     return link;
 }
 
-const CHARACTERS_RELATION_INCLUDES = ['主角', '配角']
+const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
 async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
-    const results = []
-    const images = []
+    const results = [];
+    const images = [];
     const characters = await bangumiApi.getSubjectCharacters(subjectId);
     if (!characters || !Array.isArray(characters)) {
-        __log.warn(`[Bangumi Clean] Subject[${subjectId}] empty characters.`)
+        __log.warn(`[Bangumi Clean] Subject[${subjectId}] empty characters.`);
         return { results, images };
     }
-    __log.info(`[Bangumi Clean] Subject[${subjectId}] get ${characters.length} characters.`)
+    __log.info(`[Bangumi Clean] Subject[${subjectId}] get ${characters.length} characters.`);
     for (const character of characters) {
         if (!CHARACTERS_RELATION_INCLUDES.includes(character.relation)) continue;
         const summary = character.summary || '';
-        // const summaryCN = await translateJaToZh(summary)
-        const characterImage = ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id))
+        const characterImage = ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id));
         const characterActors = character.actors ?? [];
         const actors = [];
         for (const actor of characterActors) {
-            const actorImage = ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id))
-            actors.push({ name: actor.name, image: actorImage, id: actor.id })
+            const actorImage = ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id));
+            actors.push({ name: actor.name, image: actorImage, id: actor.id });
         }
         const result = {
             id: character.id,
@@ -139,13 +138,20 @@ async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
             summary,
             relation: character.relation || '',
             actors
-        }
+        };
         results.push(result);
-        await Promise.resolve(resolve => setTimeout(resolve, fetchDelay))
+        await Promise.resolve(resolve => setTimeout(resolve, fetchDelay));
     }
     return { results, images };
 }
 
+/**
+ * 清洗 Bangumi 原始 API 条目数据为标准数据库入库结构
+ * 包括计算所属季度、提取中文别名、解析制作人员 Staff、抓取主角配角与声优图片并入库图片转存表
+ * @param {Object} subject - Bangumi 原始条目对象
+ * @param {import('@types/animeTypes.d.ts').SubjectPullOptions} [options={}] - 配置选项
+ * @returns {Promise<import('@types/animeTypes.d.ts').CleanedSubject|undefined>}
+ */
 export async function cleanBangumiSubject(subject, options = {}) {
     if (!subject || !subject.id) return;
     const season = getSeasonForSubject(subject);
@@ -153,14 +159,13 @@ export async function cleanBangumiSubject(subject, options = {}) {
         __log.warn(`[Bangumi Clean] Subject[${subject.id}] cannot get season, skipped.`);
         return;
     }
-    const { fetchDelay, skipCharacter = false } = options
-    const infoBox = subject['infobox']
+    const { fetchDelay, skipCharacter = false } = options;
+    const infoBox = subject['infobox'];
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
     const platform = getPlatformFromSubject(subject);
-    // const summaryCN = await translateJaToZh(subject.summary);
-    const images = []
-    const characters = []
+    const images = [];
+    const characters = [];
     if (!skipCharacter) {
         const charactersResult = await getCharactersBySubjectId(subject.id, fetchDelay);
         images.push(...charactersResult.images);
@@ -177,12 +182,11 @@ export async function cleanBangumiSubject(subject, options = {}) {
         airDate: subject.date,
         season,
         summary: subject.summary,
-        // summaryCN,
         totalEpisodes: subject.total_episodes,
         cover,
         metaTags: JSON.stringify(subject.meta_tags ?? []),
         staff: JSON.stringify(staff),
         characters: JSON.stringify(characters),
         nsfw: Boolean(subject.nsfw) ? 1 : 0
-    }
+    };
 }
