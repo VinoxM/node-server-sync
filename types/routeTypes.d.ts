@@ -1,14 +1,21 @@
 import type { Request, Response } from "express";
 import type { UserInfo } from './authorizationTypes';
 
-export interface ApiRequest extends Request {
+/**
+ * API 统一请求对象（扩展自 Express.Request，包含 userInfo 鉴权载荷）
+ */
+interface ApiRequest extends Request {
   userInfo?: UserInfo;
   [key: string]: any;
 }
 
-export interface ApiResponse extends Response {
+/**
+ * API 统一响应对象（扩展自 Express.Response）
+ */
+interface ApiResponse extends Response {
   /** 是否已自定义管道处理过 */
-  __customPiped: boolean;
+  __customPiped?: boolean;
+  [key: string]: any;
 }
 
 export interface ApiRouteConfig {

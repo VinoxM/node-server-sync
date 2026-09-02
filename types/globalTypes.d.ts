@@ -2,7 +2,7 @@ import type { SqliteDB } from "../src/core/database/libSqlDB.js";
 import type { RedisClient } from "../src/core/database/redisDB.js";
 import type { ContextSubscribe } from "../src/core/context/subscribe.js";
 
-export {};
+export { };
 
 declare global {
     interface ProcessArgs {
