@@ -33,8 +33,8 @@ export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniq
  * 批量检查一组视频在指定分类下的黑白名单匹配状态与入库可行性
  * @param {Object} body - 请求载荷
  * @param {string} body.category - 分类名称
- * @param {Array<import('@types/mediaTypes.d.ts').MediaFilterCheckRule>} body.rules - 待校验规则列表
- * @returns {Promise<Array<import('@types/mediaTypes.d.ts').MediaFilterCheckResult>>}
+ * @param {Array<import('#types/mediaTypes.d.ts').MediaFilterCheckRule>} body.rules - 待校验规则列表
+ * @returns {Promise<Array<import('#types/mediaTypes.d.ts').MediaFilterCheckResult>>}
  */
 export async function checkVideoFilterRules(body) {
     const { category, rules } = body;

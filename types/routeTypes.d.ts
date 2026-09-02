@@ -20,13 +20,13 @@ interface ApiResponse extends Response {
 
 export interface ApiRouteConfig {
   /** HTTP 请求方法，如 GET / POST / ALL */
-  method?: string;
+  method: 'get' | 'post' | 'all';
   /** 接口前置参数/条件校验 */
   preCheck?: (req: ApiRequest) => any;
   /** 接口前置数据解密/预处理 */
   preHandle?: (req: ApiRequest) => any;
   /** 核心业务处理回调 */
-  callback?: (req: ApiRequest, res: ApiResponse) => any | Promise<any>;
+  callback: (req: ApiRequest, res: ApiResponse) => any | Promise<any>;
   /** 是否需要鉴权验证 */
   needAuth?: boolean;
   /** 请求通信签名/秘钥（支持固定值或动态函数） */

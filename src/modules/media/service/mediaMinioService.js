@@ -62,7 +62,7 @@ export function validateVideoStatusCanNotCreateMinio(status) {
 
 /**
  * 手动创建单个 MinIO 对象存储任务并触发上传/下载任务流
- * @param {import('@types/mediaTypes.d.ts').MediaMinioCreateOptions} minioObj - MinIO 对象参数
+ * @param {import('#types/mediaTypes.d.ts').MediaMinioCreateOptions} minioObj - MinIO 对象参数
  * @param {(complete: boolean) => any} [callback] - 上传完成后的回调函数
  * @param {boolean} [executeAsync=true] - 是否异步排队执行
  * @returns {Promise<number>} 1 成功，0 超时或失败

@@ -1,8 +1,8 @@
 import { getAria2Socket } from "#core/instance/aria2Socket.js";
 
 /**
- * @typedef {import('@types/downloadTypes.d.ts').Aria2TaskOption} Aria2TaskOption
- * @typedef {import('@types/downloadTypes.d.ts').Aria2TaskStatus} Aria2TaskStatus
+ * @typedef {import('#types/downloadTypes.d.ts').Aria2TaskOption} Aria2TaskOption
+ * @typedef {import('#types/downloadTypes.d.ts').Aria2TaskStatus} Aria2TaskStatus
  */
 
 /**

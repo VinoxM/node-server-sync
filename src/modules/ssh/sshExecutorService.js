@@ -2,13 +2,13 @@ import { getSSHExecutor } from "#core/instance/sshExecutor.js";
 import sshExecutorConst from "./constants/sshExecutorConst.js";
 
 /**
- * @typedef {import('@types/sshTypes.d.ts').ISSHExecutor} ISSHExecutor
- * @typedef {import('@types/sshTypes.d.ts').SshExecutorOptions} SshExecutorOptions
- * @typedef {import('@types/sshTypes.d.ts').ExtractSubtitleItem} ExtractSubtitleItem
- * @typedef {import('@types/sshTypes.d.ts').ExtractFontItem} ExtractFontItem
- * @typedef {import('@types/sshTypes.d.ts').SshExtractResult<ExtractSubtitleItem>} SshSubtitleExtractResult
- * @typedef {import('@types/sshTypes.d.ts').SshExtractResult<ExtractFontItem>} SshFontExtractResult
- * @typedef {import('@types/sshTypes.d.ts').SshScriptDefinition} SshScriptDefinition
+ * @typedef {import('#types/sshTypes.d.ts').ISSHExecutor} ISSHExecutor
+ * @typedef {import('#types/sshTypes.d.ts').SshExecutorOptions} SshExecutorOptions
+ * @typedef {import('#types/sshTypes.d.ts').ExtractSubtitleItem} ExtractSubtitleItem
+ * @typedef {import('#types/sshTypes.d.ts').ExtractFontItem} ExtractFontItem
+ * @typedef {import('#types/sshTypes.d.ts').SshExtractResult<ExtractSubtitleItem>} SshSubtitleExtractResult
+ * @typedef {import('#types/sshTypes.d.ts').SshExtractResult<ExtractFontItem>} SshFontExtractResult
+ * @typedef {import('#types/sshTypes.d.ts').SshScriptDefinition} SshScriptDefinition
  */
 
 const DEFAULT_SSH_EXECUTOR_LABEL = 'storage';

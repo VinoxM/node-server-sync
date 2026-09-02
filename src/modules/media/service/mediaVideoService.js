@@ -30,7 +30,7 @@ export async function checkCategoryExistsByInside(categoryId, isInside) {
 
 /**
  * 分页复合检索视频列表
- * @param {import('@types/mediaTypes.d.ts').MediaSearchOptions} body - 检索条件
+ * @param {import('#types/mediaTypes.d.ts').MediaSearchOptions} body - 检索条件
  * @param {boolean} isInside - 是否内部私密分类
  * @param {number} [userId] - 当前用户 ID
  * @returns {Promise<{ record: any[], total: number, pageNum: number, pageSize: number }>}
@@ -74,7 +74,7 @@ export async function checkVideoCanAdd({ category, author, uniqueId = null }) {
 
 /**
  * 创建完整视频记录并自动触发封面/视频源/弹幕的异步解析上传任务
- * @param {import('@types/mediaTypes.d.ts').MediaCreateOptions} videoObj - 视频创建参数
+ * @param {import('#types/mediaTypes.d.ts').MediaCreateOptions} videoObj - 视频创建参数
  * @param {boolean} [executeAsync=true] - 是否异步执行资源解析任务链
  * @returns {Promise<{ id: number }>}
  */

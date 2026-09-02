@@ -149,8 +149,8 @@ async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
  * 清洗 Bangumi 原始 API 条目数据为标准数据库入库结构
  * 包括计算所属季度、提取中文别名、解析制作人员 Staff、抓取主角配角与声优图片并入库图片转存表
  * @param {Object} subject - Bangumi 原始条目对象
- * @param {import('@types/animeTypes.d.ts').SubjectPullOptions} [options={}] - 配置选项
- * @returns {Promise<import('@types/animeTypes.d.ts').CleanedSubject|undefined>}
+ * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options={}] - 配置选项
+ * @returns {Promise<import('#types/animeTypes.d.ts').CleanedSubject|undefined>}
  */
 export async function cleanBangumiSubject(subject, options = {}) {
     if (!subject || !subject.id) return;

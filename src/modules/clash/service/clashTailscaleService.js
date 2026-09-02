@@ -5,7 +5,7 @@ import yaml from 'yaml';
 import { getItem } from '#utils/objectUtil.js';
 
 /**
- * @typedef {import('@types/clashTypes.d.ts').ClashConfig} ClashConfig
+ * @typedef {import('#types/clashTypes.d.ts').ClashConfig} ClashConfig
  */
 
 /**

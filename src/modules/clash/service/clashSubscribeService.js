@@ -5,8 +5,8 @@ import { pushNotification } from '#api/sockets/notification.js';
 import { getUrlFull } from '#utils/httpUtil.js';
 
 /**
- * @typedef {import('@types/clashTypes.d.ts').ClashSubscriptionResult} ClashSubscriptionResult
- * @typedef {import('@types/clashTypes.d.ts').ClashSubscriptionSourceObj} ClashSubscriptionSourceObj
+ * @typedef {import('#types/clashTypes.d.ts').ClashSubscriptionResult} ClashSubscriptionResult
+ * @typedef {import('#types/clashTypes.d.ts').ClashSubscriptionSourceObj} ClashSubscriptionSourceObj
  */
 
 /**

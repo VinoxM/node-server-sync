@@ -25,7 +25,7 @@ function checkSubnet(inputIp, cidr) {
 /**
  * 汇总当前请求可用的白名单 Host 与 CIDR 规则（合并路由配置项与全局配置项）
  * @param {string} [url=''] - 请求 URL 路径
- * @param {import('@types/routeTypes.d.ts').ApiRouteConfig} config - 路由配置对象
+ * @param {import('#types/routeTypes.d.ts').ApiRouteConfig} config - 路由配置对象
  * @param {Array<{ api?: string, hosts?: string[], cidr?: string[] }>} [allowHostsOptions=[]] - 全局白名单配置
  * @returns {{ allowHosts: string[], allowCIDR: string[] }} 合并后的 Host 白名单与 CIDR 白名单
  */

@@ -49,14 +49,14 @@ async function updateAny(subjects, updateColumns = []) {
 export default {
     /**
      * 插入单条番剧条目
-     * @param {import('@types/animeTypes.d.ts').CleanedSubject} subject - 清洗后的番剧数据
+     * @param {import('#types/animeTypes.d.ts').CleanedSubject} subject - 清洗后的番剧数据
      * @returns {Promise<ExecResult>}
      */
     insertOne: (subject) => insertAny([subject]),
 
     /**
      * 批量插入番剧条目（自动按参数上限分批）
-     * @param {Array<import('@types/animeTypes.d.ts').CleanedSubject>} subjects - 番剧数据列表
+     * @param {Array<import('#types/animeTypes.d.ts').CleanedSubject>} subjects - 番剧数据列表
      * @returns {Promise<{ rows: number }>}
      */
     insertBatch: async (subjects) => {
@@ -72,7 +72,7 @@ export default {
 
     /**
      * 更新单个番剧条目
-     * @param {import('@types/animeTypes.d.ts').CleanedSubject} subject - 番剧数据
+     * @param {import('#types/animeTypes.d.ts').CleanedSubject} subject - 番剧数据
      * @param {string[]} [updateColumns] - 指定更新的列名数组
      * @returns {Promise<ExecResult>}
      */
@@ -80,7 +80,7 @@ export default {
 
     /**
      * 批量更新番剧条目
-     * @param {Array<import('@types/animeTypes.d.ts').CleanedSubject>} subjects - 番剧列表
+     * @param {Array<import('#types/animeTypes.d.ts').CleanedSubject>} subjects - 番剧列表
      * @param {string[]} [updateColumns] - 指定更新的列名数组
      * @returns {Promise<{ rows: number }>}
      */

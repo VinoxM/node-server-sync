@@ -6,9 +6,9 @@ import * as qbitStateConsts from './constants/qbitStateConst.js';
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 
 /**
- * @typedef {import('@types/downloadTypes.d.ts').QBitTorrentInfo} QBitTorrentInfo
- * @typedef {import('@types/downloadTypes.d.ts').QBitTorrentFile} QBitTorrentFile
- * @typedef {import('@types/downloadTypes.d.ts').QBitTorrentGroupState} QBitTorrentGroupState
+ * @typedef {import('#types/downloadTypes.d.ts').QBitTorrentInfo} QBitTorrentInfo
+ * @typedef {import('#types/downloadTypes.d.ts').QBitTorrentFile} QBitTorrentFile
+ * @typedef {import('#types/downloadTypes.d.ts').QBitTorrentGroupState} QBitTorrentGroupState
  */
 
 /** @type {GetterContextSubscribe<{ url: string, savePath: string }>} 动态订阅 qBittorrent 配置 */

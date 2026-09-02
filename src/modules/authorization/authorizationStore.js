@@ -5,9 +5,9 @@ import { authorizationSyncScript, deleteUserTokensScript } from "#constants/luaS
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 
 /**
- * @typedef {import('@types/authorizationTypes.d.ts').UserInfo} UserInfo
- * @typedef {import('@types/authorizationTypes.d.ts').AuthOptionConfig} AuthOptionConfig
- * @typedef {import('@types/authorizationTypes.d.ts').AuthClientConfig} AuthClientConfig
+ * @typedef {import('#types/authorizationTypes.d.ts').UserInfo} UserInfo
+ * @typedef {import('#types/authorizationTypes.d.ts').AuthOptionConfig} AuthOptionConfig
+ * @typedef {import('#types/authorizationTypes.d.ts').AuthClientConfig} AuthClientConfig
  */
 
 /** @type {GetterContextSubscribe<AuthOptionConfig>} 动态订阅全局授权配置 */

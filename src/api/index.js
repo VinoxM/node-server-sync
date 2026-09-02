@@ -3,7 +3,7 @@ import { getConnections, storeConnection } from '#modules/socket/wsStorage.js';
 import { apiServer } from './apiServer.js';
 
 /**
- * @typedef {import('@types/socketTypes.d.ts').ServerStartOptions} ServerStartOptions
+ * @typedef {import('#types/socketTypes.d.ts').ServerStartOptions} ServerStartOptions
  */
 
 /**

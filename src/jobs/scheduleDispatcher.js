@@ -4,8 +4,8 @@ import { Tracer } from '#core/infra/tracer.js';
 import { ContextSubscribe } from '#core/context/subscribe.js';
 
 /**
- * @typedef {import('@types/scheduleTypes.d.ts').ScheduleJobConfig} ScheduleJobConfig
- * @typedef {import('@types/scheduleTypes.d.ts').ScheduleRetryConfig} ScheduleRetryConfig
+ * @typedef {import('#types/scheduleTypes.d.ts').ScheduleJobConfig} ScheduleJobConfig
+ * @typedef {import('#types/scheduleTypes.d.ts').ScheduleRetryConfig} ScheduleRetryConfig
  */
 
 /**

@@ -6,10 +6,11 @@ import { getRequestRealIp } from '#utils/requestUtil.js';
 import { Tracer } from '#core/infra/tracer.js';
 
 /**
- * @typedef {import('@types/routeTypes.d.ts').ApiRequest} ApiRequest
- * @typedef {import('@types/routeTypes.d.ts').ApiResponse} ApiResponse
- * @typedef {import('@types/routeTypes.d.ts').ApiRouteConfig} ApiRouteConfig
- * @typedef {import('@types/routeTypes.d.ts').ApiRouteModule} ApiRouteModule
+ * @typedef {import('#types/routeTypes.d.ts').ApiRequest} ApiRequest
+ * @typedef {import('#types/routeTypes.d.ts').ApiResponse} ApiResponse
+ * @typedef {import('#types/routeTypes.d.ts').ApiRouteConfig} ApiRouteConfig
+ * @typedef {import('#types/routeTypes.d.ts').ApiRouteModule} ApiRouteModule
+ * @typedef {import('#types/filterTypes.d.ts').FilterExecuter} FilterExecuter
  */
 
 /**
@@ -39,7 +40,7 @@ class ApiServer {
     /** @type {Record<string, ApiRouteConfig>} 完整路径到路由配置项的映射字典 */
     #apiMapping = {};
 
-    /** @type {Array<(resolve: Function, reject: Function, complete: Function, data: any) => void>} 全局请求过滤器 doFilter 列表 */
+    /** @type {Array<FilterExecuter>} 全局请求过滤器 doFilter 列表 */
     #apiFilters = [];
 
     /** @type {Array<{ channel: string, path: string, server: import('ws').WebSocketServer }>} 已注册的 WebSocket 频道列表 */
@@ -81,7 +82,7 @@ class ApiServer {
 
     /**
      * 注册全局请求过滤器列表
-     * @param {Array<Function>} apiFilters - 过滤器 doFilter 执行函数数组
+     * @param {Array<FilterExecuter>} apiFilters - 过滤器 doFilter 执行函数数组
      */
     addApiFilters(apiFilters) {
         if (this.#server || __isEmptyArray(apiFilters)) return;
@@ -94,10 +95,7 @@ class ApiServer {
      */
     addApiMapping(mapping) {
         if (this.#server || !mapping) return;
-        let basePath = "";
-        if (mapping.hasOwnProperty('basePath')) {
-            basePath = mapping.basePath;
-        }
+        let basePath = mapping.basePath ?? '';
         Object.keys(mapping).forEach(key => {
             if (key !== 'basePath' && key.startsWith("/") && this.#apiDisabled.every(d => !d.test(basePath + key))) {
                 this.#apiMapping[basePath + key] = mapping[key];
@@ -123,12 +121,11 @@ class ApiServer {
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
-            const { method: m, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
+            const { method, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
             if (disabled) {
                 continue;
             }
-            const method = m ? (m + "").toLocaleLowerCase() : "all";
-            if (methodSupport.indexOf(method) === -1) {
+            if (!methodSupport.includes(method)) {
                 continue;
             }
             const mappingKey = pathRegex ? new RegExp(key) : key;
@@ -223,7 +220,8 @@ function resolve(obj, { req, res, config }) {
     if (res.destroyed || res.writableEnded || config?.ignoreReturn || res.__customPiped) return;
     const result = {
         code: 0,
-        message: 'Success.'
+        message: 'Success.',
+        data: undefined
     };
     if (obj !== undefined) result.data = obj;
     const printParams = [];

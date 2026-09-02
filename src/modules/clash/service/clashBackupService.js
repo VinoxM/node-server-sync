@@ -4,7 +4,7 @@ import clashConst from '../constants/clashFileNameConst.js';
 import { concatTailscale } from './clashTailscaleService.js';
 
 /**
- * @typedef {import('@types/clashTypes.d.ts').ClashConfig} ClashConfig
+ * @typedef {import('#types/clashTypes.d.ts').ClashConfig} ClashConfig
  */
 
 const latestClashFileName = clashConst.LATEST_FILE_NAME;

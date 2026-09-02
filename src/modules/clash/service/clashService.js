@@ -4,7 +4,7 @@ import clashConst from '../constants/clashFileNameConst.js';
 import { getSubscribeInfo } from './clashSubscribeService.js';
 
 /**
- * @typedef {import('@types/clashTypes.d.ts').ClashFileContentResult} ClashFileContentResult
+ * @typedef {import('#types/clashTypes.d.ts').ClashFileContentResult} ClashFileContentResult
  */
 
 /**

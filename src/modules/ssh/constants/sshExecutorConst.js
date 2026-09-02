@@ -1,5 +1,5 @@
 /**
- * @typedef {import('@types/sshTypes.d.ts').SshScriptDefinition} SshScriptDefinition
+ * @typedef {import('#types/sshTypes.d.ts').SshScriptDefinition} SshScriptDefinition
  */
 
 /**

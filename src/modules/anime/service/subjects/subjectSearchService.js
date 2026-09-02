@@ -49,7 +49,7 @@ function handleSearch(data) {
 
 /**
  * 获取当前季度的全量番剧放送日历数据
- * @returns {Promise<Array<import('@types/animeTypes.d.ts').AnimeCalendarItem>>}
+ * @returns {Promise<Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>>}
  */
 export async function getAnimeCalendar() {
     const season = getCurSeason();

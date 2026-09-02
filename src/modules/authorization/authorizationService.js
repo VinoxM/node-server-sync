@@ -3,9 +3,9 @@ import { aesCrypto } from "#core/instance/aesCrypto.js";
 import { getRequestClientIdAndClientSecret, getRequestTokenHash } from "#utils/requestUtil.js";
 
 /**
- * @typedef {import('@types/authorizationTypes.d.ts').UserInfo} UserInfo
- * @typedef {import('@types/routeTypes.d.ts').ApiRequest} ApiRequest
- * @typedef {import('@types/routeTypes.d.ts').ApiResponse} ApiResponse
+ * @typedef {import('#types/authorizationTypes.d.ts').UserInfo} UserInfo
+ * @typedef {import('#types/routeTypes.d.ts').ApiRequest} ApiRequest
+ * @typedef {import('#types/routeTypes.d.ts').ApiResponse} ApiResponse
  */
 
 /** @type {RedisAuthorizationStore} 全局授权 Token 存储实例 */

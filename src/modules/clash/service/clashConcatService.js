@@ -6,10 +6,10 @@ import { updateLatestConfig } from './clashBackupService.js';
 import { getSubscriptionSourcesObj } from './clashSubscribeService.js';
 
 /**
- * @typedef {import('@types/clashTypes.d.ts').ClashConfig} ClashConfig
- * @typedef {import('@types/clashTypes.d.ts').ClashProxy} ClashProxy
- * @typedef {import('@types/clashTypes.d.ts').ClashProxyGroup} ClashProxyGroup
- * @typedef {import('@types/clashTypes.d.ts').ClashSubscriptionSourceObj} ClashSubscriptionSourceObj
+ * @typedef {import('#types/clashTypes.d.ts').ClashConfig} ClashConfig
+ * @typedef {import('#types/clashTypes.d.ts').ClashProxy} ClashProxy
+ * @typedef {import('#types/clashTypes.d.ts').ClashProxyGroup} ClashProxyGroup
+ * @typedef {import('#types/clashTypes.d.ts').ClashSubscriptionSourceObj} ClashSubscriptionSourceObj
  */
 
 /**
