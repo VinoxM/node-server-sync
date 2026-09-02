@@ -121,10 +121,11 @@ class ApiServer {
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
-            const { method, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
+            const { method: m, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
             if (disabled) {
                 continue;
             }
+            const method = ("" + m).toLocaleLowerCase();
             if (!methodSupport.includes(method)) {
                 continue;
             }
