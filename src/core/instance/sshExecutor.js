@@ -373,7 +373,7 @@ const sshExecutorPool = new Map();
 /**
  * 根据标签从连接池获取或创建 SSHExecutor 实例
  * @param {string} [label=''] - SSH 连接配置标签 (对应配置中的 `ssh.<label>`)
- * @returns {SSHExecutor|null}
+ * @returns {import('@types/sshTypes.d.ts').ISSHExecutor|null}
  */
 export function getSSHExecutor(label = '') {
     if (!label) return null;

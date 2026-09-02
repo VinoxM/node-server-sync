@@ -1,3 +1,11 @@
+/**
+ * @typedef {import('@types/sshTypes.d.ts').SshScriptDefinition} SshScriptDefinition
+ */
+
+/**
+ * 远程 SSH Shell 脚本静态元数据定义映射表
+ * @type {Record<string, SshScriptDefinition>}
+ */
 export default {
     BATCH_DELETE_FOLDER: {
         title: 'Remove Remote Empty Folder',
@@ -9,7 +17,7 @@ export default {
     },
     FFMPEG_CONVERT_FLV_TO_MP4: {
         title: 'Convert File Flv To Mp4',
-        descGenerator: (flvFilePath, mp4FilePath) => `Convert file mkv to mp4: ${flvFilePath} -> ${mp4FilePath}`
+        descGenerator: (flvFilePath, mp4FilePath) => `Convert file flv to mp4: ${flvFilePath} -> ${mp4FilePath}`
     },
     FFMPEG_CONVERT_MKV_TO_MP4: {
         title: 'Convert File Mkv To Mp4',
@@ -39,4 +47,4 @@ export default {
         title: 'Move File To Minio',
         descGenerator: (sourceFile, minioLink) => `Move file to minio, ${sourceFile} ==> ${minioLink}`
     }
-}
+};
