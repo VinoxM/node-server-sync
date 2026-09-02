@@ -1,22 +1,26 @@
-import { getExecutorSnapshot, SSE_EVENT } from "../../core/instance/sshExecutor.js";
+import { defineSSEChannel } from '#utils/defineUtil.js';
+import { getExecutorSnapshot, SSE_EVENT } from "#core/instance/sshExecutor.js";
 
-export default {
+/**
+ * SSH 执行器实时日志与状态流推送 SSE 频道 (`?channel=executor`)
+ */
+export default defineSSEChannel({
     channel: 'executor',
     validator: (req, clients) => {
-        const query = req.query
-        const uname = query.uname
-        return __isNotBlank(uname) && !Array.from(clients['executor'] ?? []).some(c => c.getUname() === uname)
+        const query = req.query;
+        const uname = query?.uname;
+        return typeof uname === 'string' && __isNotBlank(uname) && !Array.from(clients['executor'] ?? []).some(c => c.getUname() === uname);
     },
     onConnected: (client, query) => {
-        const label = query.label
+        const label = query?.label;
         if (__isBlank(label)) {
             client.emitEvent("message:error", 'Executor label is blank.');
             client.close();
             return;
         }
-        const snapshot = getExecutorSnapshot(label) || {}
+        const snapshot = getExecutorSnapshot(label) || {};
 
-        const { ready = false, tasksDesc = [], taskSnapshot = {} } = snapshot
+        const { ready = false, tasksDesc = [], taskSnapshot = {} } = snapshot;
 
         client.emitEvent(ready ? SSE_EVENT.READY : SSE_EVENT.DESTROY);
 
@@ -34,10 +38,10 @@ export default {
         }
     },
     canWrite: (query, opts, client) => {
-        const label = query.label
+        const label = query?.label;
         if (__isBlank(label)) return false;
-        return opts?.label === label
+        return opts?.label === label;
     },
     onDisconnected: () => {
     }
-}
+});

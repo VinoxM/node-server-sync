@@ -1,3 +1,6 @@
+/**
+ * HTTP 请求体 (req.body) 通用字段名称常量字典
+ */
 export default {
     REGEX: 'regex',
     JOB_NAME: 'jobName',
@@ -36,4 +39,4 @@ export default {
     REPLACE_BY: 'replaceBy',
     PAGE_NUM: 'pageNum',
     PAGE_SIZE: 'pageSize'
-}
+};

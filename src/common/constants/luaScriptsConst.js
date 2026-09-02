@@ -1,3 +1,19 @@
+/**
+ * Redis Lua 脚本：授权 Token 同步与自动淘汰
+ * - KEYS[1]: `user_tokens:{uid}:{clientId}` 用户在特定客户端下的活跃 Token 有序集合
+ * - ARGV[1]: score (当前时间戳)
+ * - ARGV[2]: hash (Token 句柄哈希)
+ * - ARGV[3]: max_store (该端最大允许 Token 存储数)
+ * - ARGV[4]: token (原始 JWT 文本)
+ * - ARGV[5]: expire (Redis 键过期时间，单位秒)
+ * 
+ * 逻辑：
+ * 1. 向 ZSet 插入当前 Hash 及时间戳
+ * 2. 检查当前客户端 Token 总数，超过上限时按 score 升序淘汰最旧的 Hash
+ * 3. 批量删除被淘汰的 `token:{hash}` 详情键与 ZSet 成员
+ * 4. 设置当前 `token:{hash}` 的具体内容及 TTL 过期时间
+ * @type {string}
+ */
 export const authorizationSyncScript = `
     -- KEYS[1]: user_tokens:{uid}
     -- ARGV[1]: score (时间戳)
@@ -34,8 +50,18 @@ export const authorizationSyncScript = `
     -- 4. 存储当前 Token 详情
     redis.call('SET', 'token:' .. ARGV[2], ARGV[4], 'EX', ARGV[5])
     return 1
-`
+`;
 
+/**
+ * Redis Lua 脚本：批量注销指定用户下的所有多端 Token
+ * - KEYS[1]: `user_tokens:{uid}:*` 匹配该用户全部客户端的通配符 Pattern
+ * 
+ * 逻辑：
+ * 1. 扫描所有匹配的 `user_tokens:{uid}:{clientId}` 列表 Key
+ * 2. 读取各端下的全部 Hash 列表并批量删除对应的 `token:{hash}` 键
+ * 3. 移除各端的 ZSet 列表 Key，返回删除的客户端 Key 数量
+ * @type {string}
+ */
 export const deleteUserTokensScript = `
     local keys = redis.call('KEYS', KEYS[1])
     local deletedCount = 0

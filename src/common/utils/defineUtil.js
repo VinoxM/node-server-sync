@@ -24,3 +24,21 @@ export function defineFilter(filter) {
 export function defineScheduleJob(jobConfig) {
     return jobConfig;
 }
+
+/**
+ * WebSocket 频道路由定义辅助函数，用于提供统一的 WebSocket 频道配置类型推导与 IDE 智能提示
+ * @param {import('@types/socketTypes.d.ts').SocketChannelConfig} channelConfig - 频道配置对象
+ * @returns {import('@types/socketTypes.d.ts').SocketChannelConfig} 原样返回频道配置对象
+ */
+export function defineSocketChannel(channelConfig) {
+    return channelConfig;
+}
+
+/**
+ * SSE 频道路由定义辅助函数，用于提供统一的 SSE 频道配置类型推导与 IDE 智能提示
+ * @param {import('@types/socketTypes.d.ts').SSEChannelConfig} channelConfig - SSE 频道配置对象
+ * @returns {import('@types/socketTypes.d.ts').SSEChannelConfig} 原样返回频道配置对象
+ */
+export function defineSSEChannel(channelConfig) {
+    return channelConfig;
+}
