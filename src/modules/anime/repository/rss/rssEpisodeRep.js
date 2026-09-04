@@ -1,4 +1,4 @@
-import { EPISODE_FAILED_REASON, EPISODE_STATUS } from "../constants/rssTaskStatusConst.js";
+import { EPISODE_FAILED_REASON, EPISODE_STATUS } from "../../constants/rssTaskStatusConst.js";
 
 const dbName = 'anime';
 
@@ -37,7 +37,7 @@ export default {
      * @param {number|string} episode - 集数/话数
      * @returns {Promise<boolean>}
      */
-    selectExistsBySubsIdAndEpisode: (subsId, episode) => {
+    selectExistsBySubsIdAndEpisode: async (subsId, episode) => {
         const sql = 'SELECT COUNT(1) as count FROM rss_episode WHERE rss_subs_id = ? AND episode = ?';
         return __sqliteDB.selectOne(sql, [subsId, episode], null, dbName).then(data => data.count > 0);
     },

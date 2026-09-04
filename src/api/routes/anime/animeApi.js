@@ -35,7 +35,7 @@ export default defineRoutes({
         needSecret,
         preCheck: (/** @type {ApiRequest} */ req) => checkQueryKeyNotBlank(req, 'id'),
         callback: async (/** @type {ApiRequest} */ req) => {
-            const userInfo = await decodeAuthorization(req, 1);
+            const userInfo = await decodeAuthorization(req);
             return getAnimeInformation(req.query.id, userInfo);
         }
     },

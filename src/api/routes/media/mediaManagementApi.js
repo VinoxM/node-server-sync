@@ -33,8 +33,10 @@ import {
     updatePlaylistVideoSort,
     updatePlaylistVideoSortBatch
 } from '#modules/media/service/mediaPlaylistService.js';
+import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST } = apiMethodConst;
+const needAuth = { clients: [NEED_AUTH_CLIENT.MANAGE] };
 
 /** 获取媒体后台管理模块通信秘钥 */
 const needSecret = () => "mAou5820.media.management";
@@ -83,7 +85,7 @@ export default defineRoutes({
     "/videos/updateTitle": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['id', 'title']),
         callback: (/** @type {ApiRequest} */ req) => updateVideoTitle(req.body['id'], req.body['title'])
@@ -96,7 +98,7 @@ export default defineRoutes({
     "/videos/updateTags": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['id', 'operator']) && checkBodyKeyNotEmptyArray(req, 'tags'),
         callback: (/** @type {ApiRequest} */ req) => updateVideoTags(req.body['id'], req.body['tags'], req.body['operator'])
@@ -109,7 +111,7 @@ export default defineRoutes({
     "/videos/delete": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => removeVideo(req.body['id'])
@@ -122,7 +124,7 @@ export default defineRoutes({
     "/videos/deleteBatch": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotEmptyArray(req, 'ids'),
@@ -136,7 +138,7 @@ export default defineRoutes({
     "/videos/retryCalculation": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => updateVideoStatusByVideoMinioStatus(req.body['id'])
@@ -151,7 +153,7 @@ export default defineRoutes({
     "/category/create": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['category', 'inside']) && checkBodyKeyMatch(req, 'inside', ['[0|1]']),
         callback: (/** @type {ApiRequest} */ req) => addCategory(req.body['category'], req.body['inside'])
@@ -164,7 +166,7 @@ export default defineRoutes({
     "/category/delete": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => deleteCategory(req.body['id'])
@@ -179,7 +181,7 @@ export default defineRoutes({
     "/author/create": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['categoryId', 'name']),
         callback: (/** @type {ApiRequest} */ req) => addAuthor(req.body['name'], req.body['categoryId'])
@@ -192,7 +194,7 @@ export default defineRoutes({
     "/author/delete": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
@@ -206,7 +208,7 @@ export default defineRoutes({
     "/author/clean": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['categoryId']),
         callback: (/** @type {ApiRequest} */ req) => cleanEmptyAuthor(req.body['categoryId'])
@@ -233,7 +235,7 @@ export default defineRoutes({
     "/storage/create": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['videoId', 'type', 'uri']),
         callback: (/** @type {ApiRequest} */ req) => createMinioManually(req.body)
@@ -246,7 +248,7 @@ export default defineRoutes({
     "/storage/updateOriginUri": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['id', 'uri']),
         callback: (/** @type {ApiRequest} */ req) => updateMinioOriginUri(req.body['id'], req.body['uri'])
@@ -259,7 +261,7 @@ export default defineRoutes({
     "/storage/delete": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => deleteVideoMinio(req.body['id'])
@@ -272,7 +274,7 @@ export default defineRoutes({
     "/storage/retryIngest": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => retryMinio(req.body['id'])
@@ -285,7 +287,7 @@ export default defineRoutes({
     "/storage/updateTitleOrSort": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'id'),
         callback: (/** @type {ApiRequest} */ req) => updateMinioTitleAndSort(req.body)
@@ -326,7 +328,7 @@ export default defineRoutes({
     "/storage/deleteTask": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'taskId'),
         callback: (/** @type {ApiRequest} */ req) => removeTask(req.body['taskId'])
@@ -378,7 +380,7 @@ export default defineRoutes({
     "/videosTagMapping/clean": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE, NEED_AUTH_CLIENT.API_POST] },
         allowHosts: allowLanHosts,
         callback: async () => {
             const deletedVideoIds = await videoTagMapRep.deleteDirtyVideoTagMapping();
@@ -406,7 +408,7 @@ export default defineRoutes({
     '/options/updateOne': {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['id', 'value', 'description']),
         callback: (/** @type {ApiRequest} */ req) => updateOption(req.body.id, req.body.description, req.body.value)
@@ -446,7 +448,7 @@ export default defineRoutes({
     "/playlist/create": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['categoryId', 'title']),
@@ -460,7 +462,7 @@ export default defineRoutes({
     "/playlist/updateTitle": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'title']),
@@ -474,7 +476,7 @@ export default defineRoutes({
     "/playlist/remove": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotBlank(req, 'id'),
@@ -488,7 +490,7 @@ export default defineRoutes({
     "/playlist/videos": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotBlank(req, 'id'),
@@ -502,7 +504,7 @@ export default defineRoutes({
     "/playlist/addVideo": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId']),
@@ -516,7 +518,7 @@ export default defineRoutes({
     "/playlist/addVideoBatch": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotEmptyArray(req, 'arr'),
@@ -530,7 +532,7 @@ export default defineRoutes({
     "/playlist/updateVideoSort": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId', 'sort']),
@@ -544,7 +546,7 @@ export default defineRoutes({
     "/playlist/updateVideoSortBatch": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotEmptyArray(req, "arr"),
@@ -558,7 +560,7 @@ export default defineRoutes({
     "/playlist/removeVideo": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeysNotBlank(req, ['id', 'videoId']),
@@ -572,7 +574,7 @@ export default defineRoutes({
     "/playlist/removeVideoBatch": {
         method: POST,
         ignoreSecret: true,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkHeaderInside(req, needSecret(), insideManagementSecret)
             && checkBodyKeyNotBlank(req, 'id') && checkBodyKeyNotEmptyArray(req, 'videos'),

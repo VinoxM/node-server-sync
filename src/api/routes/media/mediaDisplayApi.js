@@ -19,8 +19,11 @@ import { decodeAuthorization } from '#modules/authorization/authorizationService
 import { addUserFavorites, checkFavorites, getUserFavorites, removeUserFavorites } from '#modules/media/service/mediaFavoritesService.js';
 import { FAVORITES_TARGET_TYPE } from '#modules/media/constants/favoritesConst.js';
 import { getPlaylistByVideoId } from '#modules/media/service/mediaPlaylistService.js';
+import { NEED_AUTH_CLIENT } from '#constants/authorizationConst.js';
 
 const { GET, POST } = apiMethodConst;
+
+const needAuth = { clients: [NEED_AUTH_CLIENT.MEDIA] };
 
 /** 获取媒体前台展示模块通信秘钥 */
 const needSecret = () => "mAou5820.media.display";
@@ -183,7 +186,7 @@ export default defineRoutes({
         method: POST,
         ignoreSecret: true,
         allowHosts: allowLanHosts,
-        needAuth: true,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);
@@ -199,7 +202,7 @@ export default defineRoutes({
         method: POST,
         ignoreSecret: true,
         allowHosts: allowLanHosts,
-        needAuth: true,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);
@@ -216,7 +219,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         allowHosts: allowLanHosts,
-        needAuth: true,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);
@@ -233,7 +236,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         allowHosts: allowLanHosts,
-        needAuth: true,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);
@@ -250,7 +253,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         allowHosts: allowLanHosts,
-        needAuth: true,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotEmptyArray(req, 'payload'),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);

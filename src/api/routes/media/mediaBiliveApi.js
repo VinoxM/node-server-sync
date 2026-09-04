@@ -10,8 +10,10 @@ import {
 import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from '#modules/media/service/bilive/biliveFileService.js';
 import { biliveRecordApi } from '#modules/media/service/bilive/biliveApiService.js';
 import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST } = apiMethodConst;
+const needAuth = { clients: [NEED_AUTH_CLIENT.MANAGE] };
 
 /** 获取 B站直播录制模块通信秘钥 */
 const needSecret = () => "mAou5820.media.bilive-record";
@@ -97,7 +99,7 @@ export default defineRoutes({
     "/record/initStreamVideo": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => initStreamVideo(req.body['streamId'], req.body['tags'])
@@ -110,7 +112,7 @@ export default defineRoutes({
     "/record/deleteStream": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => deleteStream(req.body['streamId'])
@@ -135,7 +137,7 @@ export default defineRoutes({
     "/record/uploadFileToMedia": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
@@ -149,7 +151,7 @@ export default defineRoutes({
     "/record/deletePhysicFile": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
         callback: (/** @type {ApiRequest} */ req) => removeFileByFileId(req.body['fileId'], true)
@@ -162,7 +164,7 @@ export default defineRoutes({
     "/record/deleteFile": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
         callback: (/** @type {ApiRequest} */ req) => deleteFile(req.body['fileId'], true)
@@ -175,7 +177,7 @@ export default defineRoutes({
     "/record/closeReadyToEndStream": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => closeReadyToEndStream(req.body['streamId'])
@@ -188,7 +190,7 @@ export default defineRoutes({
     "/record/autoSyncStream": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
@@ -202,7 +204,7 @@ export default defineRoutes({
     "/record/stopAutoSync": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => stopAutoSync(req.body['streamId'])

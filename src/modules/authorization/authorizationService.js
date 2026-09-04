@@ -63,10 +63,9 @@ export const decryptData = str => aesCrypto.decrypt(str);
 /**
  * 从 Express 请求中解析并校验用户身份信息
  * @param {ApiRequest} req - HTTP Request
- * @param {boolean} [ignoreError=false] - 当客户端不匹配时是否忽略报错
  * @returns {Promise<UserInfo|null>} 用户载荷对象，校验失败返回 null
  */
-export const decodeAuthorization = async (req, ignoreError = false) => {
+export const decodeAuthorization = async (req) => {
     if (req.userInfo) return req.userInfo;
     const token = getRequestTokenHash(req);
     try {
@@ -75,7 +74,7 @@ export const decodeAuthorization = async (req, ignoreError = false) => {
         if (__isNotBlank(token) && await verifyToken(token, decode => {
             if (decode.clientId === clientId) {
                 userInfo = decode;
-            } else if (!ignoreError) {
+            } else {
                 __throwMessage(`Invalid token.`);
             }
         })) {

@@ -1,9 +1,9 @@
 import { getCurSeason } from "#utils/dateUtil.js";
 import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
-import rssEpisodeRep from "../../repository/rssEpisodeRep.js";
+import rssEpisodeRep from "../../repository/rss/rssEpisodeRep.js";
 import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "../../constants/subjectConstant.js";
-import rssResultRep from "../../repository/rssResultRep.js";
-import rssTrackerRep from "../../repository/rssTrackerRep.js";
+import rssResultRep from "../../repository/rss/rssResultRep.js";
+import rssTrackerRep from "../../repository/rss/rssTrackerRep.js";
 import subjectsRep from "../../repository/subjectsRep.js";
 
 function handleSearch(data) {

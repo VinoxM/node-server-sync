@@ -2,14 +2,30 @@ import { getCurSeason, getNextSeason } from "#utils/dateUtil.js";
 import { convertPropertiesToCloumns } from "../../entity/subjectResultMap.js";
 import subjectsRep from "../../repository/subjectsRep.js";
 import subscribeRep from "../../repository/subscribeRep.js";
+import { bangumiApi } from "../bangumi/bangumiApiService.js";
 import { cleanBangumiSubject } from "./subjectCleanService.js";
 import { fetchSubjectsByAirDate } from "./subjectFetchService.js";
 
 /**
+ * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
+ * @typedef {import('#types/animeTypes.d.ts').SubjectPullOptions} SubjectPullOptions
+ */
+
+/**
+ * 按bangumiId拉取并清洗动画条目
+ * @param {number|string} bangumiId
+ * @returns {Promise<CleanedSubject>}
+ */
+export async function fetchAnimeSubjectByBangumiId(bangumiId) {
+    const subject = await bangumiApi.getSubject(bangumiId);
+    return cleanBangumiSubject(subject);
+}
+
+/**
  * 按日期范围拉取并清洗动画条目列表
  * @param {[string, string]} dateRange - 起止日期范围
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options] - 配置选项
- * @returns {Promise<Array<import('#types/animeTypes.d.ts').CleanedSubject>>}
+ * @param {SubjectPullOptions} [options] - 配置选项
+ * @returns {Promise<Array<CleanedSubject>>}
  */
 export async function fetchAnimeSubjects(dateRange, options) {
     __log.info(`[Subject Fetch] Ready to fetch anime subjects for date range: [${dateRange[0]}, ${dateRange[1]})`);
@@ -25,8 +41,8 @@ export async function fetchAnimeSubjects(dateRange, options) {
 
 /**
  * 拉取当前季度的动画条目列表
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options] - 配置选项
- * @returns {Promise<Array<import('#types/animeTypes.d.ts').CleanedSubject>>}
+ * @param {SubjectPullOptions} [options] - 配置选项
+ * @returns {Promise<Array<CleanedSubject>>}
  */
 export async function fetchCurrentSeasonAnime(options) {
     const [year, month] = getCurSeason();
@@ -40,7 +56,7 @@ export async function fetchCurrentSeasonAnime(options) {
 /**
  * 拉取指定日期范围的动画条目并同步入库/更新
  * @param {[string, string]} dateRange - 起止日期范围
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options] - 导入配置
+ * @param {SubjectPullOptions} [options] - 导入配置
  * @returns {Promise<{ totalFetched: number, totalInserted: number, totalUpdated: number }>}
  */
 export async function pullAnimeSubjects(dateRange, options) {
@@ -58,7 +74,7 @@ export async function pullAnimeSubjects(dateRange, options) {
 
 /**
  * 拉取当前季度的动画条目并同步入库/更新
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options] - 导入配置
+ * @param {SubjectPullOptions} [options] - 导入配置
  * @returns {Promise<{ totalFetched: number, totalInserted: number, totalUpdated: number }>}
  */
 export async function pullCurrentSeasonAnime(options) {
@@ -76,8 +92,8 @@ export async function pullCurrentSeasonAnime(options) {
 
 /**
  * 批量插入或更新已清洗的番剧列表
- * @param {Array<import('#types/animeTypes.d.ts').CleanedSubject>} subjects - 番剧列表
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options={}] - 配置选项
+ * @param {Array<CleanedSubject>} subjects - 番剧列表
+ * @param {SubjectPullOptions} [options={}] - 配置选项
  * @returns {Promise<{ inserted: number, updated: number }>}
  */
 export async function upsertCleanedSubjects(subjects, options = {}) {
@@ -107,8 +123,8 @@ export async function upsertCleanedSubjects(subjects, options = {}) {
 
 /**
  * 插入或更新单条已清洗的番剧条目
- * @param {import('#types/animeTypes.d.ts').CleanedSubject} subject - 番剧条目
- * @param {import('#types/animeTypes.d.ts').SubjectPullOptions} [options={}] - 配置选项
+ * @param {CleanedSubject} subject - 番剧条目
+ * @param {SubjectPullOptions} [options={}] - 配置选项
  * @returns {Promise<ExecResult>}
  */
 export async function upsertOneCleanedSubject(subject, options = {}) {

@@ -16,16 +16,7 @@ axios:
 api:
   requestBodyLimit: 2 * 1024 * 1024
   apiDisabled: []
-  allowHosts:
-    - api: /summary/*
-      hosts: ["*-coder.vinoxm.cloud", "server.vinoxm.art"]
   filterDisabled: []
-  needAuth:
-    - /rss(/v2)?/[(?!get)|Matchers]*$
-    - /rss/subscribe/*
-    - /rss/[copyright|link]/[add|edit|del].*
-    - /rss/result/*
-    - /rss/regex/*
   tokenBucket:
     config:
       enable: true

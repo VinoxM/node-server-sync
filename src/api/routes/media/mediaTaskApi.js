@@ -5,8 +5,10 @@ import { checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import { MEDIA_ARIA2_TASK_STATUS } from "#modules/media/constants/mediaConst.js";
 import { updateMinioStatus } from "#modules/media/service/mediaMinioService.js";
 import { pauseOrResumeTask, updateTaskStatus } from "#modules/media/service/mediaTaskService.js";
+import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST } = apiMethodConst;
+const needAuth = { clients: [NEED_AUTH_CLIENT.MANAGE] };
 
 /** 获取媒体任务调度模块通信秘钥 */
 const needSecret = () => "mAou5820.media.task";
@@ -60,7 +62,7 @@ export default defineRoutes({
     "/toggleAria2Task": {
         method: POST,
         needSecret,
-        needAuth: true,
+        needAuth,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['gid', 'operator']),
         callback: (/** @type {ApiRequest} */ req) => pauseOrResumeTask(req.body['gid'], req.body['operator'])

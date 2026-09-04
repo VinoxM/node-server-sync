@@ -3,6 +3,18 @@ import { dateFormatForDB } from '#utils/dateUtil.js';
 const dbName = 'anime';
 const enablePrint = { print: true };
 
+const INSERT_COLUMNS = ['id', 'pid', 'title', 'torrent', 'pub_date', 'tracker', 'episode', 'sort'];
+const BATCH_INSERT_PARAMS_LIMIT = 500;
+async function insertAny(results) {
+    if (__isEmptyArray(results)) {
+        return { rows: 0 }
+    }
+    const valueSql = '(?, ?, ?, ?, ?, ?, ?, ?)'
+    const sql = `INSERT OR IGNORE INTO rss_result(${INSERT_COLUMNS.join(',')}) VALUES${results.map(_ => valueSql).join(',')}`;
+    const values = results.flatMap(result => ([result.id, result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort]));
+    return __sqliteDB.insert(sql, values, null, dbName);
+}
+
 /**
  * RSS 抓取条目结果仓储服务
  */
@@ -11,7 +23,7 @@ export default {
      * 获取当前结果表最大主键 ID
      * @returns {Promise<number>}
      */
-    selectMaxId: () => {
+    selectMaxId: async () => {
         const sql = "SELECT MAX(id) id FROM rss_result";
         return __sqliteDB.selectOne(sql, [], null, dbName).then(data => data?.id || 0);
     },
@@ -21,31 +33,22 @@ export default {
      * @param {Object} result - 条目数据
      * @returns {Promise<ExecResult>}
      */
-    insertOne: (result) => {
-        let sql = "INSERT OR IGNORE INTO rss_result" +
-            "(id, pid, title, torrent, pub_date, tracker, episode, sort) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        const params = [result.id, result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort];
-        return __sqliteDB.insert(sql, params, enablePrint, dbName);
-    },
+    insertOne: (result) => insertAny([result]),
 
     /**
      * 批量插入 RSS 抓取条目列表
      * @param {Array<any>} resultArr - 条目数组
-     * @returns {Promise<ExecResult|void>}
+     * @returns {Promise<ExecResult>}
      */
-    insertMany: (resultArr) => {
-        if (__isEmptyArray(resultArr)) return Promise.resolve();
-        let sql = "INSERT OR IGNORE INTO rss_result" +
-            "(id, pid, title, torrent, pub_date, tracker, episode, sort) " +
-            "VALUES ";
-        const params = [];
-        resultArr.forEach(result => {
-            sql += "(?, ?, ?, ?, ?, ?, ?, ?),";
-            params.push(result.id, result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort);
-        });
-        sql = sql.substring(0, sql.length - 1);
-        return __sqliteDB.insert(sql, params, null, dbName);
+    insertMany: async (resultArr) => {
+        const fullBatchSize = Math.floor(BATCH_INSERT_PARAMS_LIMIT / INSERT_COLUMNS.length);
+        let totalInserted = 0;
+        for (let i = 0; i < resultArr.length; i += fullBatchSize) {
+            const batch = resultArr.slice(i, i + fullBatchSize);
+            const { rows } = await insertAny(batch);
+            totalInserted += rows;
+        }
+        return { rows: totalInserted };
     },
 
     /**

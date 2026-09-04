@@ -1,9 +1,5 @@
-import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { decodeAuthorization } from "#modules/authorization/authorizationService.js";
 import { defineFilter } from "#utils/defineUtil.js";
-
-/** 全局配置中需强制鉴权的 API 正则订阅 */
-const needAuthApiRegex = new GetterContextSubscribe('NeedAuthApi', () => __env.get('api.needAuth', []).map(r => new RegExp(r)));
 
 /**
  * 用户鉴权过滤器
@@ -14,9 +10,17 @@ export default defineFilter({
     order: -79,
     doFilter: async (resolve, reject, complete, { req, res, config }) => {
         const { needAuth } = config;
-        if (needAuth || needAuthApiRegex.getValue().some(r => r.test(req.path))) {
+        if (needAuth === undefined || needAuth == null) {
+            resolve({ req, res, config });
+        }
+        const needAuthBooleanFlag = typeof needAuth === 'boolean' && needAuth;
+        const needAuthObjectFlag = typeof needAuth === 'object' && __isNotEmptyArray(needAuth.clients);
+        if (needAuthBooleanFlag || needAuthObjectFlag) {
             const userInfo = await decodeAuthorization(req);
             userInfo || __throwMessage('Permission denied.', -401, 401);
+            if (needAuthObjectFlag && !needAuth.clients.includes(userInfo.clientId)) {
+                __throwMessage('Permission denied.', -401, 401);
+            }
             req.userInfo = userInfo;
         }
         resolve({ req, res, config });

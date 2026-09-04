@@ -57,11 +57,20 @@ export default {
      * 批量更新图片状态
      * @param {number[]} imageIds - 主键 ID 数组
      * @param {number} status - 目标状态
+     * @param {number} [whenStatus] - 判断条件状态, 可选
+     * @param {boolean} [equalsWhen=true] - 是否等于判断条件状态, 可选, 默认等于
      * @returns {Promise<ExecResult>}
      */
-    updateImageStatusBatch: (imageIds, status) => {
-        const sql = `UPDATE bangumi_images SET status=? WHERE id IN (${imageIds.map(() => '?').join(',')})`;
-        return __sqliteDB.update(sql, [status, ...imageIds], null, dbName);
+    updateImageStatusBatch: (imageIds, status, whenStatus, equalsWhen = true) => {
+        const params = [status];
+        let sql = `UPDATE bangumi_images SET status=? WHERE `;
+        if (__isNotBlank(whenStatus)) {
+            params.push(whenStatus);
+            sql += equalsWhen ? `status=? AND ` : `status!=? AND `;
+        }
+        sql += `id IN (${imageIds.map(() => '?').join(',')})`;
+        params.push(...imageIds)
+        return __sqliteDB.update(sql, params, null, dbName);
     },
 
     /**
@@ -76,12 +85,23 @@ export default {
     },
 
     /**
-     * 模糊删除指定前缀链接的图片缓存记录
+     * 模糊查询指定前缀链接的图片缓存记录
+     * @param {string} link - 前缀链接
+     * @returns {Promise<QueryResult<{id: number, link: string, minioLink: string}>>}
+     */
+    selectByLinkLikely: link => {
+        const sql = `SELECT id, link, minio_link FROM bangumi_images WHERE link LIKE ?`;
+        return __sqliteDB.selectAll(sql, [`${link}%`, null, dbName]);
+    },
+
+    /**
+     * 批量删除指定ID的图片缓存记录
      * @param {string} link - 前缀链接
      * @returns {Promise<ExecResult>}
      */
-    deleteByLinkLikely: link => {
-        const sql = `DELETE FROM bangumi_images WHERE link LIKE ?`;
-        return __sqliteDB.delete(sql, [`${link}%`], null, dbName);
+    deleteByIds: ids => {
+        if (__isEmptyArray(ids)) return { rows: 0 };
+        const sql = `DELETE FROM bangumi_images WHERE id IN (${ids.map(() => '?').join(',')})`;
+        return __sqliteDB.delete(sql, ids, null, dbName);
     }
 };

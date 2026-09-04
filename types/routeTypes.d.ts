@@ -18,6 +18,10 @@ interface ApiResponse extends Response {
   [key: string]: any;
 }
 
+interface ApiNeedAuthConfig {
+  clients: Array<string>;
+}
+
 export interface ApiRouteConfig {
   /** HTTP 请求方法，如 GET / POST / ALL */
   method: 'get' | 'post' | 'all';
@@ -28,13 +32,15 @@ export interface ApiRouteConfig {
   /** 核心业务处理回调 */
   callback: (req: ApiRequest, res: ApiResponse) => any | Promise<any>;
   /** 是否需要鉴权验证 */
-  needAuth?: boolean;
+  needAuth?: boolean | ApiNeedAuthConfig;
   /** 请求通信签名/秘钥（支持固定值或动态函数） */
   needSecret?: string | (() => string);
   /** 是否忽略通信秘钥验证 */
   ignoreSecret?: boolean;
-  /** 允许访问的主机/IP 列表 */
-  allowHosts?: string[] | (() => string[]);
+  /** 允许访问的域名列表 */
+  allowHosts?: string[];
+  /** 允许访问的IP列表 */
+  allowCIDR?: string[];
   /** 是否禁用该路由 */
   disabled?: boolean;
   /** 是否忽略访问日志打印 */

@@ -55,6 +55,10 @@ export const SUBSCRIBE_RESULT_HIDE_VALUE = {
  * @enum {number}
  */
 export const BANGUMI_IMAGES_STATUS = {
+    /** 删除失败 */
+    REMOVE_FAILED: -2,
+    /** 删除中 */
+    REMOVING: -1,
     /** 待同步 */
     PREPARED: 0,
     /** 正在同步至 MinIO */

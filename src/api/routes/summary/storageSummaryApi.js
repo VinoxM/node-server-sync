@@ -3,6 +3,7 @@ import { getLatestStorageSummary, storageSummaryDimensions } from "#modules/stat
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { getMinioClientMatchersSafely } from "#modules/media/service/mediaMinioService.js";
 import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST, GET } = apiMethodConst;
 
@@ -20,8 +21,9 @@ export default defineRoutes({
      */
     "/storage/doSummary": {
         method: POST,
+        allowHosts: allowLanHosts,
         needSecret,
-        needAuth: true,
+        needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE] },
         callback: () => storageSummaryDimensions()
     },
 
