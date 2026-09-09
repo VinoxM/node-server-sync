@@ -1,5 +1,5 @@
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
-import { MATCHERS, STAFF_TAG_CLEAN } from "../../constants/subjectTagConstant.js";
+import { MATCHERS, STAFF_TAG_CLEAN } from "#modules/anime/constants/subjectTagConstant.js";
 import { bangumiApi } from "../bangumi/bangumiApiService.js";
 import { generateActorImageLink, generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "../bangumi/bangumiImagesService.js";
 

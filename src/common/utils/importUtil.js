@@ -46,6 +46,6 @@ export async function importFolderScripts(folder, recursive, callback) {
             if (module !== null && module !== undefined) {
                 callback(module, cur.name)
             }
-        })), Promise.resolve()).catch(e => console.error(e)) :
+        })), Promise.resolve()) :
         Promise.resolve()
 }

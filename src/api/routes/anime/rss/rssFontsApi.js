@@ -1,14 +1,15 @@
-import { allowLanHosts } from '../../../common/constants/allowHostsConst.js';
-import apiMethodConst from '../../../common/constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
-import rssFontsRep from '../../../modules/rss/repository/rssFontsRep.js';
+import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
+import { allowLanHosts } from '#constants/allowHostsConst.js';
+import apiMethodConst from '#constants/apiMethodConst.js';
+import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from '#common/utils/preCheckUtil.js';
+import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
 
 const { POST } = apiMethodConst;
 
-const needSecret = () => "mAou5820.rssFonts";
+const needSecret = () => "mAou5820.anime.rssFonts";
 
 export default {
-    basePath: "/rss/fonts",
+    basePath: "/anime/rss/fonts",
     '/getAll': {
         method: POST,
         allowHosts: allowLanHosts,
@@ -24,14 +25,14 @@ export default {
     },
     '/addOne': {
         method: POST,
-        needAuth: true,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['title', 'minioLink']),
         callback: req => rssFontsRep.insertOne(req.body['title'], req.body['minioLink'])
     },
     '/updateOne': {
         method: POST,
-        needAuth: true,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'title', 'minioLink']),
         callback: req => rssFontsRep.updateOne(req.body['id'], req.body['title'], req.body['minioLink'])
@@ -39,7 +40,7 @@ export default {
     },
     '/delOne': {
         method: POST,
-        needAuth: true,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => rssFontsRep.deleteOne(req.body['id'])

@@ -2,8 +2,8 @@ import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
 import { checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
-import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subjects/subjectPullService.js';
-import { getAnimeCalendar, getAnimeInformation } from '#modules/anime/service/subjects/subjectSearchService.js';
+import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
+import { getAnimeCalendar, getAnimeInformation } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 
 const { GET, POST } = apiMethodConst;
@@ -23,7 +23,10 @@ export default defineRoutes({
     "/calendar": {
         method: GET,
         needSecret,
-        callback: () => getAnimeCalendar()
+        callback: async (req) => {
+            const userInfo = await decodeAuthorization(req);
+            return getAnimeCalendar(userInfo)
+        }
     },
 
     /**

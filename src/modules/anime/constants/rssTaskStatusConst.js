@@ -55,3 +55,6 @@ export const EPISODE_FAILED_REASON = {
     /** 成功 (用于标记已修复) */
     SUCCESS: '3'
 };
+
+/** 不能重试的失败剧集的失败原因集合 */
+export const CAN_NOT_RETRY_FAILED_EPISODE_REASON = [EPISODE_FAILED_REASON.SUCCESS]

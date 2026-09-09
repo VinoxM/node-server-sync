@@ -1,65 +1,51 @@
-import { EPISODE_STATUS } from '../../../modules/rss/constants/rssTaskStatusConst.js';
-import apiMethodConst from '../../../common/constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from '../../../common/utils/preCheckUtil.js';
-import rssEpisodeRep from '../../../modules/rss/repository/rssEpisodeRep.js';
+import apiMethodConst from '#constants/apiMethodConst.js';
+import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
+import rssEpisodeRep from '#modules/anime/repository/rss/rssEpisodeRep.js';
 import {
-    deleteOneEpisode, deleteOneFailedEpisode, generateMinioSharedLink,
-    retryFailedEpisode, updateFailedEpisode
-} from '../../../modules/rss/service/rssEpisodeService.js';
-import { allowLanHosts } from '../../../common/constants/allowHostsConst.js';
+    deleteOneEpisode, deleteOneFailedEpisode,
+    retryFailedEpisode, updateEpisodeStatus, updateFailedEpisode
+} from '#modules/anime/service/rss/rssEpisodeService.js';
+import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 
 const { POST } = apiMethodConst;
 
-const needSecret = () => "mAou5820.rssEpisode";
+const needAuth = needAuthSingleClient.MANAGE;
+const needSecret = () => "mAou5820.anime.rssEpisode";
 
 export default {
-    basePath: "/rss/episode",
+    basePath: "/anime/rss/episode",
     '/updateEpisodeStatus': {
         method: POST,
         allowHosts: allowLanHosts,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
-        callback: req => {
-            const status = req.body.status
-            const id = req.body.id
-            if (!Object.values(EPISODE_STATUS).includes(status)) {
-                __throwMessage('Invalid episode status.')
-            }
-            __log.info(`[RssTask] Update rss episode[${id}] status: ${status}`)
-            return rssEpisodeRep.updateStatusById(id, status)
-        }
-    },
-    '/generateSharedLink': {
-        method: POST,
-        needAuth: true,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'episodeId'),
-        callback: req => generateMinioSharedLink(req.body.episodeId)
+        callback: req => updateEpisodeStatus(req.body.id, req.body.status)
     },
     '/getEpisodes': {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
         callback: req => rssEpisodeRep.selectBySubsId(req.body.rssSubsId).then(({ data }) => data)
     },
     "/deleteEpisode": {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'episodeId'),
         callback: req => deleteOneEpisode(req.body.episodeId)
     },
     '/getFailedEpisodes': {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
         callback: req => rssEpisodeRep.selectFailedBySubsId(req.body.rssSubsId).then(({ data }) => data)
     },
     '/retryFailedEpisode': {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
         maybeStream: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
@@ -67,17 +53,14 @@ export default {
     },
     '/updateFailedEpisode': {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
-        preCheck: req => {
-            checkBodyKeysNotBlank(req, ['id', 'rootPath', 'fileName'])
-            checkBodyKeysExists(req, ['episode', 'link'])
-        },
+        preCheck: req => checkBodyKeysNotBlank(req, ['id', 'rootPath', 'fileName']) && checkBodyKeysExists(req, ['episode', 'link']),
         callback: req => updateFailedEpisode(req.body)
     },
     '/deleteFailedEpisode': {
         method: POST,
-        needAuth: true,
+        needAuth,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
         callback: req => deleteOneFailedEpisode(req.body.failedEpisodeId)

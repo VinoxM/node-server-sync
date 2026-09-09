@@ -1,4 +1,4 @@
-import { EPISODE_STATUS, EPISODE_FAILED_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
+import { EPISODE_STATUS, EPISODE_FAILED_REASON, CAN_NOT_RETRY_FAILED_EPISODE_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
 import rssRep from "#modules/anime/repository/rss/rssRep.js";
@@ -14,7 +14,19 @@ import {
 import { backfillSubtitleFonts, resolveEpisodeSubtitle } from "./rssSubtitleService.js";
 import { insertFont, matchSubtitleFont } from "./rssFontsService.js";
 
-const cannotRetryFailedEpisodeReason = [EPISODE_FAILED_REASON.SUCCESS];
+/**
+ * 更新剧集状态, 用于给下载服务在下载完成后钩子脚本中更新剧集状态
+ * @param {number} id 剧集ID
+ * @param {string} status 状态
+ * @returns {Promise<{rows:number}>}
+ */
+export async function updateEpisodeStatus(id, status) {
+    if (!Object.values(EPISODE_STATUS).includes(status)) {
+        __throwMessage('Invalid episode status.')
+    }
+    __log.info(`[RssTask] Update rss episode[${id}] status: ${status}`)
+    return rssEpisodeRep.updateStatusById(id, status)
+}
 
 /**
  * 校验文件扩展名是否为动画视频格式
@@ -67,6 +79,7 @@ export function generateMinioLink(season, animeName, episode, ext) {
 
 /**
  * 获取剧集 MinIO 存储访问相对链接
+ * @deprecated no used
  * @param {number} episodeId - 剧集 ID
  * @returns {Promise<string>}
  */
@@ -116,7 +129,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
         __throwMessage('Failed episode not found.');
     }
 
-    if (cannotRetryFailedEpisodeReason.includes(failed.reason)) {
+    if (CAN_NOT_RETRY_FAILED_EPISODE_REASON.includes(failed.reason)) {
         __throwMessage('Failed episode cannot retry.');
     }
 

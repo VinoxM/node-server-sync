@@ -1,8 +1,65 @@
 import { getMinioClient } from "#core/instance/minioClient.js";
-import { BANGUMI_IMAGES_STATUS, SUBJECT_HIDE_VALUE } from "#modules/anime/constants/subjectConstant.js";
+import {
+    BANGUMI_IMAGES_STATUS, SUBJECT_HIDE_VALUE,
+    SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT
+} from "#modules/anime/constants/subjectConstant.js";
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
+import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 import { generateCharacterImageLink } from "../bangumi/bangumiImagesService.js";
+
+export async function getExistsSeasons() {
+    return subjectsRep.selectAllSeasons().then(res => res.data.map(d => d.season));
+}
+
+export async function searchSubjects(season, name) {
+    const { data } = await subjectsRep.selectAllBySeasonAndName(season, name);
+    return data.map(obj => {
+        const { platform, metaTags, startTime, ...rest } = obj;
+        const isTV = platform === SUBJECT_PLATFORM_DEFAULT || JSON.parse(metaTags || '[]').includes?.(SUBJECT_PLATFORM_DEFAULT);
+        const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
+        return {
+            ...rest,
+            isShort,
+            platform: isShort || isTV ? SUBJECT_PLATFORM_DEFAULT : platform,
+            goon: rest.goon ?? 0
+        }
+    })
+}
+
+export async function getSubjectForEdit(subjectId) {
+    const subject = await subjectsRep.selectOneById(subjectId);
+    subject || __throwMessage('Subject not exists.');
+    const subjectView = handleSubjectView(subject);
+    const result = {
+        ...subjectView,
+        nsfw: subject.nsfw
+    }
+    const subscribe = await subscribeRep.selectByBangumiId(subject.bangumiId);
+    if (!subscribe) return result;
+    result.subscribe = subscribe;
+    return result;
+}
+
+export function handleSubjectView(subject) {
+    const {
+        subsId, nameAlias, platform, metaTags, staff, characters,
+        hide, nsfw, updateTime, createTime, fin, summaryCN, season,
+        ...rest
+    } = subject;
+    const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;
+    return {
+        ...rest,
+        subsId,
+        nameAlias: JSON.parse(nameAlias ?? '[]'),
+        platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
+        metaTags: JSON.parse(metaTags ?? '[]'),
+        staff: JSON.parse(staff ?? '[]'),
+        characters: JSON.parse(characters ?? '[]'),
+        isShort,
+        fin: Boolean(fin)
+    };
+}
 
 /**
  * 删除单个番剧条目并级联清理关联角色图片缓存
@@ -51,10 +108,4 @@ export async function updateSubjectHide(id, hide) {
     const { hide: originHide } = subject;
     const { rows } = await subjectsRep.updateSubjectHide(hide, id, originHide);
     return rows > 0 ? hide : originHide;
-}
-
-export async function getSubjectForEdit(subjectId) {
-    const subject = await subjectsRep.selectOneById(subjectId);
-    subject || __throwMessage('Subject not exists.');
-    
 }

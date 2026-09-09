@@ -1,4 +1,4 @@
-import { SUBJECT_HIDE_VALUE, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
+import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
 const dbName = 'anime';
@@ -184,17 +184,48 @@ export default {
      * @returns {Promise<QueryResult<any>>}
      */
     selectVisibleBySeason: (season) => {
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, rs.id AS subsId, rs.fin, rs.start_time, `
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
             + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
             + `CASE WHEN julianday('now') - julianday(MAX(rr.pub_date)) < 1 then 1 else 0 end hasNew `
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
-            + `WHERE t.nsfw=0 AND (t.season=? AND t.hide=${SUBJECT_HIDE_VALUE.NO}) `
+            + `WHERE (t.season=? AND t.hide=${SUBJECT_HIDE_VALUE.NO}) `
             + `OR (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?) `
             + 'GROUP BY t.id ';
         const params = [season, season, season];
+        return __sqliteDB.selectAll(sql, params, null, dbName);
+    },
+
+    /**
+     * 查询已存在的所有季节
+     * @returns {Promise<QueryResult<{ season: string }>>}
+     */
+    selectAllSeasons: () => {
+        return __sqliteDB.selectAll(`SELECT season FROM subjects GROUP BY season`, [], null, dbName);
+    },
+
+    selectAllBySeasonAndName: (season, name) => {
+        let queryCase = '', whereCause = '';
+        const params = [];
+        if (__isNotBlank(name)) {
+            whereCause = 'season=? AND (t.name LIKE ? OR t.name_cn LIKE ?) ';
+            const nameLikely = `%${name}%`;
+            params.push(season, nameLikely, nameLikely);
+        } else {
+            queryCase = ', CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon '
+            whereCause = `season=? OR (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?) `;
+            params.push(season, season, season);
+        }
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
+            + `rs.id AS subsId, rs.fin, rs.start_time `
+            + queryCase
+            + 'FROM subjects t '
+            + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `WHERE ${whereCause}`
+            + `GROUP BY t.id`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     }
 };

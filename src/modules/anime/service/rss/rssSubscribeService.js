@@ -1,6 +1,7 @@
 import Parser from 'rss-parser';
 import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
 import { getUrlContent } from '#utils/httpUtil.js';
+import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 
 const rssXMLParser = {
     value: null,
@@ -52,4 +53,13 @@ export async function analysisRssSubscribe(obj) {
  */
 export async function canDeleteSubscribe(id) {
     return (await rssSubscribeRep.selectEpisodesExistsSubsBySubsId(id)) === 0;
+}
+
+export async function createSubscribeBySubjectId(subjectId) {
+    const subject = await subjectsRep.selectOneById(subjectId);
+    subject || __throwMessage('Subject not exists.');
+    const { season, airDate, bangumiId } = subject;
+    const startTime = __isNotBlank(airDate) ? new Date(airDate) : new Date(season + '-01');
+    const res = await subscribeRep.insertOne({ bangumiId, startTime });
+    return res.rows;
 }

@@ -1,4 +1,4 @@
-import { EPISODE_FAILED_REASON, EPISODE_STATUS } from "../../constants/rssTaskStatusConst.js";
+import { EPISODE_FAILED_REASON, EPISODE_STATUS } from "#modules/anime/constants/rssTaskStatusConst.js";
 
 const dbName = 'anime';
 
@@ -61,7 +61,7 @@ export default {
             rssEpisode.rssSubsId,
             rssEpisode.episode,
             rssEpisode.minioLink,
-            rssEpisode.status ?? '0',
+            rssEpisode.status ?? EPISODE_STATUS.PREPARED,
             rssEpisode.rssSubsId,
             rssEpisode.episode
         ];
@@ -149,7 +149,7 @@ export default {
             rssEpisodeFailed.minioLink,
             rssEpisodeFailed.rootPath,
             rssEpisodeFailed.fileName,
-            rssEpisodeFailed.reason ?? '0',
+            rssEpisodeFailed.reason ?? EPISODE_FAILED_REASON.UNKNOWN,
             new Date()
         ];
         return (transactionDB || __sqliteDB).insert(sql, params, null, dbName);
@@ -216,7 +216,7 @@ export default {
      * @returns {Promise<ExecResult>}
      */
     updateFailedEpisodeById: (data) => {
-        const sql = 'UPDATE rss_episode_failed SET episode=?, minio_link=?, root_path=?, file_name=? WHERE id=? AND reason != 3';
+        const sql = `UPDATE rss_episode_failed SET episode=?, minio_link=?, root_path=?, file_name=? WHERE id=? AND reason != ${EPISODE_FAILED_REASON.SUCCESS}`;
         return __sqliteDB.update(sql, [
             data.episode ?? null,
             data.link ?? null,

@@ -1,16 +1,20 @@
-import { allowLanHosts } from "../../../common/constants/allowHostsConst.js";
-import apiMethodConst from "../../../common/constants/apiMethodConst.js";
-import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "../../../common/utils/preCheckUtil.js";
-import rssResultRep from "../../../modules/rss/repository/rssResultRep.js";
-import { addRssTask, completeTask, deleteTask, pauseTask, queryTasks, queryTaskTorrentInfo, resumeTask, updateTaskStatus } from "../../../modules/rss/service/rssTaskService.js";
-import { concatTracker } from "../../../modules/rss/service/rssTrackerService.js";
+import { allowLanHosts } from "#constants/allowHostsConst.js";
+import apiMethodConst from "#constants/apiMethodConst.js";
+import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
+import rssResultRep from "#modules/rss/repository/rssResultRep.js";
+import {
+    addRssTask, completeTask, deleteTask,
+    pauseTask, queryTasks, queryTaskTorrentInfo,
+    resumeTask, updateTaskStatus
+} from "#modules/rss/service/rssTaskService.js";
+import { concatTracker } from "#modules/rss/service/rssTrackerService.js";
 
 const { POST } = apiMethodConst;
 
-const needSecret = () => "mAou5820.rssTask";
+const needSecret = () => "mAou5820.anime.rssTask";
 
 export default {
-    basePath: "/rss/task",
+    basePath: "/anime/rss/task",
     "/addTask": {
         method: POST,
         needAuth: true,

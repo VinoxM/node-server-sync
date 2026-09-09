@@ -1,7 +1,7 @@
 import { getCurSeason, getNextSeason } from "#utils/dateUtil.js";
-import { convertPropertiesToCloumns } from "../../entity/subjectResultMap.js";
-import subjectsRep from "../../repository/subjectsRep.js";
-import subscribeRep from "../../repository/subscribeRep.js";
+import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
+import subjectsRep from "#modules/anime/repository/subjectsRep.js";
+import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 import { bangumiApi } from "../bangumi/bangumiApiService.js";
 import { cleanBangumiSubject } from "./subjectCleanService.js";
 import { fetchSubjectsByAirDate } from "./subjectFetchService.js";

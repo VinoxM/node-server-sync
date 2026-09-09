@@ -7,6 +7,7 @@ import { defineFilter } from "#utils/defineUtil.js";
  * 作用: 当路由配置了 needAuth 或匹配全局 needAuth 正则时，解析 Header 中的 Bearer Token 并注入 `req.userInfo`
  */
 export default defineFilter({
+    disabled: true,
     order: -79,
     doFilter: async (resolve, reject, complete, { req, res, config }) => {
         const { needAuth } = config;

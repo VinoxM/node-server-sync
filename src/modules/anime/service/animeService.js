@@ -1,13 +1,13 @@
 import { getCurSeason } from "#utils/dateUtil.js";
-import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
-import rssEpisodeRep from "../../repository/rss/rssEpisodeRep.js";
-import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "../../constants/subjectConstant.js";
-import rssResultRep from "../../repository/rss/rssResultRep.js";
-import rssTrackerRep from "../../repository/rss/rssTrackerRep.js";
-import subjectsRep from "../../repository/subjectsRep.js";
+import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
+import { SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "#modules/anime/constants/subjectConstant.js";
+import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
+import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
+import subjectsRep from "#modules/anime/repository/subjectsRep.js";
+import { handleSubjectView } from "./subject/subjectService.js";
 
-function handleSearch(data) {
-    let list = Array.from(data);
+function handleSearch(data, userInfo) {
+    let list = userInfo ? data : data.filter(o => o.nsfw === SUBJECT_NSFW_VALUE.NO);
     let now = new Date();
     if (now.getHours() < 6) {
         now.setDate(now.getDate() - 1);
@@ -26,8 +26,8 @@ function handleSearch(data) {
             hours += 24;
         }
         let updateTime = `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
-        const isTV = obj.platform === 'TV' || JSON.parse(obj.metaTags || '[]').includes?.('TV');
-        const isShort = obj.platform === 'TV_Short';
+        const isTV = obj.platform === SUBJECT_PLATFORM_DEFAULT || JSON.parse(obj.metaTags || '[]').includes?.(SUBJECT_PLATFORM_DEFAULT);
+        const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
         let type = `${isShort ? 1 : 0}${(isTV || isShort) ? 0 : 1}`;
         let status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
         return {
@@ -51,10 +51,10 @@ function handleSearch(data) {
  * 获取当前季度的全量番剧放送日历数据
  * @returns {Promise<Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>>}
  */
-export async function getAnimeCalendar() {
+export async function getAnimeCalendar(userInfo) {
     const season = getCurSeason();
     const { rows, data } = await subjectsRep.selectVisibleBySeason(season.join('-'));
-    return rows > 0 ? handleSearch(data) : [];
+    return rows > 0 ? handleSearch(data, userInfo) : [];
 }
 
 /**
@@ -66,12 +66,8 @@ export async function getAnimeCalendar() {
 export async function getAnimeInformation(id, userInfo) {
     const subject = await subjectsRep.selectOneByIdForView(id);
     subject || __throwMessage('Anime not exists.');
-    const {
-        subsId, nameAlias, platform, metaTags, staff, characters,
-        hide, nsfw, updateTime, createTime, fin, summaryCN, season,
-        ...rest
-    } = subject;
-    const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;
+    const subjectView = handleSubjectView(subject);
+    const subsId = subject.subsId;
     const results = await getRssResultsByRssSubscribeId(subsId);
     let episodes = undefined;
     if (userInfo) {
@@ -82,15 +78,7 @@ export async function getAnimeInformation(id, userInfo) {
             .toSorted((a, b) => a.episode - b.episode);
     }
     return {
-        ...rest,
-        subsId,
-        nameAlias: JSON.parse(nameAlias ?? '[]'),
-        platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
-        metaTags: JSON.parse(metaTags ?? '[]'),
-        staff: JSON.parse(staff ?? '[]'),
-        characters: JSON.parse(characters ?? '[]'),
-        isShort,
-        fin: Boolean(fin),
+        ...subjectView,
         results,
         episodes
     };
@@ -111,14 +99,4 @@ async function getRssResultsByRssSubscribeId(rssSubsId) {
 
 async function getRssEpisodesByRssSubscribeId(rssSubsId) {
     return rssEpisodeRep.selectBySubsId(rssSubsId).then(({ data }) => data);
-}
-
-/**
- * 过滤当前用户收藏的 RSS 订阅列表
- * @param {UserInfo} userInfo - 用户信息
- * @returns {Promise<any[]>}
- */
-async function getUserFavoritesSubscriptions(userInfo) {
-    if (!userInfo) return [];
-    return filterUserRssFavoritesWithUid(userInfo.id);
 }
