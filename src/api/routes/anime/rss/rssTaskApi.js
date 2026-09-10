@@ -1,13 +1,11 @@
 import { allowLanHosts } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
-import rssResultRep from "#modules/rss/repository/rssResultRep.js";
 import {
-    addRssTask, completeTask, deleteTask,
+    completeTask, deleteTask,
     pauseTask, queryTasks, queryTaskTorrentInfo,
-    resumeTask, updateTaskStatus
-} from "#modules/rss/service/rssTaskService.js";
-import { concatTracker } from "#modules/rss/service/rssTrackerService.js";
+    resumeTask, updateTaskStatus, addRssTaskFromWebhook
+} from "#modules/anime/service/rss/rssTaskService.js";
 
 const { POST } = apiMethodConst;
 
@@ -19,22 +17,8 @@ export default {
         method: POST,
         needAuth: true,
         needSecret,
-        preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'rssResultId']),
-        callback: async (req) => {
-            const rssSubsId = req.body.rssSubsId
-            const rssResultId = req.body.rssResultId
-            const rssResult = await rssResultRep.selectOneForTaskByIdAndPid(rssResultId, rssSubsId)
-            if (!rssResult) {
-                __throwMessage('Invalid rss result.')
-            }
-            const torrent = await concatTracker(rssResult.torrent, rssResult.tracker)
-            return addRssTask({
-                torrent,
-                title: rssResult.title,
-                rssSubsId: rssResult.pid,
-                resultId: rssResult.id
-            }).then(taskInfo => taskInfo ? taskInfo : __throwMessage('Add task failed.'))
-        }
+        preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId', 'rssResultId']),
+        callback: req => addRssTaskFromWebhook(req.body.rssSubsId, req.body.rssResultId)
     },
     "/updateTaskStatus": {
         method: POST,

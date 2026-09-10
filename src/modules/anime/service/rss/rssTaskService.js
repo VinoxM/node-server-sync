@@ -7,7 +7,6 @@ import {
 import { TASK_STATUS, EPISODE_STATUS, EPISODE_FAILED_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
 import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
-import rssRep from "#modules/anime/repository/rss/rssRep.js";
 import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
 import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisodeService.js";
 import { filterUserRssFavorites } from "#modules/account/service/rssFavoritesService.js";
@@ -19,6 +18,7 @@ import {
 } from '#modules/ssh/sshExecutorService.js';
 import { insertFont, matchSubtitleFont } from './rssFontsService.js';
 import { Tracer } from '#core/infra/tracer.js';
+import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP'];
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE];
@@ -39,6 +39,22 @@ export function addRssTasksFromFavorites(rssSubsArr) {
             await addRssTask(rssTask);
         }
     });
+}
+
+export async function addRssTaskFromWebhook(rssSubsId, rssResultId) {
+    const rssResult = await rssResultRep.selectOneForTaskByIdAndPid(rssResultId, rssSubsId);
+    const rssSubs = await rssSubscribeRep.selectOneById(rssSubsId);
+    if (!rssResult || !rssSubs) {
+        __throwMessage('Invalid rss result.')
+    }
+    const torrent = await concatTracker(rssResult.torrent, rssResult.tracker);
+    const taskInfo = await addRssTask({
+        torrent,
+        title: rssSubs.name,
+        rssSubsId: rssResult.pid,
+        resultId: rssResult.id
+    });
+    return taskInfo ?? __throwMessage('Add task failed.');
 }
 
 /**
@@ -130,7 +146,7 @@ function singleResolveTaskEpisode(rssTask) {
 
 async function resolveTaskEpisode(rssTask) {
     const { id, rssSubsId } = rssTask;
-    const rssSubs = await rssRep.selectOneById(rssSubsId);
+    const rssSubs = await rssSubscribeRep.selectOneById(rssSubsId);
     const uuid = rssTask.uuid;
     let hash = rssTask.hash;
 

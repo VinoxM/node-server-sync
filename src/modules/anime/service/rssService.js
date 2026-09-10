@@ -2,7 +2,7 @@ import rssEpisodeRep from '#modules/anime/repository/rss/rssEpisodeRep.js';
 import rssSubtitleRep from '#modules/anime/repository/rss/rssSubtitleRep.js';
 import { generateMinioSourceSafely } from '#modules/media/service/mediaMinioService.js';
 import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
-import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
+import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 
 export async function getRssCardFailedViews() {
     const episodeFailedCount = await rssEpisodeRep.selectFailedCount();
@@ -38,9 +38,18 @@ export async function getRssEpisodeSource(rssSubsId, episode) {
     return result;
 }
 
-export async function getEpisodeExistsSubscriptions(body) {
-    const { season, title, pageNum = 1, pageSize = 20 } = body
-    const record = await rssSubscribeRep.selectEpisodesExistsSubsForSearch(season, title, pageSize, pageNum).then(({ data }) => data)
-    const total = await rssSubscribeRep.selectEpisodesExistsSubsForCount(season, title)
-    return { record, total, pageNum, pageSize }
+export async function getSubscribeBySubjectId(subjectId) {
+    const subscribe = await subscribeRep.selectBySubjectId(subjectId);
+    if (!subscribe) return subscribe;
+    const { regex, nameAlias, ...rest } = subscribe;
+    return {
+        ...rest,
+        regex: JSON.parse(regex ?? '[]'),
+        nameAlias: JSON.parse(nameAlias ?? '[]')
+    }
+}
+
+export async function updateSubscribe(body) {
+    const { subsId, ...rest } = body;
+    return subscribeRep.updateOne({ ...rest, id: subsId });
 }

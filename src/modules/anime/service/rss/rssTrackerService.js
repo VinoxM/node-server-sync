@@ -1,5 +1,9 @@
 import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
 
+export async function getTrackersMapping() {
+    return rssTrackerRep.getTrackersMapping();
+}
+
 /**
  * 从磁力链接中提取出纯哈希值
  * @param {string} torrent - 磁力链接字符串
@@ -67,7 +71,7 @@ export function multiExpandTorrentTracker(rssResults) {
  * @returns {Promise<Array<{ id: number, host: string }>>}
  */
 export async function saveTrackers(trackers, transactionDB) {
-    let { data: trackerArr } = await rssTrackerRep.selectAll(false);
+    let { data: trackerArr } = await rssTrackerRep.selectAll();
     const excludes = trackers.filter(t => !trackerArr.some(obj => obj.host === t));
     if (excludes.length > 0) {
         const maxId = await rssTrackerRep.selectMaxId();
@@ -81,7 +85,7 @@ export async function saveTrackers(trackers, transactionDB) {
         }
         if (saveArr.length > 0) {
             await rssTrackerRep.insertManyWithId(saveArr, transactionDB);
-            return rssTrackerRep.selectAll(false).then(res => res.data);
+            return rssTrackerRep.selectAll().then(res => res.data);
         }
     }
     return trackerArr;

@@ -214,6 +214,7 @@ sqlite:
             `sort` integer NOT NULL DEFAULT 0,
             CONSTRAINT `idx_pid_title` UNIQUE (`pid`, `title`)
           );
+          CREATE INDEX idx_rss_result_pid_hide ON rss_result(pid, hide, pub_date, sort, episode);
       - tableName: rss_tracker
         DDL: |
           CREATE TABLE rss_tracker (
@@ -221,6 +222,14 @@ sqlite:
             `host` varchar(100) NOT NULL,
             CONSTRAINT `idx_host` UNIQUE (`host`)
           );
+      - tableName: rss_regex_history
+        DDL: |
+          CREATE TABLE rss_regex_history (
+            `id` integer PRIMARY KEY NOT NULL,
+            `regex` varchar(256) NOT NULL,
+            `score` bigint NOT NULL,
+            CONSTRAINT `idx_regex` UNIQUE (`regex`)
+          )
       - tableName: rss_torrent_task
         DDL: |
           CREATE TABLE rss_torrent_task (

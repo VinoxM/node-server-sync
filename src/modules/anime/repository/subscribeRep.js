@@ -68,14 +68,13 @@ export default {
      * @returns {Promise<ExecResult>}
      */
     updateOne: (data) => {
-        const sql = `UPDATE rss_subscribe SET start_time = ?, url = ?, regex = ?, goon = ? WHERE bangumi_id = ?`;
+        const sql = `UPDATE rss_subscribe SET start_time = ?, url = ?, regex = ?, goon = ? WHERE id = ?`;
         return __sqliteDB.update(sql, [
-            data.season,
             data.startTime,
             data.url,
             data.regex,
             data.goon,
-            data.bangumiId
+            data.id
         ], null, dbName);
     },
 
@@ -87,6 +86,18 @@ export default {
     deleteByBangumiId: (bangumiId) => {
         const sql = `DELETE FROM rss_subscribe WHERE bangumi_id = ?`;
         return __sqliteDB.delete(sql, [bangumiId], null, dbName);
+    },
+
+    /**
+     * 根据 Subject ID 查询订阅详情
+     * @param {number} subjectId - Subject ID
+     * @returns {Promise<any|null>}
+     */
+    selectBySubjectId: (subjectId) => {
+        const sql = `SELECT ${FULL_COLUMNS.map(c => 'rs.' + c).join(",")}, t.name, t.name_cn AS nameCN, t.name_alias FROM rss_subscribe rs `
+            + `INNER JOIN subjects t ON t.bangumi_id = rs.bangumi_id `
+            + `WHERE t.id=?`;
+        return __sqliteDB.selectOne(sql, [subjectId], null, dbName);
     },
 
     /**

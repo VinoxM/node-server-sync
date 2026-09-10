@@ -112,7 +112,8 @@ function ensureImageStorageLink(images, image, link) {
 }
 
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
-async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
+async function getCharactersBySubjectId(subjectId, options = {}) {
+    const { fetchDelay = 500, ignoreImages = false } = options;
     const results = [];
     const images = [];
     const characters = await bangumiApi.getSubjectCharacters(subjectId);
@@ -124,11 +125,11 @@ async function getCharactersBySubjectId(subjectId, fetchDelay = 500) {
     for (const character of characters) {
         if (!CHARACTERS_RELATION_INCLUDES.includes(character.relation)) continue;
         const summary = character.summary || '';
-        const characterImage = ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id));
+        const characterImage = ignoreImages ? character?.images?.large : ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id));
         const characterActors = character.actors ?? [];
         const actors = [];
         for (const actor of characterActors) {
-            const actorImage = ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id));
+            const actorImage = ignoreImages ? actor?.images?.large : ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id));
             actors.push({ name: actor.name, image: actorImage, id: actor.id });
         }
         const result = {
@@ -159,19 +160,20 @@ export async function cleanBangumiSubject(subject, options = {}) {
         __log.warn(`[Bangumi Clean] Subject[${subject.id}] cannot get season, skipped.`);
         return;
     }
-    const { fetchDelay, skipCharacter = false } = options;
+    const { skipCharacter = false, ignoreImages = false } = options;
     const infoBox = subject['infobox'];
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
     const platform = getPlatformFromSubject(subject);
+    const metaTags = new Set(subject.meta_tags ?? []);
     const images = [];
     const characters = [];
     if (!skipCharacter) {
-        const charactersResult = await getCharactersBySubjectId(subject.id, fetchDelay);
+        const charactersResult = await getCharactersBySubjectId(subject.id, options);
         images.push(...charactersResult.images);
         characters.push(...charactersResult.results);
     }
-    const cover = ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
+    const cover = ignoreImages ? subject.images?.large || subject.image : ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
     await putImageStorageLinkBatch(images);
     return {
         bangumiId: subject.id,
@@ -184,7 +186,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         summary: subject.summary,
         totalEpisodes: subject.total_episodes,
         cover,
-        metaTags: JSON.stringify(subject.meta_tags ?? []),
+        metaTags: JSON.stringify(Array.from(metaTags)),
         staff: JSON.stringify(staff),
         characters: JSON.stringify(characters),
         nsfw: Boolean(subject.nsfw) ? 1 : 0

@@ -1,7 +1,7 @@
 import Parser from 'rss-parser';
-import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
 import { getUrlContent } from '#utils/httpUtil.js';
 import subscribeRep from '#modules/anime/repository/subscribeRep.js';
+import subjectsRep from '#modules/anime/repository/subjectsRep.js';
 
 const rssXMLParser = {
     value: null,
@@ -44,15 +44,6 @@ export async function analysisRssSubscribe(obj) {
         __log.error(`[RssSubscribe Handler] Analysis Error: ${idStr}${decodeURI(url)} , Cause:`, err.message ?? err);
         throw err;
     }
-}
-
-/**
- * 校验指定订阅是否可安全删除（不存在已关联的剧集）
- * @param {number} id - 订阅 ID
- * @returns {Promise<boolean>}
- */
-export async function canDeleteSubscribe(id) {
-    return (await rssSubscribeRep.selectEpisodesExistsSubsBySubsId(id)) === 0;
 }
 
 export async function createSubscribeBySubjectId(subjectId) {

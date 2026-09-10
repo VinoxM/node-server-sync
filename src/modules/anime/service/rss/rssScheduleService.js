@@ -2,6 +2,11 @@ import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
 import { AsyncExecutor } from '#core/infra/asyncExecutor.js';
 import { addManyResult } from './rssResultService.js';
 import { analysisRssSubscribe } from './rssSubscribeService.js';
+import { concatTrackers, getTrackersMapping } from './rssTrackerService.js';
+import rssResultRep from '#modules/anime/repository/rss/rssResultRep.js';
+import { pushNotification } from '#api/sockets/notification.js';
+import { pushRssSubscription } from '#api/sockets/rssSubscription.js';
+import { addRssTasksFromFavorites } from './rssTaskService.js';
 
 const rssUpdate = {
     value: false,
@@ -88,4 +93,81 @@ export async function updateRssSubscribe(ids) {
         };
         submitAndRun();
     }).finally(() => rssUpdate.release());
+}
+
+export async function autoUpdateSubscribe() {
+    const { data: beforeUpdate } = await rssSubscribeRep.selectRssSubscribeCountsWithoutFin();
+    const toUpdateIds = beforeUpdate.map(d => d.id);
+    const { effectRows, handledCount } = await updateRssSubscribe(toUpdateIds);
+    if (effectRows > 0) {
+        const { data: afterUpdate } = await rssSubscribeRep.selectRssSubscribeCountsWithoutFin();
+        const updated = [];
+        afterUpdate.forEach(obj => {
+            beforeUpdate.some(b => {
+                if (b.id === obj.id) {
+                    obj.counts - b.counts > 0 && updated.push({ id: obj.id, name: obj.name, cover: obj.cover, count: obj.counts - b.counts });
+                    return true;
+                }
+                return false;
+            });
+        });
+        if (updated.length === 0) return;
+        const trackers = await getTrackersMapping();
+        const updatedRssSubs = [];
+        for (const { id, name, cover, count } of updated) {
+            const limitedData = await rssResultRep.selectRssResultsByPidWithLimit(id, count);
+            const rssSubs = { name, cover, count };
+            if (limitedData.rows) {
+                continue;
+            }
+            rssSubs.id = id;
+            rssSubs.result = limitedData.data.map(obj => ({
+                resultId: obj.id,
+                title: obj.title,
+                torrent: concatTrackers(obj.torrent, obj.tracker, trackers)
+            }))
+            updatedRssSubs.push(rssSubs);
+        }
+        pushToNotification({ effectRows, handledCount, updated: updatedRssSubs });
+        const rssSubsArr = smoothArray(updatedRssSubs);
+        pushToRssSubscription(rssSubsArr);
+        addRssTasksFromFavorites(rssSubsArr);
+    }
+}
+
+/**
+ * 推送 RSS 更新通知至 WebSocket
+ * @param {Record<string, any>} data - 载荷数据
+ */
+function pushToNotification(data) {
+    pushNotification(JSON.stringify({ event: 'RSS Subscribe', ...data }), 'Server');
+}
+
+/**
+ * 展平并提取订阅任务列表
+ * @param {Array<{ id: number, result?: Array<any> }>} data - 原始更新结果
+ * @returns {Array<any>} 展平后的任务项数组
+ */
+function smoothArray(data) {
+    const resultArr = [];
+    const arr = Array.from(data);
+    for (const { id, result } of arr) {
+        Array.from(result || []).forEach(tObj => {
+            resultArr.push({
+                rssSubsId: id,
+                ...tObj
+            });
+        });
+    }
+    return resultArr;
+}
+
+/**
+ * 广播 RSS 订阅事件给已连接的 WebSocket 客户端
+ * @param {Array<any>} rssSubsArr - 订阅任务项
+ */
+function pushToRssSubscription(rssSubsArr) {
+    if (rssSubsArr.length > 0) {
+        pushRssSubscription(JSON.stringify(rssSubsArr), 'Server');
+    }
 }

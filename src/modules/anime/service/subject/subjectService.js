@@ -12,52 +12,60 @@ export async function getExistsSeasons() {
     return subjectsRep.selectAllSeasons().then(res => res.data.map(d => d.season));
 }
 
-export async function searchSubjects(season, name) {
-    const { data } = await subjectsRep.selectAllBySeasonAndName(season, name);
-    return data.map(obj => {
-        const { platform, metaTags, startTime, ...rest } = obj;
-        const isTV = platform === SUBJECT_PLATFORM_DEFAULT || JSON.parse(metaTags || '[]').includes?.(SUBJECT_PLATFORM_DEFAULT);
-        const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
-        return {
-            ...rest,
-            isShort,
-            platform: isShort || isTV ? SUBJECT_PLATFORM_DEFAULT : platform,
-            goon: rest.goon ?? 0
-        }
-    })
-}
-
-export async function getSubjectForEdit(subjectId) {
-    const subject = await subjectsRep.selectOneById(subjectId);
-    subject || __throwMessage('Subject not exists.');
-    const subjectView = handleSubjectView(subject);
-    const result = {
-        ...subjectView,
-        nsfw: subject.nsfw
-    }
-    const subscribe = await subscribeRep.selectByBangumiId(subject.bangumiId);
-    if (!subscribe) return result;
-    result.subscribe = subscribe;
-    return result;
-}
-
 export function handleSubjectView(subject) {
+    if (!subject) return subject;
     const {
         subsId, nameAlias, platform, metaTags, staff, characters,
-        hide, nsfw, updateTime, createTime, fin, summaryCN, season,
+        hide, nsfw, updateTime, createTime, summaryCN, season,
         ...rest
     } = subject;
     const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;
     return {
         ...rest,
+        season,
         subsId,
         nameAlias: JSON.parse(nameAlias ?? '[]'),
         platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
         metaTags: JSON.parse(metaTags ?? '[]'),
         staff: JSON.parse(staff ?? '[]'),
         characters: JSON.parse(characters ?? '[]'),
-        isShort,
-        fin: Boolean(fin)
+        isShort
+    };
+}
+
+function handleSubjectViewForEdit(subject) {
+    if (!subject) return subject;
+    const subjectView = handleSubjectView(subject);
+    const { nameAlias, staff, characters, metaTags, startTime, ...rest } = subjectView;
+    return {
+        ...rest,
+        goon: subject.goon ?? 0,
+        nsfw: subject.nsfw,
+        fin: subject.fin,
+        hide: subject.hide
+    }
+}
+
+export async function searchSubjects(season, name) {
+    const { data } = await subjectsRep.selectAllBySeasonAndName(season, name);
+    return data.map(handleSubjectViewForEdit)
+}
+
+export async function getSubjectForEditView(subjectId, season) {
+    const subject = await subjectsRep.selectOneByIdAndSeason(subjectId, season);
+    if (!subject.goon && season !== subject.season) {
+        return null;
+    }
+    return handleSubjectViewForEdit(subject)
+}
+
+export async function getSubjectForEdit(subjectId) {
+    const subject = await subjectsRep.selectOneById(subjectId);
+    subject || __throwMessage('Subject not exists.');
+    const subjectView = handleSubjectView(subject);
+    return {
+        ...subjectView,
+        nsfw: subject.nsfw
     };
 }
 
@@ -96,6 +104,17 @@ export async function deleteOneSubject(id) {
 }
 
 /**
+ * 更新番剧条目的所属季节
+ * @param {number} id - 番剧 ID
+ * @param {number} season - 目标季节
+ * @returns {Promise<boolean>}
+ */
+export async function updateSubjectSeason(id, season) {
+    const { rows } = await subjectsRep.updateSeasonById(season, id);
+    return rows > 0;
+}
+
+/**
  * 更新番剧条目在前台的隐藏/显示状态
  * @param {number} id - 番剧 ID
  * @param {number} hide - 目标隐藏值 (SUBJECT_HIDE_VALUE: 0|1)
@@ -108,4 +127,34 @@ export async function updateSubjectHide(id, hide) {
     const { hide: originHide } = subject;
     const { rows } = await subjectsRep.updateSubjectHide(hide, id, originHide);
     return rows > 0 ? hide : originHide;
+}
+
+/**
+ * 更新番剧条目是否是泡面番
+ * @param {number} id - 番剧 ID
+ * @param {number} short - 目标值
+ * @returns {Promise<boolean>}
+ */
+export async function updateSubjectIsShort(id, short) {
+    const subject = await subjectsRep.selectOneById(id);
+    subject || __throwMessage('Subject not exists.');
+    const { platform: originPlatform } = subject;
+    [SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT].includes(originPlatform) || __throwMessage('Cannot update subscribe isShort.');
+    const platform = short ? SUBJECT_PLATFORM_IS_SHORT : SUBJECT_PLATFORM_DEFAULT;
+    const { rows } = await subjectsRep.updateSubjectPlatform(platform, id);
+    return rows > 0;
+}
+
+/**
+ * 更新番剧条目是否已完结
+ * @param {number} id - 番剧 ID
+ * @param {number} fin - 目标值
+ * @returns {Promise<boolean>}
+ */
+export async function updateSubjectFin(id, fin) {
+    const subject = await subjectsRep.selectOneById(id);
+    subject || __throwMessage('Subject not exists.');
+    const { bangumiId } = subject;
+    const { rows } = subscribeRep.updateFinByBangumiId(bangumiId, fin);
+    rows === 0 && __throwMessage('Subject subscribe not exists.');
 }

@@ -1,5 +1,5 @@
 import { SUBSCRIBE_FIN_VALUE } from "#modules/anime/constants/subjectConstant.js";
-import { RSS_SUBSCRIBE_SYNC_STATUS } from "../../constants/rssSubscribeConsts.js";
+import { RSS_SUBSCRIBE_SYNC_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 
 const callbackIfKeyAbsent = (callback, data) => {
     const insertPropertyMap = {
@@ -29,6 +29,16 @@ const callbackIfKeyAbsent = (callback, data) => {
 const dbName = 'anime'
 const enablePrint = { print: true }
 
+function handleName(data) {
+    if (data) {
+        return {
+            ...data,
+            name: __isNotBlank(data.nameCN) ? data.nameCN : data.name
+        };
+    }
+    return data;
+}
+
 export default {
     /**
      * 根据传入的订阅ID集合查询 或 查询未完结番剧的订阅
@@ -43,7 +53,29 @@ export default {
             `SELECT id, url, regex FROM rss_subscribe WHERE id IN (${subsIds.map(_ => '?').join(",")})`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
-
+    selectOneById: async id => {
+        const sql = `SELECT rs.id, rs.url, rs.regex, rs.fin, rs.goon, t.name, t.name_cn AS nameCN, t.season `
+            + `FROM rss_subscribe rs `
+            + `LEFT JOIN subjects t ON t.bangumi_id=rs.bangumi_id `
+            + `WHERE rs.id=? `;
+        const data = await __sqliteDB.selectOne(sql, [id], null, dbName);
+        return handleName(data);
+    },
+    selectRssSubscribeCountsWithoutFin: async () => {
+        const sql = `SELECT rs.id, t.name, t.name_cn AS nameCN, t.cover, COUNT(rr.id) `
+            + `FROM rss_subscribe rs `
+            + `LEFT JOIN subjects t ON t.bangumi_id=rs.bangumi_id `
+            + `LEFT JOIN rss_result rr ON rs.id = rr.pid `
+            + `WHERE rs.fin=${SUBSCRIBE_FIN_VALUE.NO} GROUP BY rs.id, t.name, nameCN, t.co`;
+        const res = await __sqliteDB.selectAll(sql, [], null, dbName);
+        if (res.rows > 0) {
+            return {
+                rows: res.rows,
+                data: res.data.map(handleName)
+            };
+        }
+        return res;
+    },
     /** old */
     selectForSubscribeByIds: (ids) => {
         if (__isEmptyArray(ids)) {

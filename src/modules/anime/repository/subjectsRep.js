@@ -21,8 +21,8 @@ async function insertAny(subjects) {
     return __sqliteDB.insert(sql, values, null, dbName);
 }
 
-// Exclude 'id', 'bangumi_id', 'update_time' columns
-const UPDATE_COLUMN_OPTIONS = SUBJECT_RESULT_MAP.filter(m => !['id', 'bangumi_id', 'update_time'].includes(m.column));
+// Exclude 'id', 'bangumi_id', 'create_time' columns
+const UPDATE_COLUMN_OPTIONS = SUBJECT_RESULT_MAP.filter(m => !['id', 'bangumi_id', 'create_time'].includes(m.column));
 const BATCH_UPDATE_LIMIT = 500;
 
 async function updateAny(subjects, updateColumns = []) {
@@ -170,6 +170,16 @@ export default {
     },
 
     /**
+     * 修改条目所属季度
+     * @param {string} platform - 季度 (如 '2026-10')
+     * @param {number} id - 条目 ID
+     * @returns {Promise<ExecResult>}
+     */
+    updateSubjectPlatform: (platform, id) => {
+        return __sqliteDB.update(`UPDATE subjects SET platform=? WHERE id=?`, [platform, id], null, dbName);
+    },
+
+    /**
      * 物理删除指定条目
      * @param {number} id - 条目 ID
      * @returns {Promise<ExecResult>}
@@ -187,14 +197,13 @@ export default {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
-            + `CASE WHEN julianday('now') - julianday(MAX(rr.pub_date)) < 1 then 1 else 0 end hasNew `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count '
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
-            + `WHERE (t.season=? AND t.hide=${SUBJECT_HIDE_VALUE.NO}) `
-            + `OR (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?) `
-            + 'GROUP BY t.id ';
+            + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
+            + `AND (t.season=? OR (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?)) `
+            + 'GROUP BY t.id,rs.id ';
         const params = [season, season, season];
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
@@ -227,5 +236,22 @@ export default {
             + `WHERE ${whereCause}`
             + `GROUP BY t.id`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
+    },
+
+    selectOneByIdAndSeason: (id, season) => {
+        let queryCase = '';
+        const params = [];
+        if (__isNotBlank(season)) {
+            queryCase = ', CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon ';
+            params.push(season);
+        }
+        params.push(id);
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
+            + `rs.id AS subsId, rs.fin, rs.start_time `
+            + queryCase
+            + 'FROM subjects t '
+            + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `WHERE t.id=?`;
+        return __sqliteDB.selectOne(sql, params, null, dbName);
     }
 };

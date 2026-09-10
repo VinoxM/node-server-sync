@@ -1,19 +1,21 @@
 import { tryClone } from '#utils/objectUtil.js';
 
 let trackerCache = null;
+const trackerMapping = new Map();
 
 const dbName = 'anime';
-const enablePrint = { print: true };
 
-async function selectAllTrackers(print = true, replaceCache = false) {
+async function selectAllTrackers(replaceCache = false) {
     const sql = "SELECT id,host FROM rss_tracker";
     if (trackerCache) {
         return Promise.resolve({ rows: trackerCache.length, data: tryClone(trackerCache) });
     }
-    const returning = __sqliteDB.selectAll(sql, [], print ? enablePrint : null, dbName);
+    const returning = __sqliteDB.selectAll(sql, [], null, dbName);
     return returning.then(res => {
         if (replaceCache || !trackerCache) {
             trackerCache = tryClone(res.data);
+            trackerMapping.clear();
+            trackerCache.forEach(item => trackerMapping.set(item.id, item.host));
         }
         return res;
     });
@@ -23,13 +25,20 @@ async function selectAllTrackers(print = true, replaceCache = false) {
  * BitTorrent Tracker 服务器列表仓储服务
  */
 export default {
+
+    getTrackersMapping: async () => {
+        if (!trackerCache) {
+            await selectAllTrackers(true);
+        }
+        return Object.fromEntries(trackerMapping.entries())
+    },
+
     /**
      * 查询全部 Tracker 服务器（支持内存缓存）
-     * @param {boolean} [print=true] - 是否打印 SQL 日志
      * @param {boolean} [replaceCache=false] - 是否强制更新缓存
      * @returns {Promise<QueryResult<{ id: number, host: string }>>}
      */
-    selectAll: (print = true, replaceCache = false) => selectAllTrackers(print, replaceCache),
+    selectAll: (replaceCache = false) => selectAllTrackers(replaceCache),
 
     /**
      * 根据 Tracker ID 列表获取对应的 Host 地址列表
@@ -38,7 +47,7 @@ export default {
      */
     selectHostsByIds: async ids => {
         if (__isEmptyArray(ids)) return [];
-        const { data } = await selectAllTrackers(false);
+        const { data } = await selectAllTrackers();
         return data.filter(({ id }) => ids.includes(id + '')).map(({ host }) => host);
     },
 
@@ -70,7 +79,7 @@ export default {
         sql = sql.substring(0, sql.length - 1);
         return db.insert(sql, params, null, dbName).then(res => {
             if (res.rows) {
-                selectAllTrackers(true, true);
+                selectAllTrackers(true);
             }
             return res;
         });

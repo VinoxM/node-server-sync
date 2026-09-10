@@ -1,4 +1,4 @@
-import { saveTrackers, multiExpandTorrentTracker, expandTorrentTracker } from "./rssTrackerService.js";
+import { saveTrackers, multiExpandTorrentTracker, expandTorrentTracker, getTrackersMapping } from "./rssTrackerService.js";
 import { GetterContextSubscribe } from '#core/context/subscribe.js';
 import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
 
@@ -22,7 +22,8 @@ export async function addOneResult(result) {
     const trackerArr = await saveTrackers(trackers);
     const rssResultMaxId = await rssResultRep.selectMaxId();
     handleRssResultProperties(result, { trackerArr, rssResultMaxId });
-    return rssResultRep.insertOne(result);
+    const { rows } = await rssResultRep.insertOne(result);
+    rows || __throwMessage('Add rss result failed. Cause: exists.');
 }
 
 /**
@@ -42,6 +43,31 @@ export async function addManyResult(resultArr) {
     return rows;
 }
 
+export async function getResultsBySubsId(subsId) {
+    const trackers = await getTrackersMapping();
+    const { data } = await rssResultRep.selectRssResultsByPid(subsId);
+    return data.map(item => {
+        const torrent = [item.torrent, (item.tracker ?? '').split(',').map(t => t in trackers ? trackers[t] : '').join('&tr=')].join('&tr=');
+        const { tracker, ...result } = item;
+        result.torrent = 'magnet:?xt=urn:btih:' + torrent;
+        return result;
+    });
+}
+
+export async function deleteOneResult(id) {
+    const { rows } = await rssResultRep.deleteOneById(id);
+    rows || __throwMessage('Delete rss result failed. Cause: not exists.');
+}
+
+export async function deleteAllSubscribeResults(subsId) {
+    return rssResultRep.deleteByPid(subsId);
+}
+
+export async function hideOneResult(id, hide) {
+    const { rows } = await rssResultRep.fakeDeleteOneById(id, hide);
+    rows || __throwMessage('Hide rss result failed. Cause: not exists.');
+}
+
 /**
  * 修改单条 RSS 抓取条目信息
  * @param {Object} result - 抓取条目数据
@@ -51,7 +77,8 @@ export async function editOneResult(result) {
     const trackers = expandTorrentTracker(result);
     const trackerArr = await saveTrackers(trackers);
     handleRssResultProperties(result, { trackerArr });
-    return rssResultRep.updateOne(result);
+    const { rows } = await rssResultRep.updateOne(result);
+    rows || __throwMessage('Edit rss result failed.');
 }
 
 function handleRssResultProperties(rssResult, { rssResultMaxId = -1, incr = 0, trackerArr = null }) {

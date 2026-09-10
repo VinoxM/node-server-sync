@@ -114,9 +114,7 @@ export default {
      * @returns {Promise<{ id: number, pid: number, torrent: string, tracker: string, title: string }|null>}
      */
     selectOneForTaskByIdAndPid: (id, pid) => {
-        const sql = 'SELECT rr.id, rr.pid, rr.torrent, rr.tracker, rs.name title FROM rss_result rr ' +
-            'INNER JOIN rss_subscribe rs ON rr.pid=rs.id ' +
-            'WHERE rr.id=? AND rr.pid=?';
+        const sql = 'SELECT id, pid, torrent, tracker FROM rss_result WHERE id=? AND pid=?';
         return __sqliteDB.selectOne(sql, [id, pid], null, dbName);
     },
 
@@ -131,12 +129,24 @@ export default {
     },
 
     /**
-     * 查询指定订阅下未隐藏的所有抓取条目（按集数序号升序）
+     * 查询指定订阅下的所有抓取条目（按集数序号降序）
      * @param {number} pid - 订阅 ID
+     * @param {boolean} [onlyVisible] - 仅查询可见的结果
      * @returns {Promise<QueryResult<{ id: number, title: string, torrent: string, pubDate: string, tracker: string, episode: number }>>}
      */
-    selectRssResultsByPid: (pid) => {
-        const sql = "SELECT id, title,torrent,pub_date,tracker,episode FROM rss_result WHERE pid=? AND hide=0 ORDER BY sort";
+    selectRssResultsByPid: (pid, onlyVisible = false) => {
+        const sql = `SELECT id, pid, title,torrent,pub_date,tracker,episode,hide,sort FROM rss_result WHERE pid=?${onlyVisible ? ' AND hide=0' : ''} ORDER BY sort DESC`;
         return __sqliteDB.selectAll(sql, [pid], null, dbName);
+    },
+
+    /**
+     * 查询指定订阅下所有抓取条目（按id序号降序）
+     * @param {number} pid - 订阅 ID
+     * @param {number} limit - 最大多少条
+     * @returns {Promise<QueryResult<{ id: number, title: string, torrent: string, pubDate: string, tracker: string, episode: number }>>}
+     */
+    selectRssResultsByPidWithLimit: (pid, limit) => {
+        const sql = `SELECT id, pid, title, torrent, pub_date,tracker,episode,hide,sort FROM rss_result WHERE pid=? ORDER BY id DESC LIMIT ?`;
+        return __sqliteDB.selectAll(sql, [pid, limit], null, dbName);
     },
 };

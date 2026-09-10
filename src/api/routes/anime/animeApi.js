@@ -1,10 +1,13 @@
 import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
-import { checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
 import { getAnimeCalendar, getAnimeInformation } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
+import { allowLanHosts } from '#common/constants/allowHostsConst.js';
+import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
+import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 
 const { GET, POST } = apiMethodConst;
 
@@ -41,6 +44,15 @@ export default defineRoutes({
             const userInfo = await decodeAuthorization(req);
             return getAnimeInformation(req.query.id, userInfo);
         }
+    },
+
+    "/getEpisodeSource": {
+        method: POST,
+        needAuth: needAuthSingleClient.ANIME,
+        allowHosts: allowLanHosts,
+        needSecret,
+        preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
+        callback: req => getRssEpisodeSource(req.body.rssSubsId, req.body.episode)
     },
 
     /**

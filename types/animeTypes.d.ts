@@ -50,6 +50,8 @@ export interface SubjectPullOptions {
   delayMs?: number;
   /** 是否跳过角色和声优信息抓取 */
   skipCharacter?: boolean;
+  /** 是否不处理图片 */
+  ignoreImages?: boolean;
 }
 
 /**

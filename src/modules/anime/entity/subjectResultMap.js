@@ -1,6 +1,24 @@
 import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE } from "../constants/subjectConstant.js";
 
 /**
+ * 支持接口更新的字段属性
+ * @readonly
+ * @enum {string}
+ */
+export const SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN = [
+    'name',
+    'nameCN',
+    'nameAlias',
+    'platform',
+    'airDate',
+    'summary',
+    'totalEpisodes',
+    'metaTags',
+    'staff',
+    'characters'
+]
+
+/**
  * subjects 表字段与实体属性映射配置列表
  * @type {Array<{ property: string, column: string, defaultValue?: () => any }>}
  */

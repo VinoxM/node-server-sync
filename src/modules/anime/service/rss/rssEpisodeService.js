@@ -1,7 +1,6 @@
 import { EPISODE_STATUS, EPISODE_FAILED_REASON, CAN_NOT_RETRY_FAILED_EPISODE_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
-import rssRep from "#modules/anime/repository/rss/rssRep.js";
 import { getEpisodeMatches } from "./rssResultService.js";
 import path, { join } from 'path';
 import { pushNotification } from "#api/sockets/notification.js";
@@ -13,6 +12,7 @@ import {
 } from "#modules/ssh/sshExecutorService.js";
 import { backfillSubtitleFonts, resolveEpisodeSubtitle } from "./rssSubtitleService.js";
 import { insertFont, matchSubtitleFont } from "./rssFontsService.js";
+import rssSubscribeRep from "#modules/anime/repository/rss/rssSubscribeRep.js";
 
 /**
  * 更新剧集状态, 用于给下载服务在下载完成后钩子脚本中更新剧集状态
@@ -146,7 +146,7 @@ export async function retryFailedEpisode(failedEpisodeId) {
         __throwMessage('Not a video file.');
     }
 
-    const rssSubs = await rssRep.selectOneById(rssSubsId);
+    const rssSubs = await rssSubscribeRep.selectOneById(rssSubsId);
     if (!rssSubs) {
         __throwMessage('Rss subscribe not found.');
     }

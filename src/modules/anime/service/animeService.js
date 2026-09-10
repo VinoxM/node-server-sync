@@ -9,6 +9,7 @@ import { handleSubjectView } from "./subject/subjectService.js";
 function handleSearch(data, userInfo) {
     let list = userInfo ? data : data.filter(o => o.nsfw === SUBJECT_NSFW_VALUE.NO);
     let now = new Date();
+    const nowTimestamp = now.getTime();
     if (now.getHours() < 6) {
         now.setDate(now.getDate() - 1);
     }
@@ -30,6 +31,7 @@ function handleSearch(data, userInfo) {
         const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
         let type = `${isShort ? 1 : 0}${(isTV || isShort) ? 0 : 1}`;
         let status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
+        const hasNew = obj.lastPub && (nowTimestamp - new Date(obj.lastPub).getTime() < 24 * 60 * 60 * 1000) ? 1 : 0;
         return {
             Z: obj.nameCN, // name
             J: obj.name, // nameJP
@@ -38,7 +40,7 @@ function handleSearch(data, userInfo) {
             T: type, // type. isShort(0/1) concat isWeb(0/1)
             S: status, // status. enum: 0-not start/1-broadcasting/2-fin
             E: obj.latestEp, // lastEp
-            N: obj.hasNew, // hasNew. enum: 0, 1
+            N: hasNew, // hasNew. enum: 0, 1
             U: obj.id + ":" + obj.subsId, // id
             R: obj.count, // epCount
             G: obj.goon, // goon
@@ -79,6 +81,7 @@ export async function getAnimeInformation(id, userInfo) {
     }
     return {
         ...subjectView,
+        fin: Boolean(subject.fin),
         results,
         episodes
     };
@@ -86,9 +89,9 @@ export async function getAnimeInformation(id, userInfo) {
 
 async function getRssResultsByRssSubscribeId(rssSubsId) {
     const results = [];
-    const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId);
+    const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId, true);
     for (const item of data) {
-        const { tracker, ...result } = item;
+        const { tracker, hide, pid, sort, ...result } = item;
         const trackers = await rssTrackerRep.selectHostsByIds((item.tracker ?? '').split(','));
         const torrent = [item.torrent, trackers.join('&tr=')].join('&tr=');
         result.torrent = 'magnet:?xt=urn:btih:' + torrent;

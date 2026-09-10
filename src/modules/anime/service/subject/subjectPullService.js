@@ -14,11 +14,17 @@ import { fetchSubjectsByAirDate } from "./subjectFetchService.js";
 /**
  * 按bangumiId拉取并清洗动画条目
  * @param {number|string} bangumiId
+ * @param {SubjectPullOptions} [options] - 配置选项
  * @returns {Promise<CleanedSubject>}
  */
-export async function fetchAnimeSubjectByBangumiId(bangumiId) {
+export async function fetchAndCleanBangumiSubject(bangumiId, options) {
     const subject = await bangumiApi.getSubject(bangumiId);
-    return cleanBangumiSubject(subject);
+    return cleanBangumiSubject(subject, options);
+}
+
+export async function pullCleanedBangumiSubject(bangumiId, updateProperties) {
+    const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId);
+    return upsertOneCleanedSubject(cleanedSubject, { updateProperties });
 }
 
 /**
