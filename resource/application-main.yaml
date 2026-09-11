@@ -33,16 +33,8 @@ api:
     blockTime: 1000 * 60 * 60 * 24
     blockIgnore:
       - /common/*
-      - /rss/subscribe/*
-      - /rss/[copyright|link]/[add|edit|del].*
-      - /rss/[subtitle|episode|fonts]/*
-      - /rss/result/*
-      - /rss/regex/*
-      - /rss/task/*
       - /media/*
-      - /rss/v2/getRssCardFailedViews
-      - /anime/images/*
-      - /anime/calendar
+      - /anime/*
 sse:
   disabled:
     - barrage
