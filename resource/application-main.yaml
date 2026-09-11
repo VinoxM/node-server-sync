@@ -19,13 +19,11 @@ api:
   filterDisabled: []
   tokenBucket:
     config:
-      enable: true
+      enable: false
       initSize: 10
       maxSize: 100
       rate: 0.5
-    needToken:
-      - /rss(/v2)?/get((?!/|Matchers).)*$
-      - /rss/tracker/getAll
+    needToken: []
   ipBlocker:
     enable: true
     maxInterval: 1000 * 60
@@ -88,8 +86,9 @@ rss:
       keyword: true
       match: https://share.dmhy.org/topics/rss/rss.xml?keyword=#{keyword}
   awaitRssUpdating:
-    - /rss/[copyright|link|result|subscribe]/[add|edit|replace|update].*
-    - /rss/subscribe/[subTest|setFin]
+    - /anime/rss/initSubjectSubscribe
+    - /anime/rss/updateSubscribe
+    - /anime/suject/update.fin
   episodeMatches:
     - .*?\[([0-9]{1,4}(\.5)?)(v[0-3])?\].*
     - .*?[-～] ([0-9]{1,4}(\.5)?)(v[0-3])? .*
