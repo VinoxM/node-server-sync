@@ -40,6 +40,14 @@ function tryImageType(image) {
     }
 }
 
+function relaceCommonBangumiImageLink(image) {
+    if (__isBlank(image)) return image;
+    if (image.startsWith('https://lain.bgm.tv/pic/')) {
+        return image.replace('https://lain.bgm.tv/pic/', 'https://lain.bgm.tv/r/400/pic/');
+    }
+    return image;
+}
+
 /**
  * 批量注册待持久化到 MinIO 的图片链接
  * @param {Array<{ image: string, link: string }>} images - 图片原始 URL 与相对链接列表
@@ -49,7 +57,7 @@ export async function putImageStorageLinkBatch(images) {
     const dataList = images.map(({ image, link }) => ({
         link,
         minioLink: generateImageBucketLink(image, link),
-        originUrl: image
+        originUrl: relaceCommonBangumiImageLink(image)
     }));
     if (dataList.length > 0) {
         return bangumiImagesRep.insertBatch(dataList);
