@@ -1,4 +1,5 @@
-import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
+import { isCurSeason } from "#common/utils/dateUtil.js";
+import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
 const dbName = 'anime';
@@ -208,6 +209,93 @@ export default {
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
+    selectVisibleExistsBySubsId: async subsId => {
+        const sql = `SELECT EXISTS(SELECT 1 FROM rss_subscribe rs INNER JOIN subject t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO} LIMIT 1) AS [exists]`;
+        return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(data => Boolean(data?.exists));;
+    },
+
+    selectVisibleByFilters: (filters, pageNum = 1, pageSize = 20, includeNsfw = false) => {
+        const { season, platform, name, fin } = filters;
+        const whereCause = [` t.hide=${SUBJECT_HIDE_VALUE.NO} `], params = [];
+        if (__isNotBlank(season)) {
+            whereCause.push(' t.season=? ');
+            params.push(season);
+        }
+        if (__isNotBlank(name)) {
+            whereCause.push(' (t.name LIKE ? OR t.name_cn LIKE ?) ');
+            const nameLikely = `%${name}%`;
+            params.push(nameLikely, nameLikely);
+        }
+        if (!__isAnyBlank(platform, SUBJECT_PLATFORM_SEARCH_MAPPING[platform])) {
+            const platformParam = SUBJECT_PLATFORM_SEARCH_MAPPING[platform];
+            if (Array.isArray(platformParam)) {
+                whereCause.push(` t.platform IN (${platformParam.map(_ => '?').join(',')}) `);
+                params.push(...platformParam);
+            } else {
+                whereCause.push(` t.platform=? `)
+                params.push(platformParam);
+            }
+        }
+        if (__isNotBlank(fin)) {
+            whereCause.push(' rs.fin=? ');
+            params.push(fin);
+        }
+        if (!includeNsfw) {
+            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `)
+        }
+        let limitOffset = '';
+        if (pageNum !== undefined && pageSize !== undefined) {
+            const offset = (pageNum - 1) * pageSize;
+            limitOffset = ' LIMIT ' + pageSize + ' OFFSET ' + offset;
+        }
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count '
+            + 'FROM subjects t '
+            + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
+            + `WHERE${whereCause.join('AND')}`
+            + 'GROUP BY t.id,rs.id ORDER BY t.id,rs.id '
+            + limitOffset;
+        return __sqliteDB.selectAll(sql, params, null, dbName);
+    },
+
+    selectVisibleByFiltersCount: async (filters, includeNsfw = false) => {
+        const { season, platform, name, fin } = filters;
+        const whereCause = [` t.hide=${SUBJECT_HIDE_VALUE.NO} `], params = [];
+        if (__isNotBlank(season)) {
+            whereCause.push(' t.season=? ');
+            params.push(season);
+        }
+        if (__isNotBlank(name)) {
+            whereCause.push(' (t.name LIKE ? OR t.name_cn LIKE ?) ');
+            const nameLikely = `%${name}%`;
+            params.push(nameLikely, nameLikely);
+        }
+        if (!__isAnyBlank(platform, SUBJECT_PLATFORM_SEARCH_MAPPING[platform])) {
+            const platformParam = SUBJECT_PLATFORM_SEARCH_MAPPING[platform];
+            if (Array.isArray(platformParam)) {
+                whereCause.push(` t.platform IN (${platformParam.map(_ => '?').join(',')}) `);
+                params.push(...platformParam);
+            } else {
+                whereCause.push(` t.platform=? `)
+                params.push(platformParam);
+            }
+        }
+        if (__isNotBlank(fin)) {
+            whereCause.push(' rs.fin=? ');
+            params.push(fin);
+        }
+        if (!includeNsfw) {
+            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `)
+        }
+        const sql = `SELECT COUNT(t.id) as counts `
+            + 'FROM subjects t '
+            + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `WHERE${whereCause.join('AND')}`;
+        return __sqliteDB.selectOne(sql, params, null, dbName).then(data => data?.counts ?? 0);
+    },
+
     /**
      * 查询已存在的所有季节
      * @returns {Promise<QueryResult<{ season: string }>>}
@@ -217,23 +305,28 @@ export default {
     },
 
     selectAllBySeasonAndName: (season, name) => {
-        let queryCase = '', whereCause = '';
+        let queryCase = '', whereCause = [], whereJoin = 'AND';
         const params = [];
+        if (__isNotBlank(season)) {
+            queryCase = ', CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon ';
+            whereCause.push(' t.season=? ');
+            params.push(season, season);
+        }
         if (__isNotBlank(name)) {
-            whereCause = 'season=? AND (t.name LIKE ? OR t.name_cn LIKE ?) ';
+            whereCause.push(' (t.name LIKE ? OR t.name_cn LIKE ?) ');
             const nameLikely = `%${name}%`;
-            params.push(season, nameLikely, nameLikely);
-        } else {
-            queryCase = ', CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon '
-            whereCause = `season=? OR (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?) `;
-            params.push(season, season, season);
+            params.push(nameLikely, nameLikely);
+        } else if (isCurSeason(season)) {
+            whereCause.push(` (rs.fin=${SUBSCRIBE_FIN_VALUE.NO} AND rs.goon=${SUBSCRIBE_GOON_VALUE.YES} AND t.season<?) `);
+            params.push(season);
+            whereJoin = 'OR';
         }
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
             + `rs.id AS subsId, rs.fin, rs.start_time `
             + queryCase
             + 'FROM subjects t '
             + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
-            + `WHERE ${whereCause}`
+            + `WHERE${whereCause.join(whereJoin)}`
             + `GROUP BY t.id`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },

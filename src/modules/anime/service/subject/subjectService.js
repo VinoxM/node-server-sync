@@ -1,3 +1,4 @@
+import { generate30HoursNowDate } from "#common/utils/dateUtil.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import {
     BANGUMI_IMAGES_STATUS, SUBJECT_HIDE_VALUE,
@@ -24,11 +25,11 @@ export function handleSubjectView(subject) {
         ...rest,
         season,
         subsId,
-        nameAlias: JSON.parse(nameAlias ?? '[]'),
+        nameAlias: JSON.parse(nameAlias || '[]'),
         platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
-        metaTags: JSON.parse(metaTags ?? '[]'),
-        staff: JSON.parse(staff ?? '[]'),
-        characters: JSON.parse(characters ?? '[]'),
+        metaTags: JSON.parse(metaTags || '[]'),
+        staff: JSON.parse(staff || '[]'),
+        characters: JSON.parse(characters || '[]'),
         isShort
     };
 }
@@ -37,18 +38,29 @@ function handleSubjectViewForEdit(subject) {
     if (!subject) return subject;
     const subjectView = handleSubjectView(subject);
     const { nameAlias, staff, characters, metaTags, startTime, ...rest } = subjectView;
+
+    const date = __isBlank(startTime) ? new Date(subject.season + '-01') : new Date(startTime);
+    const startDate = `${date.getFullYear()}${(date.getMonth() + 1 + '').padStart(2, '0')}${(date.getDate() + '').padStart(2, '0')}`;
+    let hours = date.getHours();
+    if (hours >= 0 && hours < 6) {
+        date.setDate(date.getDate() - 1);
+        hours += 24;
+    }
+    const updateTime = `${String(hours).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}`;
+    const calendarTime = startDate + updateTime + date.getDay();
     return {
         ...rest,
         goon: subject.goon ?? 0,
         nsfw: subject.nsfw,
         fin: subject.fin,
-        hide: subject.hide
+        hide: subject.hide,
+        calendarTime
     }
 }
 
 export async function searchSubjects(season, name) {
     const { data } = await subjectsRep.selectAllBySeasonAndName(season, name);
-    return data.map(handleSubjectViewForEdit)
+    return data.map(d => handleSubjectViewForEdit(d))
 }
 
 export async function getSubjectForEditView(subjectId, season) {

@@ -19,6 +19,7 @@ import {
 import { insertFont, matchSubtitleFont } from './rssFontsService.js';
 import { Tracer } from '#core/infra/tracer.js';
 import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
+import { concatTracker } from './rssTrackerService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP'];
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE];

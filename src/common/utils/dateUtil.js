@@ -6,6 +6,14 @@ function padStart(str, maxLength = 2, fillString = '0') {
     return (str + "").padStart(maxLength, fillString);
 }
 
+export function generate30HoursNowDate() {    
+    const now = new Date();
+    if (now.getHours() < 6) {
+        now.setDate(now.getDate() - 1);
+    }
+    return now;
+}
+
 /**
  * 格式化日期对象为指定模板字符串
  * @param {Date} d - 日期对象

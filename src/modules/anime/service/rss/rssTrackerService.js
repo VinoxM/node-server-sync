@@ -98,7 +98,7 @@ export async function saveTrackers(trackers, transactionDB) {
  * @returns {Promise<string>}
  */
 export async function concatTracker(torrentHash, trackerStr) {
-    const trackers = await rssTrackerRep.selectAll();
+    const trackers = await getTrackersMapping();
     return concatTrackers(torrentHash, trackerStr, trackers);
 }
 

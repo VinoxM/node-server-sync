@@ -84,3 +84,11 @@ export const SUBJECT_PLATFORM_IS_SHORT = 'TV_Short';
 
 /** 标准 TV 动画平台类型常量 */
 export const SUBJECT_PLATFORM_DEFAULT = 'TV';
+
+export const SUBJECT_PLATFORM_SEARCH_MAPPING = {
+    0: [SUBJECT_PLATFORM_IS_SHORT, SUBJECT_PLATFORM_DEFAULT],
+    1: '剧场版',
+    2: "WEB",
+    3: "OVA",
+    4: "其他"
+}

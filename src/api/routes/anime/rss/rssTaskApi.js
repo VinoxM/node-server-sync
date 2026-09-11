@@ -6,6 +6,7 @@ import {
     pauseTask, queryTasks, queryTaskTorrentInfo,
     resumeTask, updateTaskStatus, addRssTaskFromWebhook
 } from "#modules/anime/service/rss/rssTaskService.js";
+import { NEED_AUTH_CLIENT } from "#common/constants/authorizationConst.js";
 
 const { POST } = apiMethodConst;
 
@@ -15,7 +16,7 @@ export default {
     basePath: "/anime/rss/task",
     "/addTask": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.ANIME,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId', 'rssResultId']),
         callback: req => addRssTaskFromWebhook(req.body.rssSubsId, req.body.rssResultId)
@@ -29,42 +30,42 @@ export default {
     },
     "/taskInfo": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => queryTaskTorrentInfo(req.body.taskIds)
     },
     "/getTasks": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
         callback: req => queryTasks(req.body.rssSubsId)
     },
     "/deleteTask": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => deleteTask(req.body.taskId)
     },
     "/pauseTask": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => pauseTask(req.body.taskId)
     },
     "/resumeTask": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => resumeTask(req.body.taskId)
     },
     "/completeTask": {
         method: POST,
-        needAuth: true,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => completeTask(req.body.taskId)

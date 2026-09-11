@@ -5,8 +5,9 @@ import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
 import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { handleSubjectView } from "./subject/subjectService.js";
+import rssTaskRep from "../repository/rss/rssTaskRep.js";
 
-function handleSearch(data, userInfo) {
+function handleCalendar(data, userInfo) {
     let list = userInfo ? data : data.filter(o => o.nsfw === SUBJECT_NSFW_VALUE.NO);
     let now = new Date();
     const nowTimestamp = now.getTime();
@@ -56,7 +57,42 @@ function handleSearch(data, userInfo) {
 export async function getAnimeCalendar(userInfo) {
     const season = getCurSeason();
     const { rows, data } = await subjectsRep.selectVisibleBySeason(season.join('-'));
-    return rows > 0 ? handleSearch(data, userInfo) : [];
+    return rows > 0 ? handleCalendar(data, userInfo) : [];
+}
+
+function handleSearch(data) {
+    const now = new Date();
+    const nowTimestamp = now.getTime();
+    if (now.getHours() < 6) {
+        now.setDate(now.getDate() - 1);
+    }
+    return data.map(obj => {
+        const subject = handleSubjectView(obj);
+        const { staff, characters, ...rest } = subject;
+        const date = __isNotBlank(obj.startTime) ? new Date(obj.startTime) : new Date(obj.season + '-01');
+        if (date.getHours() < 6) {
+            date.setDate(date.getDate() - 1);
+        }
+        const status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
+        const hasNew = obj.lastPub && (nowTimestamp - new Date(obj.lastPub).getTime() < 24 * 60 * 60 * 1000) ? 1 : 0;
+        return {
+            ...rest,
+            count: obj.count,
+            goon: obj.goon,
+            latestEp: obj.latestEp,
+            status,
+            hasNew
+        }
+    });
+}
+
+export async function searchAnime(body, userInfo) {
+    const { pageNum, pageSize, ...filters } = body;
+    const includeNsfw = Boolean(userInfo);
+    const { rows, data } = await subjectsRep.selectVisibleByFilters(filters, pageNum, pageSize, includeNsfw);
+    const total = await subjectsRep.selectVisibleByFiltersCount(filters, includeNsfw);
+    const record = rows > 0 ? handleSearch(data) : [];
+    return { record, total, pageNum, pageSize };
 }
 
 /**
@@ -70,7 +106,7 @@ export async function getAnimeInformation(id, userInfo) {
     subject || __throwMessage('Anime not exists.');
     const subjectView = handleSubjectView(subject);
     const subsId = subject.subsId;
-    const results = await getRssResultsByRssSubscribeId(subsId);
+    const results = await getRssResultsByRssSubscribeId(subsId, userInfo);
     let episodes = undefined;
     if (userInfo) {
         episodes = await getRssEpisodesByRssSubscribeId(subsId);
@@ -87,14 +123,21 @@ export async function getAnimeInformation(id, userInfo) {
     };
 }
 
-async function getRssResultsByRssSubscribeId(rssSubsId) {
+async function getRssResultsByRssSubscribeId(rssSubsId, userInfo) {
     const results = [];
     const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId, true);
+    const tasks = [];
+    if (userInfo) {
+        const taskRes = await rssTaskRep.selectBySubsId(rssSubsId);
+        taskRes.rows && tasks.push(...taskRes.data);
+    }
     for (const item of data) {
         const { tracker, hide, pid, sort, ...result } = item;
         const trackers = await rssTrackerRep.selectHostsByIds((item.tracker ?? '').split(','));
         const torrent = [item.torrent, trackers.join('&tr=')].join('&tr=');
         result.torrent = 'magnet:?xt=urn:btih:' + torrent;
+        const task = tasks.find(t => t.rssResultId === item.id);
+        task && (result.taskId = task.id);
         results.push(result);
     }
     return results;

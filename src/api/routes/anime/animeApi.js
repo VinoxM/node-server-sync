@@ -1,13 +1,14 @@
 import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
-import { checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
-import { getAnimeCalendar, getAnimeInformation } from '#modules/anime/service/animeService.js';
+import { getAnimeCalendar, getAnimeInformation, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
+import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
 
 const { GET, POST } = apiMethodConst;
 
@@ -19,6 +20,20 @@ const needSecret = () => 'mAou5820.anime';
  */
 export default defineRoutes({
     basePath: '/anime',
+
+    "/search": {
+        method: POST,
+        needSecret,
+        preCheck: req => checkBodyKeysExists(req, ['season', 'name', 'platform', 'fin']) && checkBodyKeysNotBlank(req, ['pageSize', 'pageNum']),
+        callback: async (req) => {
+            const { season, name, platform, fin } = req.body;
+            __isAllBlank(season, name, platform, fin) && __throwMessage('Empty filters.');
+            __isNotBlank(platform) && !Object.keys(SUBJECT_PLATFORM_SEARCH_MAPPING).includes(platform) && __throwMessage('Invalid platform filter.');
+            __isNotBlank(fin) && !Object.values(SUBSCRIBE_FIN_VALUE).includes(fin) && __throwMessage('Invalid fin filter.');
+            const userInfo = await decodeAuthorization(req);
+            return searchAnime(req.body, userInfo);
+        }
+    },
 
     /**
      * 获取当前季度的全量番剧放送日历数据

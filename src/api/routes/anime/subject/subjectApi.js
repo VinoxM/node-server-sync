@@ -10,14 +10,13 @@ import { allowLanHosts } from "#common/constants/allowHostsConst.js";
 const { GET, POST } = apiMethodConst;
 const needAuth = needAuthSingleClient.MANAGE;
 const needSecret = () => 'mAou5820.anime.subject';
+const SEASON_MATCHER = /[0-9]{4}-(01|04|07|10)/;
 
 export default defineRoutes({
     basePath: '/anime/subject',
     '/getSeasons': {
         method: GET,
-        needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
         callback: () => getExistsSeasons()
     },
     '/searchSubjects': {
@@ -25,7 +24,9 @@ export default defineRoutes({
         needAuth,
         needSecret,
         allowHosts: allowLanHosts,
-        preCheck: req => checkBodyKeyMatch(req, 'season', [/[0-9]{4}-(01|04|07|10)/]) && checkBodyKeysExists(req, ['name']),
+        preCheck: req => checkBodyKeysExists(req, ['name', 'season'])
+            && __isNotBlank(req.body.season)
+            && checkBodyKeyMatch(req, 'season', [SEASON_MATCHER]),
         callback: req => {
             const { season, name } = req.body;
             return searchSubjects(season, name);
