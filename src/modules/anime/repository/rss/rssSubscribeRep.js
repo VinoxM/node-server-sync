@@ -66,7 +66,7 @@ export default {
             + `FROM rss_subscribe rs `
             + `LEFT JOIN subjects t ON t.bangumi_id=rs.bangumi_id `
             + `LEFT JOIN rss_result rr ON rs.id = rr.pid `
-            + `WHERE rs.fin=${SUBSCRIBE_FIN_VALUE.NO} GROUP BY rs.id, t.name, nameCN, t.co`;
+            + `WHERE rs.fin=${SUBSCRIBE_FIN_VALUE.NO} GROUP BY rs.id, t.name, nameCN, t.cover`;
         const res = await __sqliteDB.selectAll(sql, [], null, dbName);
         if (res.rows > 0) {
             return {
