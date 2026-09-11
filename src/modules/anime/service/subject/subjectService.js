@@ -1,4 +1,3 @@
-import { generate30HoursNowDate } from "#common/utils/dateUtil.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import {
     BANGUMI_IMAGES_STATUS, SUBJECT_HIDE_VALUE,

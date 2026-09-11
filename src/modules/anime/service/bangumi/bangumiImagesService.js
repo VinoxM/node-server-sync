@@ -1,3 +1,4 @@
+import { pushNotification } from "#api/sockets/notification.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import { downloadFileToMinio } from "../../../ssh/sshExecutorService.js";
 import { BANGUMI_IMAGES_STATUS, SUBJECT_MINIO_BUCKET } from "../../constants/subjectConstant.js";
@@ -104,9 +105,17 @@ export async function pushImageToStorageSchedule() {
         await bangumiImagesRep.updateImageStatusBatch(Array.from(completeIds), BANGUMI_IMAGES_STATUS.COMPLETE);
     }
     if (failedIds.size > 0) {
-        await bangumiImagesRep.updateImageStatusBatch(Array.from(completeIds), BANGUMI_IMAGES_STATUS.PREPARED);
+        await bangumiImagesRep.updateImageStatusBatch(Array.from(failedIds), BANGUMI_IMAGES_STATUS.PREPARED);
     }
     __log.info(`[Bangumi Images] Push image to storage success. Founded: ${rows}, Complete: ${completeIds.size}, Failed: ${failedIds.size}`);
+    if (completeIds.size > 0) {
+        pushNotification(JSON.stringify({
+            event: 'Bangumi Image Sync',
+            complete: completeIds.size,
+            failed: failedIds.size,
+            total: rows
+        }), 'Server');
+    }
 }
 
 async function pushImageToStorage(image, minioLink) {
