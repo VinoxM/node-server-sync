@@ -209,9 +209,9 @@ export default {
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
-    selectVisibleExistsBySubsId: async subsId => {
-        const sql = `SELECT EXISTS(SELECT 1 FROM rss_subscribe rs INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO} LIMIT 1) AS [exists]`;
-        return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(data => Boolean(data?.exists));;
+    selectOneVisibleBySubsId: async subsId => {
+        const sql = `SELECT t.name, t.name_cn AS nameCN FROM rss_subscribe rs INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO}`;
+        return __sqliteDB.selectOne(sql, [subsId], null, dbName);
     },
 
     selectVisibleByFilters: (filters, pageNum = 1, pageSize = 20, includeNsfw = false) => {

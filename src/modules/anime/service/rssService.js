@@ -15,11 +15,12 @@ export async function getRssCardFailedViews() {
 }
 
 export async function getRssEpisodeSource(rssSubsId, episode) {
-    const visible = await subjectsRep.selectVisibleExistsBySubsId(rssSubsId)
-    visible || __throwMessage('Subject invisible.');
+    const subject = await subjectsRep.selectOneVisibleBySubsId(rssSubsId)
+    subject || __throwMessage('Subject not exists.');
+    const title = __isNotBlank(subject.nameCN) ? subject.nameCN : subject.name;
     const sourcesData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode)
     const episodeData = sourcesData?.data?.find(r => r.episode === episode)
-    const result = { url: null, subtitles: [], unsupportedFonts: [], title: null, sources: sourcesData?.data.map(d => ({ episode: d.episode, title: `${d.title} - ${d.episode}` })) }
+    const result = { url: null, subtitles: [], unsupportedFonts: [], title: null, sources: sourcesData?.data.map(d => ({ episode: d.episode, title: `${title} - ${d.episode}` })) }
     if (!episodeData?.minioLink) return result
     result.url = generateMinioSourceSafely(episodeData.minioLink)
     result.title = __isBlank(episodeData.title) ? null : `${episodeData.title} - ${episode}`
