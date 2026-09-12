@@ -79,7 +79,7 @@ function generateImageBucketLink(image, link) {
 export async function putImageStorageLink(image, link) {
     if (__isAnyBlank(image, link)) return image;
     const bucketLink = generateImageBucketLink(image, link);
-    await bangumiImagesRep.insertOne({ link, minioLink: bucketLink, originUrl: image });
+    await bangumiImagesRep.insertOne({ link, minioLink: bucketLink, originUrl: relaceCommonBangumiImageLink(image) });
     return link;
 }
 

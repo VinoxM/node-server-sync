@@ -108,7 +108,7 @@ function getPlatformFromSubject(subject) {
 function ensureImageStorageLink(images, image, link) {
     if (__isAnyBlank(image, link)) return image;
     images.push({ image, link });
-    return image;
+    return link;
 }
 
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
@@ -125,11 +125,11 @@ async function getCharactersBySubjectId(subjectId, options = {}) {
     for (const character of characters) {
         if (!CHARACTERS_RELATION_INCLUDES.includes(character.relation)) continue;
         const summary = character.summary || '';
-        const characterImage = ignoreImages ? character?.images?.large : ensureImageStorageLink(images, character?.images?.common || '', generateCharacterImageLink(subjectId, character.id));
+        const characterImage = ignoreImages ? character?.images?.large : ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id));
         const characterActors = character.actors ?? [];
         const actors = [];
         for (const actor of characterActors) {
-            const actorImage = ignoreImages ? actor?.images?.large : ensureImageStorageLink(images, actor?.images?.common || '', generateActorImageLink(actor.id));
+            const actorImage = ignoreImages ? actor?.images?.large : ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id));
             actors.push({ name: actor.name, image: actorImage, id: actor.id });
         }
         const result = {
@@ -173,7 +173,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         images.push(...charactersResult.images);
         characters.push(...charactersResult.results);
     }
-    const cover = ignoreImages ? subject.images?.large || subject.image : ensureImageStorageLink(images, subject.images?.common || subject.image, generateSubjectCoverLink(subject.id));
+    const cover = ignoreImages ? subject.images?.large || subject.image : ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
     await putImageStorageLinkBatch(images);
     return {
         bangumiId: subject.id,
