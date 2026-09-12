@@ -95,7 +95,7 @@ export default {
      * @returns {Promise<QueryResult<{ minioLink: string, title: string, episode: number }>>}
      */
     selectSourceBySubsIdAndEpisode: async (rssSubsId) => {
-        const sql = `SELECT re.minio_link, rs.name AS title, re.episode `
+        const sql = `SELECT re.minio_link, re.episode `
             + `FROM rss_episode re `
             + `INNER JOIN rss_subscribe rs ON rs.id=re.rss_subs_id `
             + `WHERE re.rss_subs_id=? AND re.status=? AND re.minio_link IS NOT NULL`;
