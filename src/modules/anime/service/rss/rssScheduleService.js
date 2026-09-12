@@ -117,7 +117,7 @@ export async function autoUpdateSubscribe() {
         for (const { id, name, cover, count } of updated) {
             const limitedData = await rssResultRep.selectRssResultsByPidWithLimit(id, count);
             const rssSubs = { name, cover, count };
-            if (limitedData.rows) {
+            if (limitedData.rows === 0) {
                 continue;
             }
             rssSubs.id = id;
