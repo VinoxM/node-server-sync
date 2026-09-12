@@ -61,6 +61,7 @@ export async function putImageStorageLinkBatch(images) {
         originUrl: relaceCommonBangumiImageLink(image)
     }));
     if (dataList.length > 0) {
+        // todo 修改此处为 upsert
         return bangumiImagesRep.insertBatch(dataList);
     }
     return { rows: 0 };
@@ -79,6 +80,7 @@ function generateImageBucketLink(image, link) {
 export async function putImageStorageLink(image, link) {
     if (__isAnyBlank(image, link)) return image;
     const bucketLink = generateImageBucketLink(image, link);
+    // todo 修改此处为 upsert
     await bangumiImagesRep.insertOne({ link, minioLink: bucketLink, originUrl: relaceCommonBangumiImageLink(image) });
     return link;
 }

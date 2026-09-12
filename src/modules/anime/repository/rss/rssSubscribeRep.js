@@ -62,7 +62,7 @@ export default {
         return handleName(data);
     },
     selectRssSubscribeCountsWithoutFin: async () => {
-        const sql = `SELECT rs.id, t.name, t.name_cn AS nameCN, t.cover, COUNT(rr.id) `
+        const sql = `SELECT rs.id, t.name, t.name_cn AS nameCN, t.cover, COUNT(rr.id) AS counts `
             + `FROM rss_subscribe rs `
             + `LEFT JOIN subjects t ON t.bangumi_id=rs.bangumi_id `
             + `LEFT JOIN rss_result rr ON rs.id = rr.pid `
