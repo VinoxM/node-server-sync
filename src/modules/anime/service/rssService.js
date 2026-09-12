@@ -23,7 +23,7 @@ export async function getRssEpisodeSource(rssSubsId, episode) {
     const result = { url: null, subtitles: [], unsupportedFonts: [], title: null, sources: sourcesData?.data.map(d => ({ episode: d.episode, title: `${title} - ${d.episode}` })) }
     if (!episodeData?.minioLink) return result
     result.url = generateMinioSourceSafely(episodeData.minioLink)
-    result.title = __isBlank(episodeData.title) ? null : `${episodeData.title} - ${episode}`
+    result.title = `${title} - ${episode}`
     const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode)
     if (rows === 0) return result
     const unsupportedFontSet = new Set()
