@@ -108,7 +108,7 @@ function getPlatformFromSubject(subject) {
 function ensureImageStorageLink(images, image, link) {
     if (__isAnyBlank(image, link)) return image;
     images.push({ image, link });
-    return link;
+    return image;
 }
 
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
