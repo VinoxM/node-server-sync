@@ -6,7 +6,8 @@
     "imports": {
         "#*": "./src/*",
         "#utils/*": "./src/common/utils/*",
-        "#constants/*": "./src/common/constants/*"
+        "#constants/*": "./src/common/constants/*",
+        "#tmp/*": "./temporary/*"
     },
     "scripts": {
         "dev": "node ./src/application.js --active=main,sqlite,dev",

@@ -160,7 +160,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         __log.warn(`[Bangumi Clean] Subject[${subject.id}] cannot get season, skipped.`);
         return;
     }
-    const { skipCharacter = false, ignoreImages = false } = options;
+    const { skipCharacter = false, ignoreImages = false, persistenceImage = true } = options;
     const infoBox = subject['infobox'];
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
@@ -174,8 +174,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         characters.push(...charactersResult.results);
     }
     const cover = ignoreImages ? subject.images?.large || subject.image : ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
-    await putImageStorageLinkBatch(images);
-    return {
+    const result = {
         bangumiId: subject.id,
         name: subject.name,
         nameCN: subject.name_cn,
@@ -191,4 +190,10 @@ export async function cleanBangumiSubject(subject, options = {}) {
         characters: JSON.stringify(characters),
         nsfw: Boolean(subject.nsfw) ? 1 : 0
     };
+    if (persistenceImage) {
+        await putImageStorageLinkBatch(images);
+    } else {
+        result.images= images;
+    }
+    return result;
 }

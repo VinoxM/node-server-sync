@@ -1,4 +1,4 @@
-import { SUBSCRIBE_FIN_VALUE } from "#modules/anime/constants/subjectConstant.js";
+import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "#modules/anime/constants/subjectConstant.js";
 import { RSS_SUBSCRIBE_SYNC_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 
 const callbackIfKeyAbsent = (callback, data) => {
@@ -75,6 +75,43 @@ export default {
             };
         }
         return res;
+    },
+    selectSubjectTotalEpisodesBySubsIds: ids => {
+        if (__isEmptyArray(ids)) {
+            return { rows: 0, data: [] };
+        }
+        const sql = `SELECT t.id, rs.id subsId, rs.bangumi_id, t.total_episodes `
+            + `FROM rss_subscribe rs `
+            + `INNER JOIN subjects t ON t.bangumi_id = rs.bangumi_id `
+            + `WHERE rs.id IN (${ids.map(_ => '?').join(',')})`;
+        return __sqliteDB.selectAll(sql, ids, null, dbName);
+    },
+    selectSubscribeResultsEpisodes: id => {
+        const sql = `SELECT rs.id, rr.episode `
+            + `FROM rss_subscribe rs `
+            + `INNER JOIN rss_result rr ON rr.pid=rs.id `
+            + `WHERE rs.id=? AND rs.fin=${SUBSCRIBE_FIN_VALUE.NO}`;
+        return __sqliteDB.selectAll(sql, [id], null, dbName);
+    },
+    updateFinByIds: (ids, fin = SUBSCRIBE_FIN_VALUE.YES) => {
+        let setupCause = `fin=?`;
+        const params = [fin];
+        if (fin === SUBSCRIBE_FIN_VALUE.YES) {
+            params.push(SUBSCRIBE_GOON_VALUE.NO);
+            setupCause += `,goon=?`;
+        }
+        const sql = `UPDATE rss_subscribe SET ${setupCause} WHERE id IN (${ids.map(_ => "?").join(',')})`;
+        return __sqliteDB.update(sql, [...params, ...ids], null, dbName);
+    },
+    selectGoonByIds: ids => {
+        const sql = `SELECT rs.id, t.season, rs.goon, rs.fin `
+            + `FROM rss_subscribe rs `
+            + `INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id `
+            + `WHERE rs.id IN (${ids.map(_ => '?').join(',')})`;
+        return __sqliteDB.selectAll(sql, ids, null, dbName);
+    },
+    updateGoonByIds: (ids, goon = SUBSCRIBE_GOON_VALUE.YES) => {
+        return __sqliteDB.update(`UPDATE rss_subscribe SET goon=? WHERE id IN (${ids.map(_ => "?").join(',')})`, [goon, ...ids], null, dbName);
     },
     /** old */
     selectForSubscribeByIds: (ids) => {

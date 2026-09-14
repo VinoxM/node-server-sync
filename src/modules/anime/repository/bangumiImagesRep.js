@@ -1,6 +1,20 @@
 import { BANGUMI_IMAGES_STATUS } from "../constants/subjectConstant.js";
 
 const dbName = `anime`;
+const UPSERT_BATCH_LIMIT_PARAM = 500;
+
+async function upsertAny(dataList = []) {
+    if (__isEmptyArray(dataList)) {
+        return { rows: 0 };
+    }
+    const sql = `INSERT INTO bangumi_images (link, minio_link, origin_url, status) `
+        + `VALUES ${dataList.map(_ => '(?, ?, ?, ?)').join(', ')} `
+        + `ON CONFLICT(link) DO UPDATE SET `
+        + `origin_url = excluded.origin_url, status = ${BANGUMI_IMAGES_STATUS.PREPARED}, object_size = NULL `
+        + `WHERE bangumi_images.origin_url <> excluded.origin_url`;
+    const params = dataList.flatMap(data => ([data.link, data.minioLink, data.originUrl, BANGUMI_IMAGES_STATUS.PREPARED]));
+    return __sqliteDB.insert(sql, params, null, dbName);
+}
 
 /**
  * Bangumi 图片持久化缓存仓储服务
@@ -29,6 +43,17 @@ export default {
         const sql = `INSERT OR IGNORE INTO bangumi_images (link, minio_link, origin_url, status) VALUES ${dataList.map(() => '(?,?,?,?)').join(',')}`;
         const params = dataList.flatMap(data => ([data.link, data.minioLink, data.originUrl, BANGUMI_IMAGES_STATUS.PREPARED]));
         return __sqliteDB.insert(sql, params, null, dbName);
+    },
+
+    upsertBatch: async dataList => {
+        const fullBatchSize = Math.floor(UPSERT_BATCH_LIMIT_PARAM / 4);
+        let totalInserted = 0;
+        for (let i = 0; i < dataList.length; i += fullBatchSize) {
+            const batch = dataList.slice(i, i + fullBatchSize);
+            const { rows } = await upsertAny(batch);
+            totalInserted += rows;
+        }
+        return { rows: totalInserted };
     },
 
     /**

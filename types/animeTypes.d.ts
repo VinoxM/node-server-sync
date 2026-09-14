@@ -32,6 +32,15 @@ export interface CleanedSubject {
   hide?: number;
   /** 是否包含限制级内容 (0 或 1) */
   nsfw?: number;
+  /** 包含的相关Images映射 */
+  images?: Array<CleanedSubjectImage>;
+}
+
+export interface CleanedSubjectImage {
+  /** Subject 原始的图片链接 */
+  image: string;
+  /** 要持久化到数据库的图片链接 */
+  link: string;
 }
 
 /**
@@ -52,6 +61,8 @@ export interface SubjectPullOptions {
   skipCharacter?: boolean;
   /** 是否不处理图片 */
   ignoreImages?: boolean;
+  /** 是否持久化图片到数据库, 默认为 true */
+  persistenceImage?: boolean;
 }
 
 /**

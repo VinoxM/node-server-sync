@@ -32,7 +32,8 @@ function handleCalendar(data, userInfo) {
         const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
         let type = `${isShort ? 1 : 0}${(isTV || isShort) ? 0 : 1}`;
         let status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
-        const hasNew = obj.lastPub && (nowTimestamp - new Date(obj.lastPub).getTime() < 24 * 60 * 60 * 1000) ? 1 : 0;
+        const lastPubDatetime = new Date(obj.lastPub).getTime();
+        const hasNew = obj.lastPub && (nowTimestamp - lastPubDatetime < 24 * 60 * 60 * 1000) ? 1 : 0;
         return {
             Z: obj.nameCN, // name
             J: obj.name, // nameJP
@@ -40,12 +41,16 @@ function handleCalendar(data, userInfo) {
             C: obj.cover, // cover
             T: type, // type. isShort(0/1) concat isWeb(0/1)
             S: status, // status. enum: 0-not start/1-broadcasting/2-fin
-            E: obj.latestEp, // lastEp
+            E: obj.latestEp + ':' + obj.totalEpisodes || 0, // lastEp
             N: hasNew, // hasNew. enum: 0, 1
             U: obj.id + ":" + obj.subsId, // id
             R: obj.count, // epCount
             G: obj.goon, // goon
             A: obj.totalEpisodes,
+            P: lastPubDatetime,
+            M: JSON.parse(obj.metaTags || '[]'),
+            L: obj.season,
+            F: isShort ? SUBJECT_PLATFORM_DEFAULT : obj.platform
         };
     });
 }
@@ -60,39 +65,17 @@ export async function getAnimeCalendar(userInfo) {
     return rows > 0 ? handleCalendar(data, userInfo) : [];
 }
 
-function handleSearch(data) {
-    const now = new Date();
-    const nowTimestamp = now.getTime();
-    if (now.getHours() < 6) {
-        now.setDate(now.getDate() - 1);
-    }
-    return data.map(obj => {
-        const subject = handleSubjectView(obj);
-        const { staff, characters, ...rest } = subject;
-        const date = __isNotBlank(obj.startTime) ? new Date(obj.startTime) : new Date(obj.season + '-01');
-        if (date.getHours() < 6) {
-            date.setDate(date.getDate() - 1);
-        }
-        const status = now.getTime() - date.getTime() < 0 ? 0 : (obj.fin === 0 ? 1 : 2);
-        const hasNew = obj.lastPub && (nowTimestamp - new Date(obj.lastPub).getTime() < 24 * 60 * 60 * 1000) ? 1 : 0;
-        return {
-            ...rest,
-            count: obj.count,
-            goon: obj.goon,
-            latestEp: obj.latestEp,
-            status,
-            hasNew
-        }
-    });
-}
-
 export async function searchAnime(body, userInfo) {
-    const { pageNum, pageSize, ...filters } = body;
+    const { pageNum, pageSize, viewMode, ...filters } = body;
     const includeNsfw = Boolean(userInfo);
-    const { rows, data } = await subjectsRep.selectVisibleByFilters(filters, pageNum, pageSize, includeNsfw);
     const total = await subjectsRep.selectVisibleByFiltersCount(filters, includeNsfw);
-    const record = rows > 0 ? handleSearch(data) : [];
-    return { record, total, pageNum, pageSize };
+    const calendarable = total <= 100;
+    const cardMode = viewMode === 0;
+    const queryPageNum = cardMode ? pageNum : undefined;
+    const queryPageSize = cardMode ? pageSize : undefined;
+    const { rows, data } = await subjectsRep.selectVisibleByFilters(filters, includeNsfw, queryPageNum, queryPageSize);
+    const record = rows > 0 ? handleCalendar(data, userInfo) : [];
+    return { record, total, pageNum: queryPageNum, pageSize: queryPageSize, calendarable };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
-import { checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeyMatch, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
 import { getAnimeCalendar, getAnimeInformation, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
@@ -24,7 +24,8 @@ export default defineRoutes({
     "/search": {
         method: POST,
         needSecret,
-        preCheck: req => checkBodyKeysExists(req, ['season', 'name', 'platform', 'fin']) && checkBodyKeysNotBlank(req, ['pageSize', 'pageNum']),
+        preCheck: req => checkBodyKeysExists(req, ['season', 'name', 'platform', 'fin', 'pageSize', 'pageNum']) 
+        && checkBodyKeyMatch(req, 'viewMode', [/^[01]{1}$/]),
         callback: async (req) => {
             const { season, name, platform, fin } = req.body;
             __isAllBlank(season, name, platform, fin) && __throwMessage('Empty filters.');

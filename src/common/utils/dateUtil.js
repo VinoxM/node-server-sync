@@ -6,7 +6,7 @@ function padStart(str, maxLength = 2, fillString = '0') {
     return (str + "").padStart(maxLength, fillString);
 }
 
-export function generate30HoursNowDate() {    
+export function generate30HoursNowDate() {
     const now = new Date();
     if (now.getHours() < 6) {
         now.setDate(now.getDate() - 1);
@@ -106,4 +106,16 @@ export function dateFormatForLog(d) {
 export function isCurSeason(season) {
     const curSeasons = getCurSeason();
     return season === curSeasons.join('-');
+}
+
+/**
+ * 比较传入的季度大小
+ * @param {string} season1 - 格式如 '2024-04' 的季度字符串
+ * @param {string} season2 - 格式如 '2024-04' 的季度字符串
+ * @returns {number} season1 < season2 => -1, season1 = season2 => 0, season1 > season2 => 1
+ */
+export function compareSeason(season1, season2) {
+    const seasonNum1 = Number(season1.replace('-', ''));
+    const seasonNum2 = Number(season2.replace('-', ''));
+    return seasonNum1 - seasonNum2;
 }

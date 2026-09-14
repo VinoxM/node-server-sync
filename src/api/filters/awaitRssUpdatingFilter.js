@@ -1,5 +1,5 @@
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
-import { isRssUpdating } from "#modules/rss/service/rssSubscribeService.js";
+import { isRssUpdating } from "#modules/anime/service/rss/rssScheduleService.js";
 import { defineFilter } from "#utils/defineUtil.js";
 
 /** 订阅 RSS 正在更新时需阻塞/拦截的 API 路径正则列表 */

@@ -12,6 +12,9 @@
       ],
       "#constants/*": [
         "./src/common/constants/*"
+      ],
+      "#tmp/*": [
+        "./temporary/*"
       ]
     },
     // "checkJs": true
@@ -20,5 +23,5 @@
     "src/**/*",
     "types/**/*",
     "temporary/**/*"
-  ]
+, "deprecated/api/routes/rss.v2", "deprecated/api/routes/rss.v1", "deprecated/modules/rss"  ]
 }

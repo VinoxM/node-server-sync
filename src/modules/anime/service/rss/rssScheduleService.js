@@ -7,6 +7,8 @@ import rssResultRep from '#modules/anime/repository/rss/rssResultRep.js';
 import { pushNotification } from '#api/sockets/notification.js';
 import { pushRssSubscription } from '#api/sockets/rssSubscription.js';
 import { addRssTasksFromFavorites } from './rssTaskService.js';
+import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from '#modules/anime/constants/subjectConstant.js';
+import { compareSeason, getCurSeason } from '#common/utils/dateUtil.js';
 
 const rssUpdate = {
     value: false,
@@ -67,12 +69,12 @@ export async function updateRssSubscribe(ids) {
         const execComplete = async () => {
             const handled = handledCount + failedCount;
             if (handled < tasks.length) {
-                __log.debug(`Analysis Rss Subscribe delay ${handleDelay}ms. Handled: ${handled}, failed: ${failedCount}.`);
+                __log.debug(`[RSS Subscribe] Analysis Rss Subscribe delay ${handleDelay}ms. Handled: ${handled}, failed: ${failedCount}.`);
                 setTimeout(() => {
                     submitAndRun();
                 }, handleDelay);
             } else {
-                __log.debug(`Analysis Rss Subscribe complete. Total: ${tasks.length}, Error: ${failedCount}, Results: ${rssResults.length}`);
+                __log.debug(`[RSS Subscribe] Analysis Rss Subscribe complete. Total: ${tasks.length}, Error: ${failedCount}, Results: ${rssResults.length}`);
                 if (rssResults.length > 0) {
                     const rows = await addManyResult(rssResults);
                     rows > 0 && __log.info(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
@@ -82,7 +84,7 @@ export async function updateRssSubscribe(ids) {
             }
         };
         const execFailed = (err) => {
-            __log.info("[RSS Subscribe] Analysis Rss Subscribe error!", err);
+            __log.error("[RSS Subscribe] Analysis Rss Subscribe error!", err);
             reject(err);
         };
         const executor = new AsyncExecutor(execComplete, execFailed, parallelNum);
@@ -131,8 +133,10 @@ export async function autoUpdateSubscribe() {
         pushToNotification({ effectRows, handledCount, updated: updatedRssSubs });
         const rssSubsArr = smoothArray(updatedRssSubs);
         pushToRssSubscription(rssSubsArr);
-        addRssTasksFromFavorites(rssSubsArr);
+        await addRssTasksFromFavorites(rssSubsArr);
+        await updateSubscribesFin(updatedRssSubs);
     }
+    await updateSubscribeGoon(toUpdateIds);
 }
 
 /**
@@ -170,4 +174,44 @@ function pushToRssSubscription(rssSubsArr) {
     if (rssSubsArr.length > 0) {
         pushRssSubscription(JSON.stringify(rssSubsArr), 'Server');
     }
+}
+
+async function updateSubscribesFin(updatedRssSubs) {
+    const ids = updatedRssSubs.map(o => o.id);
+    const { rows, data: subjects } = await rssSubscribeRep.selectSubjectTotalEpisodesBySubsIds(ids);
+    if (rows === 0) return;
+    const toUpdateFinIds = [];
+    const regex = /^[0-9]+$/;
+    for (const { id } of updatedRssSubs) {
+        const subs = subjects.find(s => s.subsId === id);
+        if (!subs) continue;
+        const totalEpisodes = Number(subs.totalEpisodes);
+        if (!Number.isInteger(totalEpisodes) || totalEpisodes <= 0) continue;
+        const { rows, data: results } = await rssSubscribeRep.selectSubscribeResultsEpisodes(id);
+        if (rows === 0) continue;
+        const total = results.filter(r => regex.test(r.episode) && Number.isInteger(Number(r.episode))).length;
+        if (totalEpisodes === total) {
+            toUpdateFinIds.push(id);
+        }
+    }
+    if (toUpdateFinIds.length > 0) {
+        const updated = await rssSubscribeRep.updateFinByIds(ids);
+        updated.rows && __log.info(`[RSS Subscribe] Setup fin subjects:`, updated.rows);
+    }
+}
+
+async function updateSubscribeGoon(ids) {
+    const { rows, data: subs } = await rssSubscribeRep.selectGoonByIds(ids);
+    if (rows === 0) return;
+    const toUpdateGoonIds = [];
+    const curSeason = getCurSeason().join('-');
+    for (const { id, season, goon, fin } of subs) {
+        if (__isBlank(season)) continue;
+        if (fin === SUBSCRIBE_FIN_VALUE.NO && compareSeason(season, curSeason) < 0 && goon === SUBSCRIBE_GOON_VALUE.NO) {
+            toUpdateGoonIds.push(id);
+        }
+    }
+    if (toUpdateGoonIds.length === 0) return;
+    const updated = await rssSubscribeRep.updateGoonByIds(toUpdateGoonIds, SUBSCRIBE_GOON_VALUE.YES);
+    updated.rows && __log.info(`[RSS Subscribe] Setup goon subjects:`, updated.rows);
 }

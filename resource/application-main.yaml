@@ -61,6 +61,9 @@ schedule:
   bangumiImagesSync:
     enable: true
     cron: 0 0 0/3 * * *
+  bangumiSubjectDiff:
+    enable: true
+    cron: 0 20 4 * * *
 rss:
   convertMkvToMp4:
     enable: false

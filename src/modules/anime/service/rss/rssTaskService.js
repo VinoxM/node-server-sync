@@ -30,10 +30,10 @@ const canCompleteStatus = [TASK_STATUS.PARTIALLY_COMPLETE];
  * 根据用户收藏过滤并批量触发 RSS 下载任务
  * @param {Array<{ rssSubsId: number, [key: string]: any }>} rssSubsArr - 待检查的订阅关联列表
  */
-export function addRssTasksFromFavorites(rssSubsArr) {
+export async function addRssTasksFromFavorites(rssSubsArr) {
     const arr = Array.from(rssSubsArr);
     if (arr.length === 0) return;
-    filterUserRssFavorites(arr.map(o => o.rssSubsId)).then(async data => {
+    await filterUserRssFavorites(arr.map(o => o.rssSubsId)).then(async data => {
         const favorites = Array.from(data).map(o => o.rssSubscribeId);
         const tasks = arr.filter(o => favorites.includes(o.rssSubsId));
         for (const rssTask of tasks) {

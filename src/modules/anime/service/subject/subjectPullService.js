@@ -118,7 +118,7 @@ export async function upsertCleanedSubjects(subjects, options = {}) {
     const { rows: insertedRows } = await subjectsRep.insertBatch(insertSubjects);
     let updatedRows = 0;
     if (forceUpdate) {
-        updatedRows = (await subjectsRep.updateBatch(updateSubjects, convertPropertiesToCloumns(updateProperties))).rows;
+        updatedRows = (await subjectsRep.updateBatch(updateSubjects, handleUpdateProperties(updateProperties))).rows;
     }
     __log.info(`[Subject Upsert] Total: ${subjects.length}, Inserted ${insertedRows}, Updated ${updatedRows}`);
     return {
@@ -140,7 +140,14 @@ export async function upsertOneCleanedSubject(subject, options = {}) {
     if (!exists) {
         return subjectsRep.insertOne(subject);
     }
-    return subjectsRep.updateOne(subject, convertPropertiesToCloumns(updateProperties));
+    return subjectsRep.updateOne(subject, handleUpdateProperties(updateProperties));
+}
+
+function handleUpdateProperties(updateProperties = []) {
+    if (updateProperties.length > 0 && !updateProperties.includes('update_time')) {
+        updateProperties.push('update_time')
+    }
+    return convertPropertiesToCloumns(updateProperties);
 }
 
 async function insertSubjectSubscribes(subjects) {

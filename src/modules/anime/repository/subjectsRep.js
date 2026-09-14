@@ -1,4 +1,6 @@
 import { isCurSeason } from "#common/utils/dateUtil.js";
+import { RSS_SUBTITLE_STATUS } from "../constants/rssSubtitleStatusConst.js";
+import { EPISODE_FAILED_REASON, TASK_STATUS } from "../constants/rssTaskStatusConst.js";
 import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
@@ -198,7 +200,7 @@ export default {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count '
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
@@ -214,7 +216,7 @@ export default {
         return __sqliteDB.selectOne(sql, [subsId], null, dbName);
     },
 
-    selectVisibleByFilters: (filters, pageNum = 1, pageSize = 20, includeNsfw = false) => {
+    selectVisibleByFilters: (filters, includeNsfw = false, pageNum, pageSize) => {
         const { season, platform, name, fin } = filters;
         const whereCause = [` t.hide=${SUBJECT_HIDE_VALUE.NO} `], params = [];
         if (__isNotBlank(season)) {
@@ -248,9 +250,9 @@ export default {
             const offset = (pageNum - 1) * pageSize;
             limitOffset = ' LIMIT ' + pageSize + ' OFFSET ' + offset;
         }
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, `
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.sort) latestSort, MAX(rr.episode) latestEp, COUNT(rr.id) count '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count '
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
@@ -322,12 +324,17 @@ export default {
             whereJoin = 'OR';
         }
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
-            + `rs.id AS subsId, rs.fin, rs.start_time `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
+            + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
             + queryCase
             + 'FROM subjects t '
             + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + 'LEFT JOIN rss_result rr ON rr.pid=rs.id '
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason!=${EPISODE_FAILED_REASON.SUCCESS} `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status=${RSS_SUBTITLE_STATUS.FAILED} `
             + `WHERE${whereCause.join(whereJoin)}`
-            + `GROUP BY t.id`;
+            + `GROUP BY t.id, subsId`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
@@ -340,11 +347,25 @@ export default {
         }
         params.push(id);
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
-            + `rs.id AS subsId, rs.fin, rs.start_time `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
+            + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
             + queryCase
             + 'FROM subjects t '
             + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
-            + `WHERE t.id=?`;
+            + 'LEFT JOIN rss_result rr ON rr.pid=rs.id '
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason!=${EPISODE_FAILED_REASON.SUCCESS} `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status=${RSS_SUBTITLE_STATUS.FAILED} `
+            + `WHERE t.id=? `
+            + `GROUP BY t.id, subsId`;
         return __sqliteDB.selectOne(sql, params, null, dbName);
-    }
+    },
+
+    selectNotFinSubjectsForDiff: (curSeason) => {
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.total_episodes, t.meta_tags, t.staff, t.characters `
+            + `FROM subjects t `
+            + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${SUBSCRIBE_FIN_VALUE.NO} `
+            + `WHERE t.season <= ?`;
+        return __sqliteDB.selectAll(sql, [curSeason], null, dbName);
+    },
 };

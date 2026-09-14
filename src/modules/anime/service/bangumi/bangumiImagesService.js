@@ -51,7 +51,7 @@ function relaceCommonBangumiImageLink(image) {
 
 /**
  * 批量注册待持久化到 MinIO 的图片链接
- * @param {Array<{ image: string, link: string }>} images - 图片原始 URL 与相对链接列表
+ * @param {Array<import('#types/animeTypes.d.ts').CleanedSubjectImage>} images - 图片原始 URL 与相对链接列表
  * @returns {Promise<ExecResult|{ rows: number }>}
  */
 export async function putImageStorageLinkBatch(images) {
@@ -61,8 +61,7 @@ export async function putImageStorageLinkBatch(images) {
         originUrl: relaceCommonBangumiImageLink(image)
     }));
     if (dataList.length > 0) {
-        // todo 修改此处为 upsert
-        return bangumiImagesRep.insertBatch(dataList);
+        return bangumiImagesRep.upsertBatch(dataList);
     }
     return { rows: 0 };
 }
@@ -80,8 +79,7 @@ function generateImageBucketLink(image, link) {
 export async function putImageStorageLink(image, link) {
     if (__isAnyBlank(image, link)) return image;
     const bucketLink = generateImageBucketLink(image, link);
-    // todo 修改此处为 upsert
-    await bangumiImagesRep.insertOne({ link, minioLink: bucketLink, originUrl: relaceCommonBangumiImageLink(image) });
+    await bangumiImagesRep.upsertBatch([{ link, minioLink: bucketLink, originUrl: relaceCommonBangumiImageLink(image) }]);
     return link;
 }
 
