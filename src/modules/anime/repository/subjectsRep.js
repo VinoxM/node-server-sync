@@ -200,7 +200,7 @@ export default {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'CASE WHEN rs.goon = 0 OR t.season = ? THEN 0 ELSE 1 END AS goon, '
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count '
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
@@ -252,7 +252,7 @@ export default {
         }
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count '
             + 'FROM subjects t '
             + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
@@ -325,7 +325,7 @@ export default {
         }
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count, '
             + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
             + queryCase
             + 'FROM subjects t '
@@ -348,7 +348,7 @@ export default {
         params.push(id);
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
-            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(rr.id) count, '
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count, '
             + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
             + queryCase
             + 'FROM subjects t '

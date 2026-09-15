@@ -134,7 +134,7 @@ export async function autoUpdateSubscribe() {
         const rssSubsArr = smoothArray(updatedRssSubs);
         pushToRssSubscription(rssSubsArr);
         await addRssTasksFromFavorites(rssSubsArr);
-        await updateSubscribesFin(updatedRssSubs);
+        await updateSubscribesFin(toUpdateIds);
     }
     await updateSubscribeGoon(toUpdateIds);
 }
@@ -176,13 +176,12 @@ function pushToRssSubscription(rssSubsArr) {
     }
 }
 
-async function updateSubscribesFin(updatedRssSubs) {
-    const ids = updatedRssSubs.map(o => o.id);
-    const { rows, data: subjects } = await rssSubscribeRep.selectSubjectTotalEpisodesBySubsIds(ids);
+async function updateSubscribesFin(toUpdateIds) {
+    const { rows, data: subjects } = await rssSubscribeRep.selectSubjectTotalEpisodesBySubsIds(toUpdateIds);
     if (rows === 0) return;
     const toUpdateFinIds = [];
     const regex = /^[0-9]+$/;
-    for (const { id } of updatedRssSubs) {
+    for (const id of toUpdateIds) {
         const subs = subjects.find(s => s.subsId === id);
         if (!subs) continue;
         const totalEpisodes = Number(subs.totalEpisodes);

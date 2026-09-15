@@ -41,7 +41,7 @@ function handleCalendar(data, userInfo) {
             C: obj.cover, // cover
             T: type, // type. isShort(0/1) concat isWeb(0/1)
             S: status, // status. enum: 0-not start/1-broadcasting/2-fin
-            E: obj.latestEp + ':' + obj.totalEpisodes || 0, // lastEp
+            E: (obj.latestEp || '') + ':' + obj.totalEpisodes || 0, // lastEp
             N: hasNew, // hasNew. enum: 0, 1
             U: obj.id + ":" + obj.subsId, // id
             R: obj.count, // epCount

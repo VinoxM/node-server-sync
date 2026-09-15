@@ -15,6 +15,7 @@ export async function updateNotFinSubjects() {
     for (const subject of subjects) {
         const handled = await diffAndUpsertSubject(subject);
         handleCount += handled ? 1 : 0;
+        await new Promise(resolve => setTimeout(resolve, 500));
     }
     __log.info(`[Bangumi Difference] Upsert not fin subjects: ${handleCount}, total: ${totalCount}`);
     return { totalCount, handleCount };
