@@ -45,6 +45,14 @@ async function tryAnalysisRssSubscribe(obj, results) {
     }
 }
 
+async function tryAddManyResult(rssResults) {
+    if (__env.isDev()) {
+        __log.debug(`[RSS Subscribe] Dev environment, skipped the rssResults database insert.`)
+        return rssResults.length;
+    }
+    return await addManyResult(rssResults);
+}
+
 /**
  * 触发全量或指定订阅列表的 RSS 抓取并解析更新
  * @param {number[]} [ids] - 可选的订阅 ID 数组（若为空则更新全部有效订阅）
@@ -76,8 +84,7 @@ export async function updateRssSubscribe(ids) {
             } else {
                 __log.debug(`[RSS Subscribe] Analysis Rss Subscribe complete. Total: ${tasks.length}, Error: ${failedCount}, Results: ${rssResults.length}`);
                 if (rssResults.length > 0) {
-                    const rows = await addManyResult(rssResults);
-                    // const rows = rssResults.length;
+                    const rows = await tryAddManyResult(rssResults);
                     rows > 0 && __log.info(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
                     effectRows += rows;
                 }
