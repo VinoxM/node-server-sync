@@ -76,8 +76,8 @@ export async function updateRssSubscribe(ids) {
             } else {
                 __log.debug(`[RSS Subscribe] Analysis Rss Subscribe complete. Total: ${tasks.length}, Error: ${failedCount}, Results: ${rssResults.length}`);
                 if (rssResults.length > 0) {
-                    // const rows = await addManyResult(rssResults);
-                    const rows = rssResults.length;
+                    const rows = await addManyResult(rssResults);
+                    // const rows = rssResults.length;
                     rows > 0 && __log.info(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
                     effectRows += rows;
                 }
