@@ -41,14 +41,6 @@ function tryImageType(image) {
     }
 }
 
-function relaceCommonBangumiImageLink(image) {
-    if (__isBlank(image)) return image;
-    if (image.startsWith('https://lain.bgm.tv/pic/')) {
-        return image.replace('https://lain.bgm.tv/pic/', 'https://lain.bgm.tv/r/400/pic/');
-    }
-    return image;
-}
-
 /**
  * 批量注册待持久化到 MinIO 的图片链接
  * @param {Array<import('#types/animeTypes.d.ts').CleanedSubjectImage>} images - 图片原始 URL 与相对链接列表
@@ -58,7 +50,7 @@ export async function putImageStorageLinkBatch(images) {
     const dataList = images.map(({ image, link }) => ({
         link,
         minioLink: generateImageBucketLink(image, link),
-        originUrl: relaceCommonBangumiImageLink(image)
+        originUrl: image
     }));
     if (dataList.length > 0) {
         return bangumiImagesRep.upsertBatch(dataList);
@@ -79,7 +71,7 @@ function generateImageBucketLink(image, link) {
 export async function putImageStorageLink(image, link) {
     if (__isAnyBlank(image, link)) return image;
     const bucketLink = generateImageBucketLink(image, link);
-    await bangumiImagesRep.upsertBatch([{ link, minioLink: bucketLink, originUrl: relaceCommonBangumiImageLink(image) }]);
+    await bangumiImagesRep.upsertBatch([{ link, minioLink: bucketLink, originUrl: image }]);
     return link;
 }
 
@@ -124,16 +116,12 @@ async function pushImageToStorage(image, minioLink) {
     const suitableMinioLink = client.generateSuitableMinioLink(minioLink);
     if (__isBlank(suitableMinioLink)) return false;
     try {
-        await client.getObjectStat(minioLink);
-        return true;
+        await client.deleteObject(minioLink);
     } catch (err) {
-        if (err.code === 'NotFound' || err.statusCode === 404) {
-            const code = await downloadFileToMinio(image, suitableMinioLink, { useProxy: true });
-            return code === 0;
-        }
-        __log.error(`[Bangumi Images] Get minio object stat failed. MinioLink: ${suitableMinioLink}, Cause:`, err.message || err);
+        __log.error(`[Bangumi Images] Delete minio object stat failed. MinioLink: ${suitableMinioLink}, Cause:`, err.message || err);
     }
-    return false;
+    const code = await downloadFileToMinio(image, suitableMinioLink, { useProxy: true });
+    return code === 0;
 }
 
 async function getBangumiImages(link, res) {

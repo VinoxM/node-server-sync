@@ -59,8 +59,10 @@ export interface SubjectPullOptions {
   delayMs?: number;
   /** 是否跳过角色和声优信息抓取 */
   skipCharacter?: boolean;
-  /** 是否不处理图片 */
-  ignoreImages?: boolean;
+  /** 是否使用原始图片, 默认为 false */
+  useOriginImage?: boolean;
+  /** 是否收集图片预备存入数据库, 默认为 true */
+  collectImage?: boolean;
   /** 是否持久化图片到数据库, 默认为 true */
   persistenceImage?: boolean;
 }

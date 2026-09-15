@@ -115,8 +115,8 @@ export default {
      * @returns {Promise<QueryResult<{id: number, link: string, minioLink: string}>>}
      */
     selectByLinkLikely: link => {
-        const sql = `SELECT id, link, minio_link FROM bangumi_images WHERE link LIKE ?`;
-        return __sqliteDB.selectAll(sql, [`${link}%`, null, dbName]);
+        const sql = `SELECT id, link, minio_link, origin_url FROM bangumi_images WHERE link LIKE ?`;
+        return __sqliteDB.selectAll(sql, [`${link}%`], null, dbName);
     },
 
     /**

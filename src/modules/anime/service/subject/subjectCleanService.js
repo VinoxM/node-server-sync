@@ -105,15 +105,25 @@ function getPlatformFromSubject(subject) {
     return platform;
 }
 
-function ensureImageStorageLink(images, image, link) {
+function relaceCommonBangumiImageLink(image) {
+    if (__isBlank(image)) return image;
+    if (image.startsWith('https://lain.bgm.tv/pic/')) {
+        return image.replace('https://lain.bgm.tv/pic/', 'https://lain.bgm.tv/r/400/pic/');
+    }
+    return image;
+}
+
+function ensureImageStorageLink(images, image, link, options = {}) {
     if (__isAnyBlank(image, link)) return image;
-    images.push({ image, link });
-    return link;
+    const { collectImage = true, useOriginImage = false } = options;
+    const originImage = relaceCommonBangumiImageLink(image);
+    collectImage && images.push({ image: originImage, link });
+    return useOriginImage ? originImage : link;
 }
 
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
 async function getCharactersBySubjectId(subjectId, options = {}) {
-    const { fetchDelay = 500, ignoreImages = false } = options;
+    const { fetchDelay = 500 } = options;
     const results = [];
     const images = [];
     const characters = await bangumiApi.getSubjectCharacters(subjectId);
@@ -125,11 +135,11 @@ async function getCharactersBySubjectId(subjectId, options = {}) {
     for (const character of characters) {
         if (!CHARACTERS_RELATION_INCLUDES.includes(character.relation)) continue;
         const summary = character.summary || '';
-        const characterImage = ignoreImages ? character?.images?.large : ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id));
+        const characterImage = ensureImageStorageLink(images, character?.images?.large || '', generateCharacterImageLink(subjectId, character.id), options);
         const characterActors = character.actors ?? [];
         const actors = [];
         for (const actor of characterActors) {
-            const actorImage = ignoreImages ? actor?.images?.large : ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id));
+            const actorImage = ensureImageStorageLink(images, actor?.images?.large || '', generateActorImageLink(actor.id), options);
             actors.push({ name: actor.name, image: actorImage, id: actor.id });
         }
         const result = {
@@ -160,7 +170,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         __log.warn(`[Bangumi Clean] Subject[${subject.id}] cannot get season, skipped.`);
         return;
     }
-    const { skipCharacter = false, ignoreImages = false, persistenceImage = true } = options;
+    const { skipCharacter = false, collectImage = true, persistenceImage = true } = options;
     const infoBox = subject['infobox'];
     const alias = getAliasFromSubjectInfoBox(infoBox);
     const staff = getStaffFromSubjectInfoBox(infoBox);
@@ -173,7 +183,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         images.push(...charactersResult.images);
         characters.push(...charactersResult.results);
     }
-    const cover = ignoreImages ? subject.images?.large || subject.image : ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id));
+    const cover = ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id), options);
     const result = {
         bangumiId: subject.id,
         name: subject.name,
@@ -192,8 +202,9 @@ export async function cleanBangumiSubject(subject, options = {}) {
     };
     if (persistenceImage) {
         await putImageStorageLinkBatch(images);
-    } else {
-        result.images= images;
+    }
+    if (collectImage) {
+        result.images = images;
     }
     return result;
 }

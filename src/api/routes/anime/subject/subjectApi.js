@@ -62,7 +62,7 @@ export default defineRoutes({
         preCheck: req => checkBodyKeyNotBlank(req, 'bangumiId'),
         callback: async req => {
             const bangumiId = req.body.bangumiId;
-            const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { ignoreImages: true });
+            const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { collectImage: false, useOriginImage: true, persistenceImage: false });
             const view = handleSubjectView(cleanedSubject);
             return {
                 ...view,

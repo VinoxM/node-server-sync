@@ -1,5 +1,6 @@
 import { getCurSeason } from "#common/utils/dateUtil.js";
 import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
+import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "../subject/subjectPullService.js";
 import { handleSubjectView } from "../subject/subjectService.js";
@@ -21,9 +22,10 @@ export async function updateNotFinSubjects() {
 
 async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
-    const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false });
-    const cleanedSUbjectView = handleSubjectView(cleanedSubject)
-    const diffs = getSubjectDiffProperties(subjectView, cleanedSUbjectView);
+    const backfillSubject = await fillbackOriginUrl(subjectView, bangumiId);
+    const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
+    const cleanedSubjectView = handleSubjectView(cleanedSubject)
+    const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
     if (diffs.length === 0) return false;
     __log.info(`[Bangumi Difference] Subject[${id}] [${getName(subjectView.name, subjectView.nameCN)}] has ${diffs.length} diffs:`, diffs.join(', '));
     diffs.push('updateTime');
@@ -32,6 +34,22 @@ async function diffAndUpsertSubject(subject) {
         await putImageStorageLinkBatch(cleanedSubject.images);
     }
     return true;
+}
+
+async function fillbackOriginUrl(subject, bangumiId) {
+    const { data } = await bangumiImagesRep.selectByLinkLikely(`/subject/${bangumiId}/`);
+    const { characters } = subject;
+    for (const { link, originUrl } of data) {
+        if (link === subject.cover) {
+            subject.cover = originUrl;
+            continue;
+        }
+        const char = characters.find(o => o.image === link);
+        if (char) {
+            char.image = originUrl;
+        }
+    }
+    return subject;
 }
 
 function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
@@ -93,6 +111,7 @@ function normalizeCharacters(chars) {
     return JSON.stringify(
         chars.map(c => ({
             name: normalizeStr(c.name),
+            image: normalizeStr(c.image),
             relation: normalizeStr(c.relation),
             summary: normalizeMultilineStr(c.summary),
             actors: Array.isArray(c.actors) ? c.actors.map(a => normalizeStr(a.name || a)).sort() : []
