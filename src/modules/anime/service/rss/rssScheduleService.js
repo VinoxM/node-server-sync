@@ -76,7 +76,8 @@ export async function updateRssSubscribe(ids) {
             } else {
                 __log.debug(`[RSS Subscribe] Analysis Rss Subscribe complete. Total: ${tasks.length}, Error: ${failedCount}, Results: ${rssResults.length}`);
                 if (rssResults.length > 0) {
-                    const rows = await addManyResult(rssResults);
+                    // const rows = await addManyResult(rssResults);
+                    const rows = rssResults.length;
                     rows > 0 && __log.info(`[RSS Subscribe] Update Rss Results complete. Rows: ${rows}`);
                     effectRows += rows;
                 }
@@ -113,27 +114,28 @@ export async function autoUpdateSubscribe() {
                 return false;
             });
         });
-        if (updated.length === 0) return;
-        const trackers = await getTrackersMapping();
-        const updatedRssSubs = [];
-        for (const { id, name, cover, count } of updated) {
-            const limitedData = await rssResultRep.selectRssResultsByPidWithLimit(id, count);
-            const rssSubs = { name, cover, count };
-            if (limitedData.rows === 0) {
-                continue;
+        if (updated.length > 0) {
+            const trackers = await getTrackersMapping();
+            const updatedRssSubs = [];
+            for (const { id, name, cover, count } of updated) {
+                const limitedData = await rssResultRep.selectRssResultsByPidWithLimit(id, count);
+                const rssSubs = { name, cover, count };
+                if (limitedData.rows === 0) {
+                    continue;
+                }
+                rssSubs.id = id;
+                rssSubs.result = limitedData.data.map(obj => ({
+                    resultId: obj.id,
+                    title: obj.title,
+                    torrent: concatTrackers(obj.torrent, obj.tracker, trackers)
+                }))
+                updatedRssSubs.push(rssSubs);
             }
-            rssSubs.id = id;
-            rssSubs.result = limitedData.data.map(obj => ({
-                resultId: obj.id,
-                title: obj.title,
-                torrent: concatTrackers(obj.torrent, obj.tracker, trackers)
-            }))
-            updatedRssSubs.push(rssSubs);
+            pushToNotification({ effectRows, handledCount, updated: updatedRssSubs });
+            const rssSubsArr = smoothArray(updatedRssSubs);
+            pushToRssSubscription(rssSubsArr);
+            await addRssTasksFromFavorites(rssSubsArr);
         }
-        pushToNotification({ effectRows, handledCount, updated: updatedRssSubs });
-        const rssSubsArr = smoothArray(updatedRssSubs);
-        pushToRssSubscription(rssSubsArr);
-        await addRssTasksFromFavorites(rssSubsArr);
         await updateSubscribesFin(toUpdateIds);
     }
     await updateSubscribeGoon(toUpdateIds);
@@ -194,7 +196,7 @@ async function updateSubscribesFin(toUpdateIds) {
         }
     }
     if (toUpdateFinIds.length > 0) {
-        const updated = await rssSubscribeRep.updateFinByIds(ids);
+        const updated = await rssSubscribeRep.updateFinByIds(toUpdateFinIds);
         updated.rows && __log.info(`[RSS Subscribe] Setup fin subjects:`, updated.rows);
     }
 }
