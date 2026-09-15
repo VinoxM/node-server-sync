@@ -6,6 +6,7 @@ import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE } from "../constants/subjectCons
  * @enum {string}
  */
 export const SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN = [
+    'cover',
     'name',
     'nameCN',
     'nameAlias',

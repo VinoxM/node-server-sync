@@ -6,6 +6,7 @@ import {
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
+import { backfillOriginUrl } from "../bangumi/bangumiDiffService.js";
 import { generateCharacterImageLink } from "../bangumi/bangumiImagesService.js";
 
 export async function getExistsSeasons() {
@@ -74,8 +75,9 @@ export async function getSubjectForEdit(subjectId) {
     const subject = await subjectsRep.selectOneById(subjectId);
     subject || __throwMessage('Subject not exists.');
     const subjectView = handleSubjectView(subject);
+    const backfilledSubjectView = await backfillOriginUrl(subjectView, subject.bangumiId, { useExtractProp: true });
     return {
-        ...subjectView,
+        ...backfilledSubjectView,
         nsfw: subject.nsfw
     };
 }

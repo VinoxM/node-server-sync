@@ -11,7 +11,7 @@ async function upsertAny(dataList = []) {
         + `VALUES ${dataList.map(_ => '(?, ?, ?, ?)').join(', ')} `
         + `ON CONFLICT(link) DO UPDATE SET `
         + `origin_url = excluded.origin_url, status = ${BANGUMI_IMAGES_STATUS.PREPARED}, object_size = NULL `
-        + `WHERE bangumi_images.origin_url <> excluded.origin_url`;
+        // + `WHERE bangumi_images.origin_url <> excluded.origin_url`;
     const params = dataList.flatMap(data => ([data.link, data.minioLink, data.originUrl, BANGUMI_IMAGES_STATUS.PREPARED]));
     return __sqliteDB.insert(sql, params, null, dbName);
 }
@@ -86,9 +86,9 @@ export default {
      * @param {boolean} [equalsWhen=true] - 是否等于判断条件状态, 可选, 默认等于
      * @returns {Promise<ExecResult>}
      */
-    updateImageStatusBatch: (imageIds, status, whenStatus, equalsWhen = true) => {
+    updateImageStatusBatch: (imageIds, status, whenStatus, equalsWhen = true, resetObjectSize = false) => {
         const params = [status];
-        let sql = `UPDATE bangumi_images SET status=? WHERE `;
+        let sql = `UPDATE bangumi_images SET status=?${resetObjectSize ? ',object_size=NULL' : ''} WHERE `;
         if (__isNotBlank(whenStatus)) {
             params.push(whenStatus);
             sql += equalsWhen ? `status=? AND ` : `status!=? AND `;

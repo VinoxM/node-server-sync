@@ -94,7 +94,7 @@ export async function pushImageToStorageSchedule() {
         pushResult ? completeIds.add(id) : failedIds.add(id);
     }
     if (completeIds.size > 0) {
-        await bangumiImagesRep.updateImageStatusBatch(Array.from(completeIds), BANGUMI_IMAGES_STATUS.COMPLETE);
+        await bangumiImagesRep.updateImageStatusBatch(Array.from(completeIds), BANGUMI_IMAGES_STATUS.COMPLETE, null, true, true);
     }
     if (failedIds.size > 0) {
         await bangumiImagesRep.updateImageStatusBatch(Array.from(failedIds), BANGUMI_IMAGES_STATUS.PREPARED);

@@ -66,7 +66,7 @@ export default defineRoutes({
             const view = handleSubjectView(cleanedSubject);
             return {
                 ...view,
-                nsfw: cleanedSubject.nsfw
+                nsfw: cleanedSubject?.nsfw
             }
         }
     },

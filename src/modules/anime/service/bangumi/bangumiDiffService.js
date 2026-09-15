@@ -23,7 +23,7 @@ export async function updateNotFinSubjects() {
 
 async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
-    const backfillSubject = await fillbackOriginUrl(subjectView, bangumiId);
+    const backfillSubject = await backfillOriginUrl(subjectView, bangumiId);
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
     const cleanedSubjectView = handleSubjectView(cleanedSubject)
     const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
@@ -37,17 +37,26 @@ async function diffAndUpsertSubject(subject) {
     return true;
 }
 
-async function fillbackOriginUrl(subject, bangumiId) {
+export async function backfillOriginUrl(subject, bangumiId, options = {}) {
     const { data } = await bangumiImagesRep.selectByLinkLikely(`/subject/${bangumiId}/`);
     const { characters } = subject;
+    const { useExtractProp = false } = options;
     for (const { link, originUrl } of data) {
         if (link === subject.cover) {
-            subject.cover = originUrl;
+            if (useExtractProp) {
+                subject.originCover = originUrl;
+            } else {
+                subject.cover = originUrl;
+            }
             continue;
         }
         const char = characters.find(o => o.image === link);
         if (char) {
-            char.image = originUrl;
+            if (useExtractProp) {
+                char.originImage = originUrl;
+            } else {
+                char.image = originUrl;
+            }
         }
     }
     return subject;
