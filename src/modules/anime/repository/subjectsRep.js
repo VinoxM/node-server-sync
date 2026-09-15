@@ -298,6 +298,19 @@ export default {
         return __sqliteDB.selectOne(sql, params, null, dbName).then(data => data?.counts ?? 0);
     },
 
+    selectVisibleBySubsIds: (subsIds) => {
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count '
+            + 'FROM subjects t '
+            + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
+            + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
+            + `AND rs.id IN (${subsIds.map(_ => '?').join(',')}) `
+            + 'GROUP BY t.id,rs.id ';
+        return __sqliteDB.selectAll(sql, subsIds, null, dbName);
+    },
+
     /**
      * 查询已存在的所有季节
      * @returns {Promise<QueryResult<{ season: string }>>}

@@ -10,18 +10,17 @@ export default defineFilter({
     order: -79,
     doFilter: async (resolve, reject, complete, { req, res, config }) => {
         const { needAuth } = config;
-        if (needAuth === undefined || needAuth == null) {
-            resolve({ req, res, config });
-        }
-        const needAuthBooleanFlag = typeof needAuth === 'boolean' && needAuth;
-        const needAuthObjectFlag = typeof needAuth === 'object' && __isNotEmptyArray(needAuth.clients);
-        if (needAuthBooleanFlag || needAuthObjectFlag) {
-            const userInfo = await decodeAuthorization(req);
-            userInfo || __throwMessage('Permission denied.', -401, 401);
-            if (needAuthObjectFlag && !needAuth.clients.includes(userInfo.clientId)) {
-                __throwMessage('Permission denied.', -401, 401);
+        if (needAuth !== undefined && needAuth !== null) {
+            const needAuthBooleanFlag = typeof needAuth === 'boolean' && needAuth;
+            const needAuthObjectFlag = typeof needAuth === 'object' && __isNotEmptyArray(needAuth.clients);
+            if (needAuthBooleanFlag || needAuthObjectFlag) {
+                const userInfo = await decodeAuthorization(req);
+                userInfo || __throwMessage('Permission denied.', -401, 401);
+                if (needAuthObjectFlag && !needAuth.clients.includes(userInfo.clientId)) {
+                    __throwMessage('Permission denied.', -401, 401);
+                }
+                req.userInfo = userInfo;
             }
-            req.userInfo = userInfo;
         }
         resolve({ req, res, config });
     },

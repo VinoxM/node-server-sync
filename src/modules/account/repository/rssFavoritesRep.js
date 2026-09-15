@@ -20,6 +20,7 @@ export default {
             sql += 'AND rss_subs_id IN(' + new Array(arr.length).fill('?').join(',') + ')';
             params = [uid, ...arr];
         }
+        sql += ' ORDER BY rss_subs_id DESC';
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 

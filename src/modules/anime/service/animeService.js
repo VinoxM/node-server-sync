@@ -6,6 +6,7 @@ import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { handleSubjectView } from "./subject/subjectService.js";
 import rssTaskRep from "../repository/rss/rssTaskRep.js";
+import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
 
 function handleCalendar(data, userInfo) {
     let list = userInfo ? data : data.filter(o => o.nsfw === SUBJECT_NSFW_VALUE.NO);
@@ -48,9 +49,8 @@ function handleCalendar(data, userInfo) {
             G: obj.goon, // goon
             A: obj.totalEpisodes,
             P: lastPubDatetime,
-            M: JSON.parse(obj.metaTags || '[]'),
-            L: obj.season,
-            F: isShort ? SUBJECT_PLATFORM_DEFAULT : obj.platform
+            F: isShort ? SUBJECT_PLATFORM_DEFAULT : obj.platform,
+            B: Boolean(obj.nsfw)
         };
     });
 }
@@ -128,4 +128,22 @@ async function getRssResultsByRssSubscribeId(rssSubsId, userInfo) {
 
 async function getRssEpisodesByRssSubscribeId(rssSubsId) {
     return rssEpisodeRep.selectBySubsId(rssSubsId).then(({ data }) => data);
+}
+
+export async function getUserFavoitesAnime(userInfo) {
+    userInfo || __throwMessage("Permission denied.", -401, 401);
+    const uid = userInfo.id;
+    const rssFavorites = await filterUserRssFavoritesWithUid(uid);
+    if (__isEmptyArray(rssFavorites)) return [];
+    const subsIds = rssFavorites.map(o => o.rssSubscribeId);
+    const { data: subjects } = await subjectsRep.selectVisibleBySubsIds(subsIds);
+    const subjectMap = new Map();
+    for (const subsId of subsIds) {
+        const index = subjects.findIndex(s => s.subsId === subsId);
+        if (index > -1) {
+            subjectMap.set(subsId, ...subjects.splice(index, 1));
+        }
+    }
+    const results = Array.from(subjectMap.values());
+    return handleCalendar(results, userInfo);
 }

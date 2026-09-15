@@ -3,7 +3,7 @@ import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
 import { checkBodyKeyMatch, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
-import { getAnimeCalendar, getAnimeInformation, searchAnime } from '#modules/anime/service/animeService.js';
+import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
@@ -14,6 +14,7 @@ const { GET, POST } = apiMethodConst;
 
 /** 获取番剧路由通信秘钥 */
 const needSecret = () => 'mAou5820.anime';
+const needAuth = needAuthSingleClient.ANIME;
 
 /**
  * 番剧放送日历、条目详情路由模块 (`/anime/*`)
@@ -24,8 +25,8 @@ export default defineRoutes({
     "/search": {
         method: POST,
         needSecret,
-        preCheck: req => checkBodyKeysExists(req, ['season', 'name', 'platform', 'fin', 'pageSize', 'pageNum']) 
-        && checkBodyKeyMatch(req, 'viewMode', [/^[01]{1}$/]),
+        preCheck: req => checkBodyKeysExists(req, ['season', 'name', 'platform', 'fin', 'pageSize', 'pageNum'])
+            && checkBodyKeyMatch(req, 'viewMode', [/^[01]{1}$/]),
         callback: async (req) => {
             const { season, name, platform, fin } = req.body;
             __isAllBlank(season, name, platform, fin) && __throwMessage('Empty filters.');
@@ -62,11 +63,21 @@ export default defineRoutes({
         }
     },
 
+    "/getUserFavorites": {
+        method: GET,
+        needSecret,
+        needAuth,
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            return getUserFavoitesAnime(userInfo);
+        }
+    },
+
     "/getEpisodeSource": {
         method: POST,
-        needAuth: needAuthSingleClient.ANIME,
         allowHosts: allowLanHosts,
         needSecret,
+        needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
         callback: req => getRssEpisodeSource(req.body.rssSubsId, req.body.episode)
     },
@@ -76,6 +87,7 @@ export default defineRoutes({
      * 请求体参数：{ season?: '2026-10', force?: boolean }
      */
     "/pullAnime": {
+        disabled: true,
         method: POST,
         needSecret,
         callback: (/** @type {ApiRequest} */ req) => {
