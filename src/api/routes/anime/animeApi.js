@@ -17,11 +17,15 @@ const needSecret = () => 'mAou5820.anime';
 const needAuth = needAuthSingleClient.ANIME;
 
 /**
- * 番剧放送日历、条目详情路由模块 (`/anime/*`)
+ * 番剧放送日历与条目详情公开/前台路由模块 (`/anime/*`)
  */
 export default defineRoutes({
     basePath: '/anime',
 
+    /**
+     * 多维条件检索番剧列表（支持卡片分页模式与日历模式，登录用户可查看 NSFW 内容）
+     * 请求体参数：{ season?: string, name?: string, platform?: string, fin?: number, viewMode: 0|1, pageNum?: number, pageSize?: number }
+     */
     "/search": {
         method: POST,
         needSecret,
@@ -38,14 +42,14 @@ export default defineRoutes({
     },
 
     /**
-     * 获取当前季度的全量番剧放送日历数据
+     * 获取当前季度的全量番剧放送日历数据（紧凑视图）
      */
     "/calendar": {
         method: GET,
         needSecret,
         callback: async (req) => {
             const userInfo = await decodeAuthorization(req);
-            return getAnimeCalendar(userInfo)
+            return getAnimeCalendar(userInfo);
         }
     },
 
@@ -63,6 +67,9 @@ export default defineRoutes({
         }
     },
 
+    /**
+     * 获取当前登录用户收藏的所有番剧列表（日历紧凑视图）
+     */
     "/getUserFavorites": {
         method: GET,
         needSecret,
@@ -73,6 +80,10 @@ export default defineRoutes({
         }
     },
 
+    /**
+     * 获取指定剧集的视频播放源、内嵌字幕及关联字体资源
+     * 请求体参数：{ rssSubsId: number, episode: number|string }
+     */
     "/getEpisodeSource": {
         method: POST,
         allowHosts: allowLanHosts,
@@ -83,7 +94,7 @@ export default defineRoutes({
     },
 
     /**
-     * 从 Bangumi API 拉取、清洗并同步番剧数据到数据库
+     * 从 Bangumi API 拉取、清洗并同步番剧数据到数据库（默认禁用，通过后台任务/管理接口调用）
      * 请求体参数：{ season?: '2026-10', force?: boolean }
      */
     "/pullAnime": {
@@ -103,5 +114,5 @@ export default defineRoutes({
             }
             return pullCurrentSeasonAnime(options);
         }
-    },
+    }
 });

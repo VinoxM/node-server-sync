@@ -61,4 +61,4 @@ export default defineRoutes({
             await getSubjectCharacterImage(subjectId, characterId, res);
         }
     }
-})
+});
