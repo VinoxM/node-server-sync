@@ -2,7 +2,7 @@ logger:
   level: info
   savePath: /home/maou/.github/node-server/log
 sqlite:
-  defaultDB: rss
+  defaultDB: anime
   dbPath: "@/db"
   executionPath: "@/resource/execution"
 server:

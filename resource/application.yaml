@@ -4,7 +4,7 @@ logger:
   level: info
 sqlite:
   db: {}
-  defaultDB: rss
+  defaultDB: anime
   dbPath: "@/db"
 server:
   port: 8081
