@@ -14,6 +14,8 @@ export interface ScheduleJobConfig {
   defaultCron?: string;
   /** 核心任务执行回调函数，支持同步或异步 Promise，接收可选的 AbortSignal 用于协同取消 */
   jobCallback: (signal?: AbortSignal) => any | Promise<any>;
+  /** 是否支持中断当前执行（默认 false），声明为 false 时将拦截 abort 请求 */
+  abortable?: boolean;
   /** 是否忽略任务触发与完成的控制台日志输出 */
   ignoreOutput?: boolean;
   /** 失败自动重试配置策略 */

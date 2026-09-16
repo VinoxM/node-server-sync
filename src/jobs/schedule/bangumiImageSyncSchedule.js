@@ -9,5 +9,6 @@ export default defineScheduleJob({
     scheduleKey: "bangumiImagesSync",
     jobName: "Bangumi Images Sync",
     defaultCron: "0 0 0/3 * * *",
+    abortable: true,
     jobCallback: (signal) => pushImageToStorageSchedule(signal)
 });

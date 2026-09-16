@@ -32,6 +32,9 @@ class ScheduleJob {
     /** @type {boolean} 是否忽略控制台日志输出 */
     #ignoreOutput = false;
 
+    /** @type {boolean} 是否支持协同中断当前执行 */
+    #abortable = false;
+
     /** @type {ScheduleRetryConfig|undefined} 失败重试策略 */
     #retry;
 
@@ -70,13 +73,14 @@ class ScheduleJob {
      * @param {Record<string, any>} [envConfig={}] - 全局环境配置文件中的对应 schedule.<key> 配置
      */
     constructor(jobConfig, envConfig = {}) {
-        const { scheduleKey, jobName, defaultCron, jobCallback, ignoreOutput, retry, immediate } = jobConfig;
+        const { scheduleKey, jobName, defaultCron, jobCallback, ignoreOutput, retry, immediate, abortable } = jobConfig;
         this.#rawConfig = jobConfig;
         this.#scheduleKey = scheduleKey;
         this.#jobName = jobName;
         this.#cronExpr = envConfig?.cron ?? envConfig?.corn ?? defaultCron;
         this.#jobCallback = jobCallback;
         this.#ignoreOutput = ignoreOutput ?? false;
+        this.#abortable = abortable ?? false;
         this.#retry = retry;
         this.#immediate = immediate || Boolean(envConfig?.immediate);
         this.#enabled = envConfig?.enable ?? true;
@@ -100,6 +104,11 @@ class ScheduleJob {
     /** @returns {boolean} */
     get isEnabled() {
         return this.#enabled;
+    }
+
+    /** @returns {boolean} */
+    get isAbortable() {
+        return this.#abortable;
     }
 
     /** @returns {boolean} */
@@ -127,7 +136,7 @@ class ScheduleJob {
             this.execute(false);
         });
 
-        __log.info(`[Schedule] Job Started: [${this.#jobName}] (Cron: "${this.#cronExpr}")`);
+        __log.info(`[Schedule] Job Started: [${this.#jobName}] (Cron: "${this.#cronExpr}", Abortable: ${this.#abortable})`);
 
         if (this.#immediate) {
             this.execute(false);
@@ -254,11 +263,24 @@ class ScheduleJob {
             if (attempt < maxCount && !signal?.aborted) {
                 __log.info(`[Schedule] Job [${this.#jobName}] will retry attempt ${attempt + 1}/${maxCount} in ${interval}ms.`);
                 this.#clearRetryTimer();
-                this.#retryTimer = setTimeout(() => {
-                    Tracer.runWithPrefix(this.#generateTracePrefix(), () => {
-                        this.#runAttempt(attempt + 1, signal);
-                    });
-                }, interval);
+                await new Promise(resolve => {
+                    const onAbort = () => {
+                        this.#clearRetryTimer();
+                        resolve();
+                    };
+                    signal?.addEventListener?.('abort', onAbort, { once: true });
+
+                    this.#retryTimer = setTimeout(async () => {
+                        signal?.removeEventListener?.('abort', onAbort);
+                        this.#retryTimer = null;
+                        if (!signal?.aborted) {
+                            await Tracer.runWithPrefix(this.#generateTracePrefix(), () => {
+                                return this.#runAttempt(attempt + 1, signal);
+                            });
+                        }
+                        resolve();
+                    }, interval);
+                });
             } else {
                 this.#clearRetryTimer();
             }
@@ -276,6 +298,25 @@ class ScheduleJob {
     }
 
     /**
+     * 仅中止当前正在运行的任务批次（保留 Cron 定时调度与任务注册，不注销任务）
+     * @param {string} [reason] - 中止原因描述
+     * @returns {boolean} 是否成功向正在运行的任务发送了协同中止信号
+     */
+    abortExecution(reason = `Job [${this.#jobName}] current execution was manually aborted.`) {
+        if (!this.#abortable) {
+            __log.warn(`[Schedule] Job [${this.#jobName}] is configured as non-abortable, abort request rejected.`);
+            return false;
+        }
+        this.#clearRetryTimer();
+        if (this.#isRunning && this.#abortController) {
+            this.#abortController.abort(new Error(reason));
+            __log.warn(`[Schedule] Aborted current execution for Job: ${this.#jobName}`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 取消当前任务调度并可选择中断正在运行中的任务
      * @param {boolean} [abortRunning=true] - 是否向当前正在执行的任务发送协同中止信号 (AbortSignal)
      */
@@ -286,7 +327,7 @@ class ScheduleJob {
             this.#nodeJob = null;
             __log.info(`[Schedule] Job Cancelled: ${this.#jobName}`);
         }
-        if (abortRunning && this.#abortController) {
+        if (abortRunning && this.#abortController && this.#abortable) {
             this.#abortController.abort(new Error(`Job [${this.#jobName}] was cancelled.`));
         }
         if (!this.#runningPromise) {
@@ -306,7 +347,7 @@ class ScheduleJob {
 
     /**
      * 获取任务当前运行指标与快照信息
-     * @returns {{ key: string, name: string, cron: string, enabled: boolean, isRunning: boolean, isAborted: boolean, nextInvocation: string|null, stats: typeof this.#stats }}
+     * @returns {{ key: string, name: string, cron: string, enabled: boolean, abortable: boolean, isRunning: boolean, isAborted: boolean, nextInvocation: string|null, stats: typeof this.#stats }}
      */
     getSnapshot() {
         return {
@@ -314,6 +355,7 @@ class ScheduleJob {
             name: this.#jobName,
             cron: this.#cronExpr,
             enabled: this.#enabled,
+            abortable: this.#abortable,
             isRunning: this.#isRunning,
             isAborted: this.isAborted,
             nextInvocation: this.#nodeJob?.nextInvocation()?.toISOString() || null,
@@ -438,6 +480,41 @@ export class Schedule extends ContextSubscribe {
     }
 
     /**
+     * 仅中断指定 Key 任务当前的单次执行（保留 Cron 定时调度与任务注册）
+     * @param {string} scheduleKey - 任务 Key
+     * @param {string} [reason] - 中止原因描述
+     * @returns {string} 执行结果说明
+     */
+    abortJob(scheduleKey, reason) {
+        if (!this.#jobs.has(scheduleKey)) {
+            __throwMessage(`No such Job: ${scheduleKey}`);
+        }
+        const job = this.#jobs.get(scheduleKey);
+        if (!job.isAbortable) {
+            __throwMessage(`Job [${job.name}] is configured as non-abortable.`);
+        }
+        const aborted = job.abortExecution(reason);
+        return aborted
+            ? `Job [${job.name}] current execution aborted.`
+            : `Job [${job.name}] is not currently running.`;
+    }
+
+    /**
+     * 中断所有正在运行中的任务单次执行（保留 Cron 定时调度与任务注册）
+     * @param {string} [reason] - 中止原因描述
+     * @returns {string[]} 成功发送中止信号的任务名称列表
+     */
+    abortAllJob(reason) {
+        const abortedJobs = [];
+        for (const job of this.#jobs.values()) {
+            if (job.abortExecution(reason)) {
+                abortedJobs.push(job.name);
+            }
+        }
+        return abortedJobs;
+    }
+
+    /**
      * 取消并注销指定 Key 的任务
      * @param {string} scheduleKey - 任务 Key
      * @param {boolean} [abortRunning=true] - 是否协同中断正在执行中的任务
@@ -558,6 +635,21 @@ export const startSchedule = () => Schedule.instance.start();
  * @param {boolean} [abortRunning=true] - 是否协同中断正在执行中的任务
  */
 export const cancelJob = (scheduleKey, abortRunning = true) => Schedule.instance.cancelJob(scheduleKey, abortRunning);
+
+/**
+ * 仅中断指定定时任务当前的单次执行（快捷入口）
+ * @param {string} scheduleKey - 任务标识 Key
+ * @param {string} [reason] - 中止原因描述
+ * @returns {string}
+ */
+export const abortJob = (scheduleKey, reason) => Schedule.instance.abortJob(scheduleKey, reason);
+
+/**
+ * 中断所有正在运行中的定时任务单次执行（快捷入口）
+ * @param {string} [reason] - 中止原因描述
+ * @returns {string[]}
+ */
+export const abortAllJob = (reason) => Schedule.instance.abortAllJob(reason);
 
 /**
  * 手动触发指定定时任务（快捷入口）

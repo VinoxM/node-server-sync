@@ -2,8 +2,8 @@ import apiBodyConst from '#constants/apiBodyConst.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
 import { defineRoutes } from '#utils/defineUtil.js';
-import { cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, startSchedule } from '#jobs/scheduleDispatcher.js';
-import { NEED_AUTH_CLIENT, needAuthSingleClient } from '#common/constants/authorizationConst.js';
+import { abortJob, cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, startSchedule } from '#jobs/scheduleDispatcher.js';
+import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 
 const { POST, GET } = apiMethodConst;
 const { JOB_NAME } = apiBodyConst;
@@ -21,26 +21,12 @@ export default defineRoutes({
     /**
      * 重启/重新加载所有定时任务调度器
      */
-    "/restartJobs": {
+    "/reloadJobs": {
         method: POST,
         needSecret,
         needAuth,
         callback: () => {
             return startSchedule();
-        }
-    },
-
-    /**
-     * 优雅关停/安全注销所有定时任务调度器
-     * 请求体参数：{ timeout?: number }
-     */
-    "/shutdownJobs": {
-        method: POST,
-        needSecret,
-        needAuth,
-        callback: (/** @type {ApiRequest} */ req) => {
-            const timeoutMs = req.body?.timeout ? Number(req.body.timeout) : 15000;
-            return gracefulShutdownSchedule(timeoutMs);
         }
     },
 
@@ -57,7 +43,7 @@ export default defineRoutes({
     },
 
     /**
-     * 停止/取消指定的定时任务
+     * 停止/取消指定的定时任务并注销
      * 请求体参数：{ jobName: string }
      */
     "/cancelJob": {
@@ -68,6 +54,21 @@ export default defineRoutes({
         callback: (/** @type {ApiRequest} */ req) => {
             const jobName = req.body[JOB_NAME];
             return cancelJob(jobName);
+        }
+    },
+
+    /**
+     * 仅中断指定定时任务当前的单次执行（保留定时计划，不注销任务）
+     * 请求体参数：{ jobName: string }
+     */
+    "/abortJob": {
+        method: POST,
+        needSecret,
+        needAuth,
+        preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
+        callback: (/** @type {ApiRequest} */ req) => {
+            const jobName = req.body[JOB_NAME];
+            return abortJob(jobName);
         }
     },
 
