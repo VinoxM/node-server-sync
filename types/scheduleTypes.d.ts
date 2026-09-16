@@ -12,14 +12,21 @@ export interface ScheduleJobConfig {
   jobName: string;
   /** 默认 Cron 调度表达式 (如 '0 0/5 * * * *') */
   defaultCron?: string;
-  /** 核心任务执行回调函数，支持同步或异步 Promise */
-  jobCallback: () => any | Promise<any>;
+  /** 核心任务执行回调函数，支持同步或异步 Promise，接收可选的 AbortSignal 用于协同取消 */
+  jobCallback: (signal?: AbortSignal) => any | Promise<any>;
   /** 是否忽略任务触发与完成的控制台日志输出 */
   ignoreOutput?: boolean;
   /** 失败自动重试配置策略 */
   retry?: ScheduleRetryConfig;
   /** 是否在调度器初始化注册时立即执行一次 */
   immediate?: boolean;
+}
+
+export interface GracefulShutdownResult {
+  /** 是否所有正在执行的任务都在超时时间内正常完成 */
+  completed: boolean;
+  /** 若超时强行退出，残留未完成的任务名称列表 */
+  pendingJobs: string[];
 }
 
 export type ScheduleJobModule = ScheduleJobConfig;

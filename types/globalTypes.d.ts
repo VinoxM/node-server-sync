@@ -184,6 +184,21 @@ declare global {
      */
     var __env: GlobalEnv;
 
+    interface GlobalShutdown {
+        /**
+         * 注册退出清理钩子，返回自增序号 ID
+         * @param callback 清理回调函数（接收可选的 AbortSignal）
+         * @param nameOrOptions 钩子名称或配置对象
+         * @param priority 优先级（数值越大越先执行，默认为 0）
+         */
+        add(callback: (signal?: AbortSignal) => any | Promise<any>, nameOrOptions?: string | { name?: string; priority?: number }, priority?: number): number;
+        /**
+         * 根据序号 ID 取消注册
+         * @param id 注册时返回的自增序号 ID
+         */
+        remove(id: number): boolean;
+    }
+
     /**
      * 全局 SQLite (LibSQL) 数据库操作实例
      */
@@ -193,6 +208,11 @@ declare global {
      * 全局 Redis 客户端操作实例 (若未启用 Redis 则为 null)
      */
     var __redisClient: RedisClient | null;
+
+    /**
+     * 全局停机与优雅退出钩子管理器
+     */
+    var __shutdown: GlobalShutdown;
 
     /**
      * 路径拼接工具函数（自动将 `@` 开头的路径解析映射为应用程序根路径）

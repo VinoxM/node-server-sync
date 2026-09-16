@@ -81,13 +81,17 @@ const PUSH_IMAGE_SCHEDULE_LIMIT = 500;
  * 定时任务：扫描待同步 (PREPARED) 的 Bangumi 图片并下载转存至 MinIO
  * @returns {Promise<void>}
  */
-export async function pushImageToStorageSchedule() {
+export async function pushImageToStorageSchedule(jobSignal) {
     const { rows, data } = await bangumiImagesRep.selectPreparedImagesWithLimit(PUSH_IMAGE_SCHEDULE_LIMIT);
     if (rows === 0) return;
     __log.info(`[Bangumi Images] Found need to synchronize images:`, rows);
     const completeIds = new Set();
     const failedIds = new Set();
     for (const { id, originUrl, minioLink } of data) {
+        if (jobSignal?.aborted) {
+            __log.warn('[Bangumi Images] Image sync received abort signal, breaking loop gracefully.');
+            break;
+        }
         const pending = await bangumiImagesRep.updatePreparedImagePending(id);
         if (pending.rows === 0) continue;
         const pushResult = await pushImageToStorage(originUrl, minioLink);

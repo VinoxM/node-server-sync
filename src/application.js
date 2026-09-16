@@ -10,7 +10,9 @@ import { tokenBucket } from './core/instance/tokenBucket.js';
 import { initializeMinioClient } from './core/instance/minioClient.js';
 import { doMigrations } from './modules/migrations/migrationsService.js';
 
-tryStartApplication(join(import.meta.dirname, "../"), async () => {
+const rootPath = join(import.meta.dirname, "../");
+
+async function start() {
     await doMigrations();
     initializeAuthTokenStore();
     await startServer();
@@ -20,4 +22,6 @@ tryStartApplication(join(import.meta.dirname, "../"), async () => {
     await sseInitialize();
     initializeMinioClient();
     await startSchedule();
-})
+}
+
+tryStartApplication(rootPath, start);

@@ -4,6 +4,8 @@ import { destroyLogger, registerLogger, setupLoggerLevel, setupLoggerWorker } fr
 import { createContext } from "#core/context/index.js";
 import { evaluate } from 'mathjs';
 import { initializeSshScripts } from "#modules/ssh/sshScriptService.js";
+import { gracefulShutdownSchedule } from "#jobs/scheduleDispatcher.js";
+import { shutdownHook, SHUTDOWN_PRIORITY } from "#core/infra/shutdownHook.js";
 
 /**
  * 全局挂载的基础工具函数集合
@@ -159,13 +161,22 @@ async function setupGlobal(rootPath) {
 
     // 10. 初始化 SSH 脚本服务
     initializeSshScripts();
+
+    // 11. 挂载全局停机钩子管理器 (__shutdown) 并注册核心系统级钩子
+    globalThis.__shutdown = {
+        add: (callback, nameOrOptions, priority) => shutdownHook.add(callback, nameOrOptions, priority),
+        remove: (id) => shutdownHook.remove(id)
+    };
+    shutdownHook.add(() => gracefulShutdownSchedule(), 'ScheduleGracefulShutdown', SHUTDOWN_PRIORITY.FIRST);
 }
 
 /**
- * 进程销毁前的清理钩子（优雅关闭日志 Worker 及写入缓存）
+ * 进程销毁前的清理钩子
+ * 先按优先级分阶段触发所有业务停机钩子（保证各任务在退出时能正常打印日志），最后独立销毁日志 Worker
  * @returns {Promise<void>}
  */
 async function beforeDestroy() {
+    await shutdownHook.executeAll(25000);
     await destroyLogger();
 }
 
@@ -177,6 +188,18 @@ async function beforeDestroy() {
  */
 export async function tryStartApplication(rootPath, callback) {
     await setupGlobal(rootPath);
+
+    let isShuttingDown = false;
+    const onSignal = async (signal) => {
+        if (isShuttingDown) return;
+        isShuttingDown = true;
+        __log.info(`[Process] Received ${signal}, starting graceful shutdown...`);
+        await beforeDestroy();
+        process.exit(0);
+    };
+    process.on('SIGTERM', () => onSignal('SIGTERM'));
+    process.on('SIGINT', () => onSignal('SIGINT'));
+
     try {
         await callback();
     } catch (ex) {

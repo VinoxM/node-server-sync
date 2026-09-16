@@ -331,6 +331,12 @@ class LogWorker {
     /** @type {string} 级别前缀 */
     #levelPrefix = '';
 
+    /** @type {boolean} 是否已经关闭 */
+    #isClosed = false;
+
+    /** @type {Promise<void>|null} 正在关闭中的 Promise 缓存 */
+    #closePromise = null;
+
     constructor() {
     }
 
@@ -362,7 +368,6 @@ class LogWorker {
             }
         });
         this.#setupWorker();
-        this.#setupProcessExit();
         this.#initialized = true;
         this.#send('initialized');
         for (const b of this.#buffer) {
@@ -401,19 +406,6 @@ class LogWorker {
                 console.error(`Worker 停止，退出码: ${code}`);
             }
         });
-    }
-
-    /**
-     * 注册进程退出时的优雅关闭钩子
-     */
-    #setupProcessExit() {
-        const shutdown = async () => {
-            await this.close();
-            process.exit(0);
-        };
-        process.on('SIGTERM', shutdown);
-        process.on('SIGINT', shutdown);
-        process.on('beforeExit', async () => { await shutdown(); });
     }
 
     /**
@@ -489,16 +481,24 @@ class LogWorker {
     }
 
     /**
-     * 关闭 Worker 并等待最后刷盘完成
+     * 关闭 Worker 并等待最后刷盘完成（具备幂等性，支持并发与多次重复调用）
      * @returns {Promise<void>}
      */
     async close() {
-        await this.#flush();
-        return new Promise((resolve, reject) => {
-            const id = ++this.#messageId;
-            this.#pending.set(id, { resolve, reject });
-            this.#worker.postMessage({ id, type: 'close' });
-        });
+        if (this.#isClosed) {
+            return this.#closePromise ?? Promise.resolve();
+        }
+        this.#isClosed = true;
+        this.#initialized = false;
+        this.#closePromise = (async () => {
+            await this.#flush();
+            return new Promise((resolve, reject) => {
+                const id = ++this.#messageId;
+                this.#pending.set(id, { resolve, reject });
+                this.#worker.postMessage({ id, type: 'close' });
+            });
+        })();
+        return this.#closePromise;
     }
 }
 

@@ -2,7 +2,7 @@ import apiBodyConst from '#constants/apiBodyConst.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
 import { defineRoutes } from '#utils/defineUtil.js';
-import { cancelJob, emitJob, getScheduleSnapshots, startSchedule } from '#jobs/scheduleDispatcher.js';
+import { cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, startSchedule } from '#jobs/scheduleDispatcher.js';
 import { NEED_AUTH_CLIENT, needAuthSingleClient } from '#common/constants/authorizationConst.js';
 
 const { POST, GET } = apiMethodConst;
@@ -28,6 +28,22 @@ export default defineRoutes({
         }
     },
 
+    /**
+     * 优雅关停/安全注销所有定时任务调度器
+     * 请求体参数：{ timeout?: number }
+     */
+    "/shutdownJobs": {
+        method: POST,
+        needSecret,
+        callback: (/** @type {ApiRequest} */ req) => {
+            const timeoutMs = req.body?.timeout ? Number(req.body.timeout) : 15000;
+            return gracefulShutdownSchedule(timeoutMs);
+        }
+    },
+
+    /**
+     * 查询所有定时任务运行状态与指标快照
+     */
     "/getJobSnapshots": {
         method: GET,
         needSecret,
