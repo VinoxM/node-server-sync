@@ -10,6 +10,7 @@ const { JOB_NAME } = apiBodyConst;
 
 /** 获取定时任务调度模块通信秘钥 */
 const needSecret = () => "mAou5820.schedule";
+const needAuth = needAuthSingleClient.MANAGE;
 
 /**
  * 定时任务动态调度与运维控制路由模块 (`/schedule/*`)
@@ -23,6 +24,7 @@ export default defineRoutes({
     "/restartJobs": {
         method: POST,
         needSecret,
+        needAuth,
         callback: () => {
             return startSchedule();
         }
@@ -35,6 +37,7 @@ export default defineRoutes({
     "/shutdownJobs": {
         method: POST,
         needSecret,
+        needAuth,
         callback: (/** @type {ApiRequest} */ req) => {
             const timeoutMs = req.body?.timeout ? Number(req.body.timeout) : 15000;
             return gracefulShutdownSchedule(timeoutMs);
@@ -47,7 +50,7 @@ export default defineRoutes({
     "/getJobSnapshots": {
         method: GET,
         needSecret,
-        // needAuth: needAuthSingleClient.MANAGE,
+        needAuth,
         callback: () => getScheduleSnapshots()
     },
 
@@ -58,6 +61,7 @@ export default defineRoutes({
     "/cancelJob": {
         method: POST,
         needSecret,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
         callback: (/** @type {ApiRequest} */ req) => {
             const jobName = req.body[JOB_NAME];
@@ -71,8 +75,8 @@ export default defineRoutes({
      */
     "/emitJob": {
         method: POST,
-        needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE, NEED_AUTH_CLIENT.API_POST] },
         needSecret,
+        needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
         callback: (/** @type {ApiRequest} */ req) => {
             const jobName = req.body[JOB_NAME];

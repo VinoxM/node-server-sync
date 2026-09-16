@@ -10,6 +10,8 @@ const SSE_LABEL = 'executor';
 
 /**
  * SSH 执行器 SSE 事件名称常量枚举
+ * @readonly
+ * @enum {string}
  */
 export const SSE_EVENT = {
     MESSAGE: 'message',
