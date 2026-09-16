@@ -51,6 +51,8 @@ export default defineRoutes({
         method: GET,
         needSecret,
         needAuth,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         callback: () => getScheduleSnapshots()
     },
 
