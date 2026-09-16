@@ -39,7 +39,7 @@ export default {
      */
     selectExistsBySubsIdAndEpisode: async (subsId, episode) => {
         const sql = 'SELECT COUNT(1) as count FROM rss_episode WHERE rss_subs_id = ? AND episode = ?';
-        return __sqliteDB.selectOne(sql, [subsId, episode], null, dbName).then(data => data.count > 0);
+        return __sqliteDB.selectOne(sql, [subsId, episode], null, dbName).then(data => (data?.count ?? 0) > 0);
     },
 
     /**
@@ -92,7 +92,7 @@ export default {
     /**
      * 查询指定订阅下已就绪可播放的剧集播放列表
      * @param {number} rssSubsId - 订阅 ID
-     * @returns {Promise<QueryResult<{ minioLink: string, title: string, episode: number }>>}
+     * @returns {Promise<QueryResult<{ minioLink: string, episode: number }>>}
      */
     selectSourceBySubsIdAndEpisode: async (rssSubsId) => {
         const sql = `SELECT re.minio_link, re.episode `
@@ -107,7 +107,7 @@ export default {
     /**
      * 查询单个异常剧集详情
      * @param {number} id - 异常记录 ID
-     * @returns {Promise<any|null>}
+     * @returns {Promise<{ id: number, rssTaskId: number, rssSubsId: number, episode: string, minioLink: string, rootPath: string, fileName: string, reason: string, createTime: string }|null>}
      */
     selectOneFailedById: id => {
         const sql = 'SELECT id, rss_task_id, rss_subs_id, episode, minio_link, root_path, file_name, reason, create_time FROM rss_episode_failed WHERE id=?';
@@ -117,7 +117,7 @@ export default {
     /**
      * 查询指定订阅下的全部异常剧集列表
      * @param {number} subsId - 订阅 ID
-     * @returns {Promise<QueryResult<any>>}
+     * @returns {Promise<QueryResult<{ id: number, rssSubsId: number, rssTaskId: number, episode: string, reason: string, createTime: string, fileName: string, rootPath: string, link: string, taskStatus: string }>>}
      */
     selectFailedBySubsId: (subsId) => {
         const sql = 'SELECT re.id, re.rss_subs_id, re.rss_task_id, re.episode, re.reason reason, re.create_time, re.file_name, re.root_path, re.minio_link AS link, rtt.status taskStatus ' +

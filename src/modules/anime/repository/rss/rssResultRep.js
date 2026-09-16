@@ -5,11 +5,12 @@ const enablePrint = { print: true };
 
 const INSERT_COLUMNS = ['id', 'pid', 'title', 'torrent', 'pub_date', 'tracker', 'episode', 'sort'];
 const BATCH_INSERT_PARAMS_LIMIT = 500;
+
 async function insertAny(results) {
     if (__isEmptyArray(results)) {
-        return { rows: 0 }
+        return { rows: 0 };
     }
-    const valueSql = '(?, ?, ?, ?, ?, ?, ?, ?)'
+    const valueSql = '(?, ?, ?, ?, ?, ?, ?, ?)';
     const sql = `INSERT OR IGNORE INTO rss_result(${INSERT_COLUMNS.join(',')}) VALUES${results.map(_ => valueSql).join(',')}`;
     const values = results.flatMap(result => ([result.id, result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort]));
     return __sqliteDB.insert(sql, values, null, dbName);
@@ -31,6 +32,14 @@ export default {
     /**
      * 插入单条 RSS 抓取条目
      * @param {Object} result - 条目数据
+     * @param {number} result.id - 主键 ID
+     * @param {number} result.pid - 订阅 ID
+     * @param {string} result.title - 资源标题
+     * @param {string} result.torrent - 磁力链或种子 Hash
+     * @param {Date|string} result.pubDate - 发布时间
+     * @param {string} [result.tracker] - 关联 Tracker ID 字符串
+     * @param {string|number} [result.episode] - 话数
+     * @param {number} [result.sort] - 排序权值
      * @returns {Promise<ExecResult>}
      */
     insertOne: (result) => insertAny([result]),
@@ -38,7 +47,7 @@ export default {
     /**
      * 批量插入 RSS 抓取条目列表
      * @param {Array<any>} resultArr - 条目数组
-     * @returns {Promise<ExecResult>}
+     * @returns {Promise<{ rows: number }>}
      */
     insertMany: async (resultArr) => {
         const fullBatchSize = Math.floor(BATCH_INSERT_PARAMS_LIMIT / INSERT_COLUMNS.length);
@@ -54,6 +63,13 @@ export default {
     /**
      * 更新单条抓取条目
      * @param {Object} result - 条目数据
+     * @param {number} result.id - 条目 ID
+     * @param {string} result.title - 标题
+     * @param {string} result.torrent - 种子
+     * @param {Date|string} result.pubDate - 发布时间
+     * @param {string} result.tracker - Tracker
+     * @param {string|number} result.episode - 集数
+     * @param {number} result.sort - 排序权值
      * @returns {Promise<ExecResult>}
      */
     updateOne: (result) => {
@@ -111,7 +127,7 @@ export default {
      * 查询条目用于创建下载任务
      * @param {number} id - 条目 ID
      * @param {number} pid - 订阅 ID
-     * @returns {Promise<{ id: number, pid: number, torrent: string, tracker: string, title: string }|null>}
+     * @returns {Promise<{ id: number, pid: number, torrent: string, tracker: string }|null>}
      */
     selectOneForTaskByIdAndPid: (id, pid) => {
         const sql = 'SELECT id, pid, torrent, tracker FROM rss_result WHERE id=? AND pid=?';
@@ -131,8 +147,8 @@ export default {
     /**
      * 查询指定订阅下的所有抓取条目（按集数序号降序）
      * @param {number} pid - 订阅 ID
-     * @param {boolean} [onlyVisible] - 仅查询可见的结果
-     * @returns {Promise<QueryResult<{ id: number, title: string, torrent: string, pubDate: string, tracker: string, episode: number }>>}
+     * @param {boolean} [onlyVisible=false] - 仅查询可见的结果
+     * @returns {Promise<QueryResult<{ id: number, pid: number, title: string, torrent: string, pubDate: string, tracker: string, episode: string, hide: number, sort: number }>>}
      */
     selectRssResultsByPid: (pid, onlyVisible = false) => {
         const sql = `SELECT id, pid, title,torrent,pub_date,tracker,episode,hide,sort FROM rss_result WHERE pid=?${onlyVisible ? ' AND hide=0' : ''} ORDER BY sort DESC`;
@@ -140,13 +156,13 @@ export default {
     },
 
     /**
-     * 查询指定订阅下所有抓取条目（按id序号降序）
+     * 查询指定订阅下所有抓取条目（按 ID 降序限制条数）
      * @param {number} pid - 订阅 ID
-     * @param {number} limit - 最大多少条
-     * @returns {Promise<QueryResult<{ id: number, title: string, torrent: string, pubDate: string, tracker: string, episode: number }>>}
+     * @param {number} limit - 最大返回条数
+     * @returns {Promise<QueryResult<{ id: number, pid: number, title: string, torrent: string, pubDate: string, tracker: string, episode: string, hide: number, sort: number }>>}
      */
     selectRssResultsByPidWithLimit: (pid, limit) => {
         const sql = `SELECT id, pid, title, torrent, pub_date,tracker,episode,hide,sort FROM rss_result WHERE pid=? ORDER BY id DESC LIMIT ?`;
         return __sqliteDB.selectAll(sql, [pid, limit], null, dbName);
-    },
+    }
 };

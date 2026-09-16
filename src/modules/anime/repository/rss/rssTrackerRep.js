@@ -7,7 +7,7 @@ const dbName = 'anime';
 
 async function selectAllTrackers(replaceCache = false) {
     const sql = "SELECT id,host FROM rss_tracker";
-    if (trackerCache) {
+    if (trackerCache && !replaceCache) {
         return Promise.resolve({ rows: trackerCache.length, data: tryClone(trackerCache) });
     }
     const returning = __sqliteDB.selectAll(sql, [], null, dbName);
@@ -25,17 +25,20 @@ async function selectAllTrackers(replaceCache = false) {
  * BitTorrent Tracker 服务器列表仓储服务
  */
 export default {
-
+    /**
+     * 获取 Tracker ID 到 Host 的字典映射对象
+     * @returns {Promise<Record<number, string>>}
+     */
     getTrackersMapping: async () => {
         if (!trackerCache) {
             await selectAllTrackers(true);
         }
-        return Object.fromEntries(trackerMapping.entries())
+        return Object.fromEntries(trackerMapping.entries());
     },
 
     /**
      * 查询全部 Tracker 服务器（支持内存缓存）
-     * @param {boolean} [replaceCache=false] - 是否强制更新缓存
+     * @param {boolean} [replaceCache=false] - 是否强制刷新更新缓存
      * @returns {Promise<QueryResult<{ id: number, host: string }>>}
      */
     selectAll: (replaceCache = false) => selectAllTrackers(replaceCache),
@@ -52,7 +55,7 @@ export default {
     },
 
     /**
-     * 获取最大 Tracker ID
+     * 获取当前最大 Tracker 主键 ID
      * @returns {Promise<number>}
      */
     selectMaxId: async () => {

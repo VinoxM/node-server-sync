@@ -1,8 +1,16 @@
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { MATCHERS, STAFF_TAG_CLEAN } from "#modules/anime/constants/subjectTagConstant.js";
-import { bangumiApi } from "../bangumi/bangumiApiService.js";
-import { generateActorImageLink, generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "../bangumi/bangumiImagesService.js";
+import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js";
+import {
+    generateActorImageLink, generateCharacterImageLink,
+    generateSubjectCoverLink, putImageStorageLinkBatch
+} from "#modules/anime/service/bangumi/bangumiImagesService.js";
 
+/**
+ * 根据月份计算季度起始月份字符串 ('01', '04', '07', '10')
+ * @param {number} month - 月份 (1-12)
+ * @returns {string|null}
+ */
 function getQuarterStartMonth(month) {
     if (month >= 1 && month <= 3) return '01';
     if (month >= 4 && month <= 6) return '04';
@@ -11,6 +19,11 @@ function getQuarterStartMonth(month) {
     return null;
 }
 
+/**
+ * 智能推断番剧所属的放送季度（如 '2026-10'），结合标签与实际开播日期比对
+ * @param {Object} subject - Bangumi 条目对象
+ * @returns {string|null}
+ */
 function getSeasonForSubject(subject) {
     if (!subject) return null;
     let tagSeason = null;
@@ -61,6 +74,12 @@ function getSeasonForSubject(subject) {
 }
 
 const NAME_ALIAS_INCLUDES = ['别名'];
+
+/**
+ * 从 Bangumi Infobox 中提取番剧别名
+ * @param {Array<{ key: string, value: any }>} [infoBox=[]] - Infobox 列表
+ * @returns {string[]} 别名列表
+ */
 function getAliasFromSubjectInfoBox(infoBox = []) {
     const results = [];
     if (!infoBox || !Array.isArray(infoBox)) return results;
@@ -76,12 +95,20 @@ function getAliasFromSubjectInfoBox(infoBox = []) {
     return results;
 }
 
+/**
+ * Staff 过滤规则列表上下文订阅
+ */
 const staffFiltersGetter = new GetterContextSubscribe('SubjectStaffFilter', () => {
     const filters = [];
     STAFF_TAG_CLEAN.forEach((v) => filters.push({ matchers: v.matchers, label: v.label, type: v.type || 'matchFirst' }));
     return filters;
 });
 
+/**
+ * 从 Bangumi Infobox 中提取结构化 Staff 信息（原作、导演、声优、动画制作等）
+ * @param {Array<{ key: string, value: any }>} [infoBox=[]] - Infobox 列表
+ * @returns {Array<{ key: string, value: string|string[] }>}
+ */
 function getStaffFromSubjectInfoBox(infoBox = []) {
     const results = [];
     if (!infoBox || !Array.isArray(infoBox)) return results;
@@ -97,6 +124,12 @@ function getStaffFromSubjectInfoBox(infoBox = []) {
 }
 
 const SHORT_ANIME_INCLUDES = ['泡面', '泡面番'];
+
+/**
+ * 根据标签与放送平台识别是否为泡面番
+ * @param {Object} subject - 条目对象
+ * @returns {string} 平台标识 (如 'TV', 'TV_Short', 'WEB', 'OVA' 等)
+ */
 function getPlatformFromSubject(subject) {
     const { platform, tags } = subject;
     if (tags.some(t => SHORT_ANIME_INCLUDES.includes(t.name)) && platform === 'TV') {
@@ -105,6 +138,11 @@ function getPlatformFromSubject(subject) {
     return platform;
 }
 
+/**
+ * 将 Bangumi 图片地址替换为大图缩略图地址
+ * @param {string} image - 原始图片链接
+ * @returns {string}
+ */
 function relaceCommonBangumiImageLink(image) {
     if (__isBlank(image)) return image;
     if (image.startsWith('https://lain.bgm.tv/pic/')) {
@@ -113,6 +151,16 @@ function relaceCommonBangumiImageLink(image) {
     return image;
 }
 
+/**
+ * 规范化收集图片链接及存储映射
+ * @param {Array<import('#types/animeTypes.d.ts').CleanedSubjectImage>} images - 收集容器
+ * @param {string} image - 原始网络图片链接
+ * @param {string} link - 相对存储路径
+ * @param {Object} [options={}] - 配置项
+ * @param {boolean} [options.collectImage=true] - 是否收集到图片数组
+ * @param {boolean} [options.useOriginImage=false] - 是否返回原始网络图片
+ * @returns {string} 最终采用的链接
+ */
 function ensureImageStorageLink(images, image, link, options = {}) {
     if (__isAnyBlank(image, link)) return image;
     const { collectImage = true, useOriginImage = false } = options;
@@ -122,6 +170,14 @@ function ensureImageStorageLink(images, image, link, options = {}) {
 }
 
 const CHARACTERS_RELATION_INCLUDES = ['主角', '配角'];
+
+/**
+ * 拉取并清洗指定番剧的角色及声优列表与立绘图片
+ * @param {number|string} subjectId - Bangumi 条目 ID
+ * @param {Object} [options={}] - 配置选项
+ * @param {number} [options.fetchDelay=500] - 延时
+ * @returns {Promise<{ results: Array<any>, images: Array<import('#types/animeTypes.d.ts').CleanedSubjectImage> }>}
+ */
 async function getCharactersBySubjectId(subjectId, options = {}) {
     const { fetchDelay = 500 } = options;
     const results = [];

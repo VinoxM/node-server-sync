@@ -1,7 +1,7 @@
 import { EPISODE_STATUS, EPISODE_FAILED_REASON, CAN_NOT_RETRY_FAILED_EPISODE_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
 import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
-import { getEpisodeMatches } from "./rssResultService.js";
+import { getEpisodeMatches } from "#modules/anime/service/rss/rssResultService.js";
 import path, { join } from 'path';
 import { pushNotification } from "#api/sockets/notification.js";
 import { Tracer } from "#core/infra/tracer.js";
@@ -10,22 +10,22 @@ import {
     moveRemoteFileToMinio, removeRemoteEmptyFolders,
     removeRemoteFiles
 } from "#modules/ssh/sshExecutorService.js";
-import { backfillSubtitleFonts, resolveEpisodeSubtitle } from "./rssSubtitleService.js";
-import { insertFont, matchSubtitleFont } from "./rssFontsService.js";
+import { backfillSubtitleFonts, resolveEpisodeSubtitle } from "#modules/anime/service/rss/rssSubtitleService.js";
+import { insertFont, matchSubtitleFont } from "#modules/anime/service/rss/rssFontsService.js";
 import rssSubscribeRep from "#modules/anime/repository/rss/rssSubscribeRep.js";
 
 /**
  * 更新剧集状态, 用于给下载服务在下载完成后钩子脚本中更新剧集状态
- * @param {number} id 剧集ID
- * @param {string} status 状态
- * @returns {Promise<{rows:number}>}
+ * @param {number} id - 剧集 ID
+ * @param {string} status - 状态
+ * @returns {Promise<{ rows: number }>}
  */
 export async function updateEpisodeStatus(id, status) {
     if (!Object.values(EPISODE_STATUS).includes(status)) {
-        __throwMessage('Invalid episode status.')
+        __throwMessage('Invalid episode status.');
     }
-    __log.info(`[RssTask] Update rss episode[${id}] status: ${status}`)
-    return rssEpisodeRep.updateStatusById(id, status)
+    __log.info(`[RssTask] Update rss episode[${id}] status: ${status}`);
+    return rssEpisodeRep.updateStatusById(id, status);
 }
 
 /**
@@ -277,6 +277,12 @@ export async function retryFailedEpisode(failedEpisodeId) {
     }
 }
 
+/**
+ * 调用远端命令将本地剧集移动至 MinIO
+ * @param {string} filePath - 本地物理路径
+ * @param {string} minioLink - MinIO 相对路径
+ * @returns {Promise<number>} 执行状态码 (0 为成功)
+ */
 async function executeRetryFailedEpisodeResolveCommand(filePath, minioLink) {
     const client = getMinioClient();
     if (!client.ready()) {
@@ -312,6 +318,10 @@ export async function deleteOneFailedEpisode(failedEpisodeId) {
     return rssEpisodeRep.deleteOneFailedById(failedEpisodeId);
 }
 
+/**
+ * 记录错误日志并推送到前端通知
+ * @param {string} message - 错误信息
+ */
 function logAndPushNotification(message) {
     __log.error(message);
     pushNotification(message);

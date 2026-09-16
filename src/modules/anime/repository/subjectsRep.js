@@ -1,7 +1,7 @@
 import { isCurSeason } from "#common/utils/dateUtil.js";
-import { RSS_SUBTITLE_STATUS } from "../constants/rssSubtitleStatusConst.js";
-import { EPISODE_FAILED_REASON, TASK_STATUS } from "../constants/rssTaskStatusConst.js";
-import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "../constants/subjectConstant.js";
+import { RSS_SUBTITLE_STATUS } from "#modules/anime/constants/rssSubtitleStatusConst.js";
+import { EPISODE_FAILED_REASON, TASK_STATUS } from "#modules/anime/constants/rssTaskStatusConst.js";
+import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "#modules/anime/constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
 const dbName = 'anime';
@@ -153,7 +153,7 @@ export default {
 
     /**
      * 更新条目隐藏状态
-     * @param {number} hide - 目标隐藏值
+     * @param {number} hide - 目标隐藏值 (SUBJECT_HIDE_VALUE)
      * @param {number} id - 条目 ID
      * @param {number} originHide - 原隐藏值
      * @returns {Promise<ExecResult>}
@@ -173,8 +173,8 @@ export default {
     },
 
     /**
-     * 修改条目所属季度
-     * @param {string} platform - 季度 (如 '2026-10')
+     * 修改条目所属放送平台类型
+     * @param {string} platform - 平台类型 (如 'tv', 'web', 'movie')
      * @param {number} id - 条目 ID
      * @returns {Promise<ExecResult>}
      */
@@ -211,11 +211,28 @@ export default {
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
+    /**
+     * 根据订阅 ID 查询对应的可见番剧名称
+     * @param {number} subsId - 订阅 ID
+     * @returns {Promise<{ name: string, nameCN: string }|null>}
+     */
     selectOneVisibleBySubsId: async subsId => {
         const sql = `SELECT t.name, t.name_cn AS nameCN FROM rss_subscribe rs INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO}`;
         return __sqliteDB.selectOne(sql, [subsId], null, dbName);
     },
 
+    /**
+     * 多条件分页过滤查询可见番剧列表
+     * @param {Object} filters - 过滤条件
+     * @param {string} [filters.season] - 季度
+     * @param {string} [filters.platform] - 平台
+     * @param {string} [filters.name] - 名称模糊搜索
+     * @param {number|string} [filters.fin] - 完结状态
+     * @param {boolean} [includeNsfw=false] - 是否包含 NSFW 内容
+     * @param {number} [pageNum] - 当前页码
+     * @param {number} [pageSize] - 每页条数
+     * @returns {Promise<QueryResult<any>>}
+     */
     selectVisibleByFilters: (filters, includeNsfw = false, pageNum, pageSize) => {
         const { season, platform, name, fin } = filters;
         const whereCause = [` t.hide=${SUBJECT_HIDE_VALUE.NO} `], params = [];
@@ -234,7 +251,7 @@ export default {
                 whereCause.push(` t.platform IN (${platformParam.map(_ => '?').join(',')}) `);
                 params.push(...platformParam);
             } else {
-                whereCause.push(` t.platform=? `)
+                whereCause.push(` t.platform=? `);
                 params.push(platformParam);
             }
         }
@@ -243,7 +260,7 @@ export default {
             params.push(fin);
         }
         if (!includeNsfw) {
-            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `)
+            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `);
         }
         let limitOffset = '';
         if (pageNum !== undefined && pageSize !== undefined) {
@@ -262,6 +279,16 @@ export default {
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
+    /**
+     * 多条件过滤查询可见番剧总数
+     * @param {Object} filters - 过滤条件
+     * @param {string} [filters.season] - 季度
+     * @param {string} [filters.platform] - 平台
+     * @param {string} [filters.name] - 名称模糊搜索
+     * @param {number|string} [filters.fin] - 完结状态
+     * @param {boolean} [includeNsfw=false] - 是否包含 NSFW
+     * @returns {Promise<number>}
+     */
     selectVisibleByFiltersCount: async (filters, includeNsfw = false) => {
         const { season, platform, name, fin } = filters;
         const whereCause = [` t.hide=${SUBJECT_HIDE_VALUE.NO} `], params = [];
@@ -280,7 +307,7 @@ export default {
                 whereCause.push(` t.platform IN (${platformParam.map(_ => '?').join(',')}) `);
                 params.push(...platformParam);
             } else {
-                whereCause.push(` t.platform=? `)
+                whereCause.push(` t.platform=? `);
                 params.push(platformParam);
             }
         }
@@ -289,7 +316,7 @@ export default {
             params.push(fin);
         }
         if (!includeNsfw) {
-            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `)
+            whereCause.push(` t.nsfw=${SUBJECT_NSFW_VALUE.NO} `);
         }
         const sql = `SELECT COUNT(t.id) as counts `
             + 'FROM subjects t '
@@ -298,6 +325,11 @@ export default {
         return __sqliteDB.selectOne(sql, params, null, dbName).then(data => data?.counts ?? 0);
     },
 
+    /**
+     * 根据订阅 ID 列表批量查询可见番剧列表
+     * @param {number[]} subsIds - 订阅 ID 列表
+     * @returns {Promise<QueryResult<any>>}
+     */
     selectVisibleBySubsIds: (subsIds) => {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
@@ -312,13 +344,19 @@ export default {
     },
 
     /**
-     * 查询已存在的所有季节
+     * 查询已存在的所有季节列表
      * @returns {Promise<QueryResult<{ season: string }>>}
      */
     selectAllSeasons: () => {
         return __sqliteDB.selectAll(`SELECT season FROM subjects GROUP BY season`, [], null, dbName);
     },
 
+    /**
+     * 根据季度与名称条件查询番剧全量信息（包含异常剧集与异常字幕统计）
+     * @param {string} [season] - 季度
+     * @param {string} [name] - 标题模糊搜索
+     * @returns {Promise<QueryResult<any>>}
+     */
     selectAllBySeasonAndName: (season, name) => {
         let queryCase = '', whereCause = [], whereJoin = 'AND';
         const params = [];
@@ -351,6 +389,12 @@ export default {
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
+    /**
+     * 根据主键 ID 与季度查询单条番剧详情（含异常统计）
+     * @param {number} id - 主键 ID
+     * @param {string} [season] - 季度
+     * @returns {Promise<any|null>}
+     */
     selectOneByIdAndSeason: (id, season) => {
         let queryCase = '';
         const params = [];
@@ -374,11 +418,16 @@ export default {
         return __sqliteDB.selectOne(sql, params, null, dbName);
     },
 
+    /**
+     * 查询尚未完结（需执行元数据 Diff 对比同步）的番剧列表
+     * @param {string} curSeason - 当前季度 (如 '2026-10')
+     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
+     */
     selectNotFinSubjectsForDiff: (curSeason) => {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.total_episodes, t.meta_tags, t.staff, t.characters `
             + `FROM subjects t `
             + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${SUBSCRIBE_FIN_VALUE.NO} `
             + `WHERE t.season <= ?`;
         return __sqliteDB.selectAll(sql, [curSeason], null, dbName);
-    },
+    }
 };

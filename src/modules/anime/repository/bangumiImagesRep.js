@@ -1,4 +1,4 @@
-import { BANGUMI_IMAGES_STATUS } from "../constants/subjectConstant.js";
+import { BANGUMI_IMAGES_STATUS } from "#modules/anime/constants/subjectConstant.js";
 
 const dbName = `anime`;
 const UPSERT_BATCH_LIMIT_PARAM = 500;
@@ -10,8 +10,7 @@ async function upsertAny(dataList = []) {
     const sql = `INSERT INTO bangumi_images (link, minio_link, origin_url, status) `
         + `VALUES ${dataList.map(_ => '(?, ?, ?, ?)').join(', ')} `
         + `ON CONFLICT(link) DO UPDATE SET `
-        + `origin_url = excluded.origin_url, status = ${BANGUMI_IMAGES_STATUS.PREPARED}, object_size = NULL `
-        // + `WHERE bangumi_images.origin_url <> excluded.origin_url`;
+        + `origin_url = excluded.origin_url, status = ${BANGUMI_IMAGES_STATUS.PREPARED}, object_size = NULL `;
     const params = dataList.flatMap(data => ([data.link, data.minioLink, data.originUrl, BANGUMI_IMAGES_STATUS.PREPARED]));
     return __sqliteDB.insert(sql, params, null, dbName);
 }
@@ -45,6 +44,11 @@ export default {
         return __sqliteDB.insert(sql, params, null, dbName);
     },
 
+    /**
+     * 批量插入或更新（Upsert）图片记录（冲突时重置为 PREPARED 状态）
+     * @param {Array<{ link: string, minioLink: string, originUrl: string }>} dataList - 图片列表
+     * @returns {Promise<{ rows: number }>}
+     */
     upsertBatch: async dataList => {
         const fullBatchSize = Math.floor(UPSERT_BATCH_LIMIT_PARAM / 4);
         let totalInserted = 0;
@@ -81,9 +85,10 @@ export default {
     /**
      * 批量更新图片状态
      * @param {number[]} imageIds - 主键 ID 数组
-     * @param {number} status - 目标状态
-     * @param {number} [whenStatus] - 判断条件状态, 可选
-     * @param {boolean} [equalsWhen=true] - 是否等于判断条件状态, 可选, 默认等于
+     * @param {number} status - 目标状态 (BANGUMI_IMAGES_STATUS)
+     * @param {number} [whenStatus] - 条件判断状态 (可选)
+     * @param {boolean} [equalsWhen=true] - 是否等于判断条件状态 (默认为 true)
+     * @param {boolean} [resetObjectSize=false] - 是否同时重置 object_size 为 NULL
      * @returns {Promise<ExecResult>}
      */
     updateImageStatusBatch: (imageIds, status, whenStatus, equalsWhen = true, resetObjectSize = false) => {
@@ -94,7 +99,7 @@ export default {
             sql += equalsWhen ? `status=? AND ` : `status!=? AND `;
         }
         sql += `id IN (${imageIds.map(() => '?').join(',')})`;
-        params.push(...imageIds)
+        params.push(...imageIds);
         return __sqliteDB.update(sql, params, null, dbName);
     },
 
@@ -112,7 +117,7 @@ export default {
     /**
      * 模糊查询指定前缀链接的图片缓存记录
      * @param {string} link - 前缀链接
-     * @returns {Promise<QueryResult<{id: number, link: string, minioLink: string}>>}
+     * @returns {Promise<QueryResult<{ id: number, link: string, minioLink: string, originUrl: string }>>}
      */
     selectByLinkLikely: link => {
         const sql = `SELECT id, link, minio_link, origin_url FROM bangumi_images WHERE link LIKE ?`;
@@ -120,12 +125,12 @@ export default {
     },
 
     /**
-     * 批量删除指定ID的图片缓存记录
-     * @param {string} link - 前缀链接
+     * 批量删除指定 ID 列表的图片缓存记录
+     * @param {number[]} ids - 主键 ID 列表
      * @returns {Promise<ExecResult>}
      */
     deleteByIds: ids => {
-        if (__isEmptyArray(ids)) return { rows: 0 };
+        if (__isEmptyArray(ids)) return Promise.resolve({ rows: 0 });
         const sql = `DELETE FROM bangumi_images WHERE id IN (${ids.map(() => '?').join(',')})`;
         return __sqliteDB.delete(sql, ids, null, dbName);
     }

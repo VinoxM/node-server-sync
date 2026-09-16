@@ -3,8 +3,16 @@ import { getUrlContent } from '#utils/httpUtil.js';
 import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 import subjectsRep from '#modules/anime/repository/subjectsRep.js';
 
+/**
+ * RSS XML 解析器单例容器
+ */
 const rssXMLParser = {
     value: null,
+    /**
+     * 解析 XML 内容为 RSS 对象
+     * @param {string} content - XML 字符串
+     * @returns {Promise<any>}
+     */
     parse: async content => {
         rssXMLParser.value ??= new Parser();
         return rssXMLParser.value.parseString(content);
@@ -46,6 +54,11 @@ export async function analysisRssSubscribe(obj) {
     }
 }
 
+/**
+ * 为指定番剧条目创建默认订阅记录
+ * @param {number|string} subjectId - 番剧主键 ID
+ * @returns {Promise<number>} 插入影响行数
+ */
 export async function createSubscribeBySubjectId(subjectId) {
     const subject = await subjectsRep.selectOneById(subjectId);
     subject || __throwMessage('Subject not exists.');

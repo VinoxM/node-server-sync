@@ -6,13 +6,22 @@ import {
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
-import { backfillOriginUrl } from "../bangumi/bangumiDiffService.js";
-import { generateCharacterImageLink } from "../bangumi/bangumiImagesService.js";
+import { backfillOriginUrl } from "#modules/anime/service/bangumi/bangumiDiffService.js";
+import { generateCharacterImageLink } from "#modules/anime/service/bangumi/bangumiImagesService.js";
 
+/**
+ * 获取数据库中已存在的所有番剧季度列表
+ * @returns {Promise<string[]>} 季度列表 (如 `['2026-10', '2026-07']`)
+ */
 export async function getExistsSeasons() {
     return subjectsRep.selectAllSeasons().then(res => res.data.map(d => d.season));
 }
 
+/**
+ * 将数据库原始番剧记录转换为前台视图展示对象（解析 JSON 字段、处理泡面番平台）
+ * @param {Object} subject - 数据库原始番剧记录
+ * @returns {Object} 视图展示对象
+ */
 export function handleSubjectView(subject) {
     if (!subject) return subject;
     const {
@@ -34,6 +43,11 @@ export function handleSubjectView(subject) {
     };
 }
 
+/**
+ * 将番剧记录转换为后台编辑界面视图对象（格式化放送时间及日历排序字段）
+ * @param {Object} subject - 数据库原始番剧记录
+ * @returns {Object} 编辑视图对象
+ */
 function handleSubjectViewForEdit(subject) {
     if (!subject) return subject;
     const subjectView = handleSubjectView(subject);
@@ -55,22 +69,39 @@ function handleSubjectViewForEdit(subject) {
         fin: subject.fin,
         hide: subject.hide,
         calendarTime
-    }
+    };
 }
 
+/**
+ * 根据季度与名称模糊搜索番剧（后台编辑列表）
+ * @param {string} season - 季度
+ * @param {string} name - 番剧名称
+ * @returns {Promise<Array<any>>}
+ */
 export async function searchSubjects(season, name) {
     const { data } = await subjectsRep.selectAllBySeasonAndName(season, name);
-    return data.map(d => handleSubjectViewForEdit(d))
+    return data.map(d => handleSubjectViewForEdit(d));
 }
 
+/**
+ * 根据番剧 ID 和季度获取指定季度的编辑视图信息（若非连载且跨季度则返回 null）
+ * @param {number|string} subjectId - 番剧 ID
+ * @param {string} season - 当前季度
+ * @returns {Promise<any|null>}
+ */
 export async function getSubjectForEditView(subjectId, season) {
     const subject = await subjectsRep.selectOneByIdAndSeason(subjectId, season);
     if (!subject.goon && season !== subject.season) {
         return null;
     }
-    return handleSubjectViewForEdit(subject)
+    return handleSubjectViewForEdit(subject);
 }
 
+/**
+ * 获取单条番剧编辑详情（回填封面与角色的原始网络图片地址）
+ * @param {number|string} subjectId - 番剧 ID
+ * @returns {Promise<any>}
+ */
 export async function getSubjectForEdit(subjectId) {
     const subject = await subjectsRep.selectOneById(subjectId);
     subject || __throwMessage('Subject not exists.');
@@ -119,7 +150,7 @@ export async function deleteOneSubject(id) {
 /**
  * 更新番剧条目的所属季节
  * @param {number} id - 番剧 ID
- * @param {number} season - 目标季节
+ * @param {string} season - 目标季节
  * @returns {Promise<boolean>}
  */
 export async function updateSubjectSeason(id, season) {
@@ -162,12 +193,12 @@ export async function updateSubjectIsShort(id, short) {
  * 更新番剧条目是否已完结
  * @param {number} id - 番剧 ID
  * @param {number} fin - 目标值
- * @returns {Promise<boolean>}
+ * @returns {Promise<void>}
  */
 export async function updateSubjectFin(id, fin) {
     const subject = await subjectsRep.selectOneById(id);
     subject || __throwMessage('Subject not exists.');
     const { bangumiId } = subject;
-    const { rows } = subscribeRep.updateFinByBangumiId(bangumiId, fin);
+    const { rows } = await subscribeRep.updateFinByBangumiId(bangumiId, fin);
     rows === 0 && __throwMessage('Subject subscribe not exists.');
 }

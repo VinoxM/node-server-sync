@@ -3,6 +3,12 @@ import { getMinioClient } from "#core/instance/minioClient.js";
 import { copyRemoteFileToMinio } from "#modules/ssh/sshExecutorService.js";
 import rssFontsRep from "#modules/anime/repository/rss/rssFontsRep.js";
 
+/**
+ * 将本地字体文件复制上传至 MinIO 对象存储
+ * @param {string} resourcePath - 本地物理文件路径
+ * @param {string} minioLink - MinIO 相对路径
+ * @returns {Promise<number>} 执行状态码 (0 为成功)
+ */
 async function uploadFileToMinio(resourcePath, minioLink) {
     const client = getMinioClient();
     if (!client?.ready()) {

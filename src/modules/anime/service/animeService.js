@@ -4,10 +4,16 @@ import { SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT
 import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
 import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
-import { handleSubjectView } from "./subject/subjectService.js";
-import rssTaskRep from "../repository/rss/rssTaskRep.js";
+import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
+import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
 import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
 
+/**
+ * 格式化番剧数据为日历紧凑视图结构
+ * @param {Array<any>} data - 原始番剧列表
+ * @param {UserInfo} [userInfo] - 用户信息（未登录时过滤 NSFW 内容）
+ * @returns {Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>}
+ */
 function handleCalendar(data, userInfo) {
     let list = userInfo ? data : data.filter(o => o.nsfw === SUBJECT_NSFW_VALUE.NO);
     let now = new Date();
@@ -57,6 +63,7 @@ function handleCalendar(data, userInfo) {
 
 /**
  * 获取当前季度的全量番剧放送日历数据
+ * @param {UserInfo} [userInfo] - 用户信息
  * @returns {Promise<Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>>}
  */
 export async function getAnimeCalendar(userInfo) {
@@ -65,6 +72,16 @@ export async function getAnimeCalendar(userInfo) {
     return rows > 0 ? handleCalendar(data, userInfo) : [];
 }
 
+/**
+ * 复合条件检索番剧数据列表（支持分页与日历模式判定）
+ * @param {Object} body - 搜索参数
+ * @param {number} [body.pageNum] - 页码
+ * @param {number} [body.pageSize] - 单页条数
+ * @param {number} [body.viewMode] - 视图模式 (0: 卡片分页模式, 其他: 全量日历模式)
+ * @param {Record<string, any>} [body.filters] - 额外过滤条件
+ * @param {UserInfo} [userInfo] - 当前登录用户信息
+ * @returns {Promise<{ record: Array<any>, total: number, pageNum?: number, pageSize?: number, calendarable: boolean }>}
+ */
 export async function searchAnime(body, userInfo) {
     const { pageNum, pageSize, viewMode, ...filters } = body;
     const includeNsfw = Boolean(userInfo);
@@ -106,6 +123,12 @@ export async function getAnimeInformation(id, userInfo) {
     };
 }
 
+/**
+ * 根据订阅 ID 查询关联的 RSS 抓取结果及下载任务关联状态
+ * @param {number|string} rssSubsId - 订阅 ID
+ * @param {UserInfo} [userInfo] - 用户信息
+ * @returns {Promise<Array<any>>}
+ */
 async function getRssResultsByRssSubscribeId(rssSubsId, userInfo) {
     const results = [];
     const { data } = await rssResultRep.selectRssResultsByPid(rssSubsId, true);
@@ -126,10 +149,20 @@ async function getRssResultsByRssSubscribeId(rssSubsId, userInfo) {
     return results;
 }
 
+/**
+ * 根据订阅 ID 获取已成功解析入库的剧集列表
+ * @param {number|string} rssSubsId - 订阅 ID
+ * @returns {Promise<Array<any>>}
+ */
 async function getRssEpisodesByRssSubscribeId(rssSubsId) {
     return rssEpisodeRep.selectBySubsId(rssSubsId).then(({ data }) => data);
 }
 
+/**
+ * 获取当前登录用户收藏的番剧列表（日历紧凑视图）
+ * @param {UserInfo} userInfo - 用户信息
+ * @returns {Promise<Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>>}
+ */
 export async function getUserFavoitesAnime(userInfo) {
     userInfo || __throwMessage("Permission denied.", -401, 401);
     const uid = userInfo.id;

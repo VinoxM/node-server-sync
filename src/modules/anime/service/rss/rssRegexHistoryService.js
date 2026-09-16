@@ -22,7 +22,9 @@ export async function addRssRegex(regex) {
     if (score !== null) {
         const scoreTemp = "" + score;
         score = parseInt(scoreTemp.substring(0, scoreTemp.length - 10));
-    } else score = 0;
+    } else {
+        score = 0;
+    }
     const timestamp = Math.floor(new Date().getTime() / 1000);
     score = (score + 1) * incrStep + timestamp;
     return isInsert ? rssRegexHistoryRep.insertRegex(regex, score) : rssRegexHistoryRep.updateRegex(regex, score);

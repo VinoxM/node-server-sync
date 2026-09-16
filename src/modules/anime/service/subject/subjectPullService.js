@@ -2,9 +2,9 @@ import { getCurSeason, getNextSeason } from "#utils/dateUtil.js";
 import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
-import { bangumiApi } from "../bangumi/bangumiApiService.js";
-import { cleanBangumiSubject } from "./subjectCleanService.js";
-import { fetchSubjectsByAirDate } from "./subjectFetchService.js";
+import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js";
+import { cleanBangumiSubject } from "#modules/anime/service/subject/subjectCleanService.js";
+import { fetchSubjectsByAirDate } from "#modules/anime/service/subject/subjectFetchService.js";
 
 /**
  * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
@@ -12,16 +12,22 @@ import { fetchSubjectsByAirDate } from "./subjectFetchService.js";
  */
 
 /**
- * 按bangumiId拉取并清洗动画条目
- * @param {number|string} bangumiId
+ * 按 Bangumi ID 拉取并清洗动画条目
+ * @param {number|string} bangumiId - 条目 ID
  * @param {SubjectPullOptions} [options] - 配置选项
- * @returns {Promise<CleanedSubject>}
+ * @returns {Promise<CleanedSubject|undefined>}
  */
 export async function fetchAndCleanBangumiSubject(bangumiId, options) {
     const subject = await bangumiApi.getSubject(bangumiId);
     return cleanBangumiSubject(subject, options);
 }
 
+/**
+ * 按 Bangumi ID 拉取、清洗并单条同步入库指定条目
+ * @param {number|string} bangumiId - 条目 ID
+ * @param {Array<string>} [updateProperties] - 指定需要更新的字段列表
+ * @returns {Promise<ExecResult>}
+ */
 export async function pullCleanedBangumiSubject(bangumiId, updateProperties) {
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId);
     return upsertOneCleanedSubject(cleanedSubject, { updateProperties });
@@ -143,13 +149,23 @@ export async function upsertOneCleanedSubject(subject, options = {}) {
     return subjectsRep.updateOne(subject, handleUpdateProperties(updateProperties));
 }
 
+/**
+ * 处理更新字段列表（自动追加 update_time 并映射为数据库列名）
+ * @param {Array<string>} [updateProperties=[]]
+ * @returns {Array<string>}
+ */
 function handleUpdateProperties(updateProperties = []) {
     if (updateProperties.length > 0 && !updateProperties.includes('update_time')) {
-        updateProperties.push('update_time')
+        updateProperties.push('update_time');
     }
     return convertPropertiesToCloumns(updateProperties);
 }
 
+/**
+ * 批量插入番剧对应的默认订阅记录
+ * @param {Array<CleanedSubject>} subjects
+ * @returns {Promise<number>} 插入条数
+ */
 async function insertSubjectSubscribes(subjects) {
     const subscribes = subjects.map(subject => {
         const { airDate, season, bangumiId } = subject;

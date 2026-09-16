@@ -1,5 +1,9 @@
 import rssTrackerRep from "#modules/anime/repository/rss/rssTrackerRep.js";
 
+/**
+ * 获取全量 Tracker 映射字典（ID -> Host）
+ * @returns {Promise<Record<string, string>>}
+ */
 export async function getTrackersMapping() {
     return rssTrackerRep.getTrackersMapping();
 }

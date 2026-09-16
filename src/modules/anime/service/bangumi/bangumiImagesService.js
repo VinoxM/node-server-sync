@@ -1,8 +1,8 @@
 import { pushNotification } from "#api/sockets/notification.js";
 import { getMinioClient } from "#core/instance/minioClient.js";
-import { downloadFileToMinio } from "../../../ssh/sshExecutorService.js";
-import { BANGUMI_IMAGES_STATUS, SUBJECT_MINIO_BUCKET } from "../../constants/subjectConstant.js";
-import bangumiImagesRep from "../../repository/bangumiImagesRep.js";
+import { downloadFileToMinio } from "#modules/ssh/sshExecutorService.js";
+import { BANGUMI_IMAGES_STATUS, SUBJECT_MINIO_BUCKET } from "#modules/anime/constants/subjectConstant.js";
+import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import path from 'path';
 
 /**
@@ -33,6 +33,11 @@ export function generateSubjectCoverLink(subjectId) {
     return `/subject/${subjectId}/cover`;
 }
 
+/**
+ * 尝试从图片 URL 中解析扩展名（默认 .jpg）
+ * @param {string} image - 图片 URL
+ * @returns {string} 文件扩展名
+ */
 function tryImageType(image) {
     try {
         return path.extname(new URL(image).pathname);
@@ -58,6 +63,12 @@ export async function putImageStorageLinkBatch(images) {
     return { rows: 0 };
 }
 
+/**
+ * 生成图片在 MinIO 上的存储对象完整路径
+ * @param {string} image - 原始网络图片 URL
+ * @param {string} link - 相对存储路径
+ * @returns {string} MinIO 目标路径
+ */
 function generateImageBucketLink(image, link) {
     return '/' + SUBJECT_MINIO_BUCKET + link + tryImageType(image);
 }
@@ -79,6 +90,7 @@ const PUSH_IMAGE_SCHEDULE_LIMIT = 500;
 
 /**
  * 定时任务：扫描待同步 (PREPARED) 的 Bangumi 图片并下载转存至 MinIO
+ * @param {AbortSignal} [jobSignal] - 中断信号
  * @returns {Promise<void>}
  */
 export async function pushImageToStorageSchedule(jobSignal) {
@@ -114,6 +126,12 @@ export async function pushImageToStorageSchedule(jobSignal) {
     }
 }
 
+/**
+ * 执行将单张网络图片下载并写入 MinIO
+ * @param {string} image - 原始网络图片 URL
+ * @param {string} minioLink - MinIO 目标对象路径
+ * @returns {Promise<boolean>} 是否转存成功
+ */
 async function pushImageToStorage(image, minioLink) {
     const client = getMinioClient();
     if (!client.ready()) return false;
@@ -128,6 +146,12 @@ async function pushImageToStorage(image, minioLink) {
     return code === 0;
 }
 
+/**
+ * 通用内部方法：从 MinIO 读取图片并以流式输出给 HTTP 响应
+ * @param {string} link - 相对图片链接
+ * @param {ApiResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function getBangumiImages(link, res) {
     const result = await bangumiImagesRep.selectByLink(link);
     result || __throwMessage('Not found.', -404, 404);

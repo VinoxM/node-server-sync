@@ -1,6 +1,6 @@
 import path from 'path';
-import { getAnimeEpisode } from './rssEpisodeService.js';
-import { getMinioClient } from '#core/instance/minioClient.js';
+import { getAnimeEpisode } from '#modules/anime/service/rss/rssEpisodeService.js';
+import { getMinioClient } from "#core/instance/minioClient.js";
 import { GetterContextSubscribe } from '#core/context/subscribe.js';
 import rssSubtitleRep from '#modules/anime/repository/rss/rssSubtitleRep.js';
 import { RSS_SUBTITLE_FILE_STATUS, RSS_SUBTITLE_STATUS } from '#modules/anime/constants/rssSubtitleStatusConst.js';
@@ -18,6 +18,11 @@ export function getRssSubtitleMatchers() {
     return rssSubtitleMatchers.getValue() || [];
 }
 
+/**
+ * 校验文件扩展名是否为字幕格式
+ * @param {string} ext - 扩展名 (如 `.ass`, `.srt`, `.vtt`)
+ * @returns {boolean}
+ */
 function isFileExtSubtitle(ext) {
     const reg = __env.get('rss.subtitleExtRegex');
     if (__isBlank(reg)) {
@@ -32,10 +37,23 @@ function isFileExtSubtitle(ext) {
     }
 }
 
+/**
+ * 生成字幕在 MinIO 上的存储对象路径
+ * @param {string} season - 季度
+ * @param {string} animeName - 动画名称
+ * @param {string|number} episode - 集数/话数
+ * @param {string} fileName - 字幕文件名
+ * @returns {string}
+ */
 function generateSubtitleMinioLink(season, animeName, episode, fileName) {
     return `/anime/${season}/${animeName}/${episode}/${fileName}`;
 }
 
+/**
+ * 根据文件名匹配提取字幕标题/语言标识
+ * @param {string} fileName - 文件名
+ * @returns {string} 提取到的标题或原文件名
+ */
 function generateSubtitleTitle(fileName) {
     let title = null;
     getRssSubtitleMatchers().some(match => {
@@ -242,6 +260,11 @@ export async function backfillSubtitleFonts(id, backfill) {
     await rssSubtitleRep.updateSubtitleFontsById(id, mapped.join(','));
 }
 
+/**
+ * 内部删除字幕本地临时物理文件
+ * @param {Object} subtitle - 字幕对象
+ * @returns {Promise<number>} 执行状态码
+ */
 async function deleteEpisodeSubtitleFileInternal(subtitle) {
     // check episode subtitle file status 
     const fileStatus = subtitle.fileStatus;
@@ -254,6 +277,13 @@ async function deleteEpisodeSubtitleFileInternal(subtitle) {
     return await removeRemoteFiles([filePath]);
 }
 
+/**
+ * 上传单条字幕至 MinIO 并维护状态
+ * @param {string} filePath - 本地物理路径
+ * @param {string} minioLink - 目标 MinIO 路径
+ * @param {number} subtitleId - 字幕 ID
+ * @returns {Promise<boolean>}
+ */
 async function uploadSubtitleToMinio(filePath, minioLink, subtitleId) {
     await rssSubtitleRep.updateSubtitleStatusById(subtitleId, RSS_SUBTITLE_STATUS.UPLOADING);
     const result = await uploadFileToMinio(filePath, minioLink);
@@ -263,6 +293,12 @@ async function uploadSubtitleToMinio(filePath, minioLink, subtitleId) {
     return complete;
 }
 
+/**
+ * 调用远端命令将字幕文件复制上传到 MinIO
+ * @param {string} resourcePath - 本地物理路径
+ * @param {string} minioLink - 目标 MinIO 路径
+ * @returns {Promise<number>}
+ */
 async function uploadFileToMinio(resourcePath, minioLink) {
     const client = getMinioClient();
     if (!client?.ready()) {
@@ -273,6 +309,11 @@ async function uploadFileToMinio(resourcePath, minioLink) {
     return await copyRemoteFileToMinio(resourcePath, suitableMinioLink);
 }
 
+/**
+ * 将 MinIO 上的 SRT 字幕转码为 WebVTT 格式
+ * @param {string} [srtMinioLink=''] - 原 SRT MinIO 路径
+ * @returns {Promise<string|null>} 转码后 VTT MinIO 路径
+ */
 async function convertMinioSrtToVtt(srtMinioLink = '') {
     if (__isBlank(srtMinioLink) || !srtMinioLink?.endsWith('.srt')) return null;
     const client = getMinioClient();
@@ -299,6 +340,11 @@ async function convertMinioSrtToVtt(srtMinioLink = '') {
     return null;
 }
 
+/**
+ * 从 MinIO 上的 ASS 字幕文件中解析出使用到的所有字体名称
+ * @param {string} [minioLink=''] - ASS 字幕 MinIO 路径
+ * @returns {Promise<string[]|null>} 字体名称列表
+ */
 async function getMinioAssFonts(minioLink = '') {
     if (__isBlank(minioLink) || !minioLink?.endsWith('.ass')) return null;
     const client = getMinioClient();
@@ -330,6 +376,11 @@ async function getMinioAssFonts(minioLink = '') {
     return null;
 }
 
+/**
+ * 删除 MinIO 上的指定对象
+ * @param {string} minioLink
+ * @returns {Promise<boolean|undefined>}
+ */
 async function deleteMinioObject(minioLink) {
     if (__isBlank(minioLink)) return;
     const client = getMinioClient();
@@ -337,6 +388,11 @@ async function deleteMinioObject(minioLink) {
     return await client.deleteObject(minioLink);
 }
 
+/**
+ * 记录日志并推送前端通知
+ * @param {string} message - 消息内容
+ * @param {number|string} [id] - 业务 ID
+ */
 function logAndPushNotification(message, id) {
     const msg = (__isNotBlank(id) ? `[${id}] ` : '') + `${message}`;
     __log.error(msg);

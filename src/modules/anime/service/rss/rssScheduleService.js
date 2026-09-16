@@ -1,12 +1,12 @@
 import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
 import { AsyncExecutor } from '#core/infra/asyncExecutor.js';
-import { addManyResult } from './rssResultService.js';
-import { analysisRssSubscribe } from './rssSubscribeService.js';
-import { concatTrackers, getTrackersMapping } from './rssTrackerService.js';
+import { addManyResult } from '#modules/anime/service/rss/rssResultService.js';
+import { analysisRssSubscribe } from '#modules/anime/service/rss/rssSubscribeService.js';
+import { concatTrackers, getTrackersMapping } from '#modules/anime/service/rss/rssTrackerService.js';
 import rssResultRep from '#modules/anime/repository/rss/rssResultRep.js';
 import { pushNotification } from '#api/sockets/notification.js';
 import { pushRssSubscription } from '#api/sockets/rssSubscription.js';
-import { addRssTasksFromFavorites } from './rssTaskService.js';
+import { addRssTasksFromFavorites } from '#modules/anime/service/rss/rssTaskService.js';
 import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from '#modules/anime/constants/subjectConstant.js';
 import { compareSeason, getCurSeason } from '#common/utils/dateUtil.js';
 
@@ -25,6 +25,11 @@ export function isRssUpdating() {
     return rssUpdate.locked();
 }
 
+/**
+ * 获取待执行更新的有效订阅列表（过滤空 URL）
+ * @param {number[]} [subsIds] - 订阅 ID 列表
+ * @returns {Promise<Array<{ id: number, url: string, regex: string }>>}
+ */
 async function getUpdateRssSubscirbe(subsIds) {
     try {
         const { data } = await rssSubscribeRep.selectForSubscribeUpdate(subsIds);
@@ -35,6 +40,12 @@ async function getUpdateRssSubscirbe(subsIds) {
     }
 }
 
+/**
+ * 尝试抓取并解析单个订阅的 XML 内容
+ * @param {{ id: number, url: string, regex: string }} obj - 订阅配置
+ * @param {Array<any>} results - 结果收集容器
+ * @returns {Promise<boolean>} 是否成功
+ */
 async function tryAnalysisRssSubscribe(obj, results) {
     try {
         const analysis = await analysisRssSubscribe(obj);
@@ -45,9 +56,14 @@ async function tryAnalysisRssSubscribe(obj, results) {
     }
 }
 
+/**
+ * 尝试批量持久化 RSS 抓取结果（开发环境下可跳过入库）
+ * @param {Array<any>} rssResults - 抓取结果列表
+ * @returns {Promise<number>} 插入条数
+ */
 async function tryAddManyResult(rssResults) {
     if (__env.isDev()) {
-        __log.debug(`[RSS Subscribe] Dev environment, skipped the rssResults database insert.`)
+        __log.debug(`[RSS Subscribe] Dev environment, skipped the rssResults database insert.`);
         return rssResults.length;
     }
     return await addManyResult(rssResults);
@@ -105,6 +121,10 @@ export async function updateRssSubscribe(ids) {
     }).finally(() => rssUpdate.release());
 }
 
+/**
+ * 定时自动拉取所有未完结订阅的更新、推送差异通知并触发收藏自动下载
+ * @returns {Promise<void>}
+ */
 export async function autoUpdateSubscribe() {
     const { data: beforeUpdate } = await rssSubscribeRep.selectRssSubscribeCountsWithoutFin();
     const toUpdateIds = beforeUpdate.map(d => d.id);
@@ -135,7 +155,7 @@ export async function autoUpdateSubscribe() {
                     resultId: obj.id,
                     title: obj.title,
                     torrent: concatTrackers(obj.torrent, obj.tracker, trackers)
-                }))
+                }));
                 updatedRssSubs.push(rssSubs);
             }
             pushToNotification({ effectRows, handledCount, updated: updatedRssSubs });
@@ -185,6 +205,11 @@ function pushToRssSubscription(rssSubsArr) {
     }
 }
 
+/**
+ * 检查并更新已匹配集数达到总集数的订阅为完结状态
+ * @param {number[]} toUpdateIds - 待检查的订阅 ID 列表
+ * @returns {Promise<void>}
+ */
 async function updateSubscribesFin(toUpdateIds) {
     const { rows, data: subjects } = await rssSubscribeRep.selectSubjectTotalEpisodesBySubsIds(toUpdateIds);
     if (rows === 0) return;
@@ -208,6 +233,11 @@ async function updateSubscribesFin(toUpdateIds) {
     }
 }
 
+/**
+ * 检查跨季度的未完结番剧并标记连载继续 (goon=1)
+ * @param {number[]} ids - 订阅 ID 列表
+ * @returns {Promise<void>}
+ */
 async function updateSubscribeGoon(ids) {
     const { rows, data: subs } = await rssSubscribeRep.selectGoonByIds(ids);
     if (rows === 0) return;

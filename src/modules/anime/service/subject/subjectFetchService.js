@@ -1,4 +1,4 @@
-import { bangumiApi } from "../bangumi/bangumiApiService.js";
+import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js";
 
 /**
  * 根据指定放送日期范围循环分页拉取 Bangumi 动画条目列表

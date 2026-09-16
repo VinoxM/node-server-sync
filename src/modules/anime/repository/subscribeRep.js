@@ -1,4 +1,4 @@
-import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "../constants/subjectConstant.js";
+import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "#modules/anime/constants/subjectConstant.js";
 
 const dbName = 'anime';
 
@@ -39,6 +39,12 @@ export default {
     /**
      * 插入单条订阅记录
      * @param {Object} subscribe - 订阅数据
+     * @param {number} subscribe.bangumiId - Bangumi 条目 ID
+     * @param {string} [subscribe.startTime] - 放送开始时间
+     * @param {string} [subscribe.url] - RSS 抓取 URL
+     * @param {string} [subscribe.regex] - 过滤规则正则表达式 JSON
+     * @param {number} [subscribe.fin] - 完结状态
+     * @param {number} [subscribe.goon] - 跨季续播状态
      * @returns {Promise<ExecResult>}
      */
     insertOne: (subscribe) => insertAny([subscribe]),
@@ -65,6 +71,11 @@ export default {
     /**
      * 更新指定 Bangumi ID 的订阅配置信息
      * @param {Object} data - 订阅数据
+     * @param {number} data.id - 主键 ID
+     * @param {string} data.startTime - 放送时间
+     * @param {string} data.url - RSS 链接
+     * @param {string} data.regex - 正则规则
+     * @param {number} data.goon - 跨季续播标志
      * @returns {Promise<ExecResult>}
      */
     updateOne: (data) => {
@@ -91,7 +102,7 @@ export default {
     /**
      * 根据 Subject ID 查询订阅详情
      * @param {number} subjectId - Subject ID
-     * @returns {Promise<any|null>}
+     * @returns {Promise<{ id: number, bangumiId: number, startTime: string, url: string, regex: string, fin: number, goon: number, name: string, nameCN: string, nameAlias: string }|null>}
      */
     selectBySubjectId: (subjectId) => {
         const sql = `SELECT ${FULL_COLUMNS.map(c => 'rs.' + c).join(",")}, t.name, t.name_cn AS nameCN, t.name_alias FROM rss_subscribe rs `
@@ -103,7 +114,7 @@ export default {
     /**
      * 根据 Bangumi ID 查询订阅详情
      * @param {number} bangumiId - Bangumi ID
-     * @returns {Promise<any|null>}
+     * @returns {Promise<{ id: number, bangumiId: number, startTime: string, url: string, regex: string, fin: number, goon: number }|null>}
      */
     selectByBangumiId: (bangumiId) => {
         const sql = `SELECT ${FULL_COLUMNS.join(",")} FROM rss_subscribe WHERE bangumi_id = ?`;
@@ -119,5 +130,5 @@ export default {
     updateFinByBangumiId: (bangumiId, fin) => {
         const sql = `UPDATE rss_subscribe SET fin = ? WHERE bangumi_id = ?`;
         return __sqliteDB.update(sql, [fin, bangumiId], null, dbName);
-    },
+    }
 };

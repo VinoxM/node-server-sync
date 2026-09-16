@@ -8,18 +8,18 @@ import { TASK_STATUS, EPISODE_STATUS, EPISODE_FAILED_REASON } from "#modules/ani
 import rssEpisodeRep from "#modules/anime/repository/rss/rssEpisodeRep.js";
 import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
 import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
-import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "./rssEpisodeService.js";
+import { generateMinioLink, getAnimeEpisode, isFileExtAnime } from "#modules/anime/service/rss/rssEpisodeService.js";
 import { filterUserRssFavorites } from "#modules/account/service/rssFavoritesService.js";
 import { pushNotification } from '#api/sockets/notification.js';
-import { backfillSubtitleFonts, resolveEpisodeSubtitle } from './rssSubtitleService.js';
+import { backfillSubtitleFonts, resolveEpisodeSubtitle } from '#modules/anime/service/rss/rssSubtitleService.js';
 import {
     convertMkvToMp4, extractMkvFonts, extractMkvSubtitles,
     removeRemoteEmptyFolders, removeRemoteFiles
 } from '#modules/ssh/sshExecutorService.js';
-import { insertFont, matchSubtitleFont } from './rssFontsService.js';
+import { insertFont, matchSubtitleFont } from '#modules/anime/service/rss/rssFontsService.js';
 import { Tracer } from '#core/infra/tracer.js';
 import rssSubscribeRep from '#modules/anime/repository/rss/rssSubscribeRep.js';
-import { concatTracker } from './rssTrackerService.js';
+import { concatTracker } from '#modules/anime/service/rss/rssTrackerService.js';
 
 const TORRENT_STOPPED_STATE = ['stoppedDL', 'stoppedUP', 'stalledUP'];
 const canUpdateStatus = [TASK_STATUS.RESOLVING, TASK_STATUS.COMPLETE, TASK_STATUS.PARTIALLY_COMPLETE];
@@ -42,11 +42,17 @@ export async function addRssTasksFromFavorites(rssSubsArr) {
     });
 }
 
+/**
+ * 响应 Webhook 手动触发单个 RSS 结果的下载任务
+ * @param {number|string} rssSubsId - 订阅 ID
+ * @param {number|string} rssResultId - 抓取结果 ID
+ * @returns {Promise<{ id: number, status: string }>}
+ */
 export async function addRssTaskFromWebhook(rssSubsId, rssResultId) {
     const rssResult = await rssResultRep.selectOneForTaskByIdAndPid(rssResultId, rssSubsId);
     const rssSubs = await rssSubscribeRep.selectOneById(rssSubsId);
     if (!rssResult || !rssSubs) {
-        __throwMessage('Invalid rss result.')
+        __throwMessage('Invalid rss result.');
     }
     const torrent = await concatTracker(rssResult.torrent, rssResult.tracker);
     const taskInfo = await addRssTask({
@@ -138,6 +144,12 @@ export async function updateTaskStatus(uuid, status) {
 }
 
 let singleResolve = Promise.resolve();
+
+/**
+ * 串行执行任务剧集解析，防止多任务并发争抢或冲突
+ * @param {Object} rssTask - 任务对象
+ * @returns {Promise<any>}
+ */
 function singleResolveTaskEpisode(rssTask) {
     const store = Tracer.getStore();
     const currentTask = singleResolve.then(() => Tracer.run(store, () => resolveTaskEpisode(rssTask)));
@@ -145,6 +157,11 @@ function singleResolveTaskEpisode(rssTask) {
     return currentTask;
 }
 
+/**
+ * 核心逻辑：解析已下载完成的种子文件（提取剧集、抽取 MKV 字幕与字体、格式转换、入库剧集记录）
+ * @param {Object} rssTask - 任务对象
+ * @returns {Promise<{ failed: number, skipped: number, result: Array<any> }|undefined>}
+ */
 async function resolveTaskEpisode(rssTask) {
     const { id, rssSubsId } = rssTask;
     const rssSubs = await rssSubscribeRep.selectOneById(rssSubsId);
@@ -361,6 +378,10 @@ async function resolveTaskEpisode(rssTask) {
     return data;
 }
 
+/**
+ * 任务完成后清理 qBittorrent 标签与种子并推送通知
+ * @param {Object} rssTask
+ */
 async function taskCompleted(rssTask) {
     const uuid = rssTask.uuid;
     let hash = rssTask.hash;
@@ -387,6 +408,12 @@ async function taskCompleted(rssTask) {
     pushNotification(`[Torrent Complete] ${rssResult?.title}`);
 }
 
+/**
+ * 持久化保存下载任务记录
+ * @param {Object} rssTask - 任务数据
+ * @param {string} [status=TASK_STATUS.FAILED] - 初始状态
+ * @returns {Promise<number>} 任务主键 ID
+ */
 function saveTask(rssTask, status = TASK_STATUS.FAILED) {
     __log.debug(`[RssTask] Save one task, status: ${status}.`);
     return rssTaskRep.insertOne({ ...rssTask, status }).then(res => res.lastId);
@@ -421,6 +448,10 @@ export async function queryTaskTorrentInfo(taskIds) {
     });
 }
 
+/**
+ * 针对缺少 hash 的任务根据 UUID 异步查询并回填 hash
+ * @param {Array<any>} tasks
+ */
 async function setupTasksHashByUUID(tasks) {
     const arr = Array.from(tasks);
     if (arr.length === 0) return;
@@ -508,6 +539,10 @@ export async function completeTask(taskId) {
     return rssTaskRep.updateStatusById(taskId, TASK_STATUS.COMPLETE);
 }
 
+/**
+ * 校验任务状态并在停止状态下移除 qBittorrent 种子与标签
+ * @param {Object} task
+ */
 async function removeCompleteTask(task) {
     const uuid = task.uuid;
     let hash = task.hash;

@@ -1,10 +1,21 @@
 import axios, { AxiosError } from 'axios';
 import { GetterContextSubscribe } from '#core/context/subscribe.js';
 
+/**
+ * 解析 Axios 响应数据
+ * @template T
+ * @param {import('axios').AxiosResponse<T>} response - HTTP 响应对象
+ * @returns {T}
+ */
 function resolveResponse(response) {
     return response.data;
 }
 
+/**
+ * 统一处理并记录 Bangumi API 请求异常
+ * @param {any} ex - 捕获的异常对象
+ * @returns {null}
+ */
 function rejectError(ex) {
     if (ex instanceof AxiosError) {
         const url = ex.config?.url;
@@ -17,6 +28,9 @@ function rejectError(ex) {
     return null;
 }
 
+/**
+ * Bangumi API Axios 实例上下文订阅单例
+ */
 const bangumiApiGetter = new GetterContextSubscribe('BangumiApi', () => {
     const proxy = __env.get('axios.proxy', {
         host: '127.0.0.1',

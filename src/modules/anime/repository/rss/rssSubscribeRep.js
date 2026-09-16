@@ -1,34 +1,13 @@
 import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "#modules/anime/constants/subjectConstant.js";
-import { RSS_SUBSCRIBE_SYNC_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 
-const callbackIfKeyAbsent = (callback, data) => {
-    const insertPropertyMap = {
-        'season': 'season',
-        'name': 'name',
-        'name_jp': 'nameJP',
-        'cover': 'cover',
-        'start_time': 'startTime',
-        'fin': 'fin',
-        'is_short': 'isShort',
-        'anime_type': 'animeType',
-        'staff': 'staff',
-        '[cast]': 'cast',
-        'origin_type': 'originType',
-        'broadcast': 'broadcast',
-        'type_tag': 'typeTag',
-        'goon': 'goon'
-    }
-    for (const k in insertPropertyMap) {
-        const key = insertPropertyMap[k];
-        if (__isNotBlank(data[key])) {
-            callback(key, k)
-        }
-    }
-}
+const dbName = 'anime';
 
-const dbName = 'anime'
-const enablePrint = { print: true }
-
+/**
+ * 格式化处理名称字段（优先使用中文名）
+ * @template T
+ * @param {T} data
+ * @returns {T}
+ */
 function handleName(data) {
     if (data) {
         return {
@@ -42,7 +21,7 @@ function handleName(data) {
 export default {
     /**
      * 根据传入的订阅ID集合查询 或 查询未完结番剧的订阅
-     * @param {Array<number>} [subsIds] 订阅ID集合
+     * @param {Array<number>} [subsIds] 订阅ID集合，为空时查询所有未完结订阅
      * @returns {Promise<QueryResult<{id: number, url: string, regex: string}>>}
      */
     selectForSubscribeUpdate: async (subsIds = []) => {
@@ -53,6 +32,12 @@ export default {
             `SELECT id, url, regex FROM rss_subscribe WHERE id IN (${subsIds.map(_ => '?').join(",")})`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
+
+    /**
+     * 根据订阅ID查询订阅详情及关联条目信息
+     * @param {number|string} id 订阅ID
+     * @returns {Promise<{id: number, url: string, regex: string, fin: number, goon: number, name: string, nameCN: string, season: string}|null>}
+     */
     selectOneById: async id => {
         const sql = `SELECT rs.id, rs.url, rs.regex, rs.fin, rs.goon, t.name, t.name_cn AS nameCN, t.season `
             + `FROM rss_subscribe rs `
@@ -61,6 +46,11 @@ export default {
         const data = await __sqliteDB.selectOne(sql, [id], null, dbName);
         return handleName(data);
     },
+
+    /**
+     * 查询所有未完结订阅的番剧信息及其匹配结果总数
+     * @returns {Promise<QueryResult<{id: number, name: string, nameCN: string, cover: string, counts: number}>>}
+     */
     selectRssSubscribeCountsWithoutFin: async () => {
         const sql = `SELECT rs.id, t.name, t.name_cn AS nameCN, t.cover, COUNT(rr.id) AS counts `
             + `FROM rss_subscribe rs `
@@ -76,6 +66,12 @@ export default {
         }
         return res;
     },
+
+    /**
+     * 根据订阅ID集合查询关联条目的总集数
+     * @param {Array<number|string>} ids 订阅ID集合
+     * @returns {Promise<QueryResult<{id: number, subsId: number, bangumiId: number, totalEpisodes: number}>>|{rows: 0, data: []}}
+     */
     selectSubjectTotalEpisodesBySubsIds: ids => {
         if (__isEmptyArray(ids)) {
             return { rows: 0, data: [] };
@@ -86,6 +82,12 @@ export default {
             + `WHERE rs.id IN (${ids.map(_ => '?').join(',')})`;
         return __sqliteDB.selectAll(sql, ids, null, dbName);
     },
+
+    /**
+     * 查询指定订阅在未完结状态下已匹配的所有集数
+     * @param {number|string} id 订阅ID
+     * @returns {Promise<QueryResult<{id: number, episode: number}>>}
+     */
     selectSubscribeResultsEpisodes: id => {
         const sql = `SELECT rs.id, rr.episode `
             + `FROM rss_subscribe rs `
@@ -93,6 +95,13 @@ export default {
             + `WHERE rs.id=? AND rs.fin=${SUBSCRIBE_FIN_VALUE.NO}`;
         return __sqliteDB.selectAll(sql, [id], null, dbName);
     },
+
+    /**
+     * 批量更新订阅的完结状态（完结时自动重置连载继续标志 goon=0）
+     * @param {Array<number|string>} ids 订阅ID集合
+     * @param {number} [fin=SUBSCRIBE_FIN_VALUE.YES] 完结状态 (0: 否, 1: 是)
+     * @returns {Promise<{rows: number}>}
+     */
     updateFinByIds: (ids, fin = SUBSCRIBE_FIN_VALUE.YES) => {
         let setupCause = `fin=?`;
         const params = [fin];
@@ -103,6 +112,12 @@ export default {
         const sql = `UPDATE rss_subscribe SET ${setupCause} WHERE id IN (${ids.map(_ => "?").join(',')})`;
         return __sqliteDB.update(sql, [...params, ...ids], null, dbName);
     },
+
+    /**
+     * 根据订阅ID集合查询季度、连载与完结状态
+     * @param {Array<number|string>} ids 订阅ID集合
+     * @returns {Promise<QueryResult<{id: number, season: string, goon: number, fin: number}>>}
+     */
     selectGoonByIds: ids => {
         const sql = `SELECT rs.id, t.season, rs.goon, rs.fin `
             + `FROM rss_subscribe rs `
@@ -110,174 +125,14 @@ export default {
             + `WHERE rs.id IN (${ids.map(_ => '?').join(',')})`;
         return __sqliteDB.selectAll(sql, ids, null, dbName);
     },
+
+    /**
+     * 批量更新订阅的连载继续标志
+     * @param {Array<number|string>} ids 订阅ID集合
+     * @param {number} [goon=SUBSCRIBE_GOON_VALUE.YES] 连载继续标志 (0: 否, 1: 是)
+     * @returns {Promise<{rows: number}>}
+     */
     updateGoonByIds: (ids, goon = SUBSCRIBE_GOON_VALUE.YES) => {
         return __sqliteDB.update(`UPDATE rss_subscribe SET goon=? WHERE id IN (${ids.map(_ => "?").join(',')})`, [goon, ...ids], null, dbName);
     },
-    /** old */
-    selectForSubscribeByIds: (ids) => {
-        if (__isEmptyArray(ids)) {
-            return Promise.resolve([]);
-        }
-        const sql = "SELECT id,regex,url " +
-            "FROM rss_subscribe " +
-            `WHERE id IN (${ids.map(_ => "?").join(',')})`;
-        return __sqliteDB.selectAll(sql, ids, null, dbName);
-    },
-    insertOne: (rss, transactionDB) => {
-        const sql = "INSERT OR IGNORE INTO " +
-            "rss_subscribe(name, name_jp, url, regex, season, start_time, cover, fin, is_short, anime_type, goon, staff, [cast], origin_type, type_tag, broadcast) " +
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        const params = [
-            rss.name, __isBlankOr(rss.nameJP, ""), __isBlankOr(rss.url, ""), __isBlankOr(rss.regex, ""), rss.season,
-            __isBlankOr(rss.startTime, ""), __isBlankOr(rss.cover, ""), __isBlankOr(rss.fin, "N"), rss.isShort, rss.animeType,
-            rss.goon, __isBlankOr(rss.staff, ""), __isBlankOr(rss.cast, ""), __isBlankOr(rss.originType, ""), __isBlankOr(rss.typeTag, ""), __isBlankOr(rss.broadcast, "")
-        ]
-        return (transactionDB || __sqliteDB).insert(sql, params, enablePrint, dbName);
-    },
-    updateFinById: (id, fin) => {
-        const sql = `UPDATE rss_subscribe SET fin=?${fin === 'Y' ? ',goon=0' : ''} WHERE id=?`;
-        return __sqliteDB.update(sql, [fin, id], enablePrint, dbName);
-    },
-    deleteById: (id, transactionDB) => {
-        const sql = `DELETE FROM rss_subscribe WHERE id = ?`;
-        return (transactionDB || __sqliteDB).delete(sql, [id], enablePrint, dbName);
-    },
-    deleteByIds: (ids, transactionDB) => {
-        if (__isEmptyArray(ids)) return Promise.resolve({ rows: 0 });
-        const sql = `DELETE FROM rss_subscribe WHERE id IN (${ids.map(_ => "?").join(",")})`;
-        return (transactionDB || __sqliteDB).delete(sql, ids, enablePrint, dbName);
-    },
-    updateOneById: (rss, transactionDB) => {
-        let sql = "UPDATE rss_subscribe SET url=?,regex=?";
-        const params = [rss.url, rss.regex];
-        callbackIfKeyAbsent((key, property) => {
-            sql += `,${property}=?`;
-            params.push(rss[key]);
-        }, rss);
-        sql += " WHERE id=?";
-        params.push(rss.id);
-        return (transactionDB || __sqliteDB).update(sql, params, enablePrint, dbName);
-    },
-    selectForReplaceBySeasons: (seasons) => {
-        if (__isEmptyArray(seasons)) {
-            return Promise.resolve([]);
-        }
-        const sql = "SELECT id,name,name_jp nameJP,regex,url,season,start_time startTime,cover,fin,is_short isShort,anime_type animeType,goon,staff,[cast],origin_type originType, type_tag typeTag, broadcast " +
-            "FROM rss_subscribe " +
-            `WHERE season IN (${seasons.map(_ => "?").join(",")})`;
-        return __sqliteDB.selectAll(sql, seasons, enablePrint, dbName);
-    },
-    updateOneWithParamsById: (id, params, transactionDB) => {
-        if (__isBlank(id)) return Promise.resolve({ rows: 0 });
-        let sql = "UPDATE rss_subscribe SET ";
-        const parameters = [];
-        callbackIfKeyAbsent((key, property) => {
-            sql += `${property}=?,`;
-            parameters.push(params[key]);
-        }, params);
-        if (parameters.length === 0) return Promise.resolve({ rows: 1 });
-        sql = sql.substring(0, sql.length - 1);
-        sql += " WHERE id=?";
-        parameters.push(id);
-        return (transactionDB || __sqliteDB).update(sql, parameters, enablePrint, dbName);
-    },
-    selectEpisodesExistsSubsForSearch: (season, title, pageSize, pageNum) => {
-        const params = []
-        const whereCondition = []
-        if (__isNotBlank(season)) {
-            whereCondition.push(`rs.season = ?`)
-            params.push(season)
-        }
-        if (__isNotBlank(title)) {
-            whereCondition.push(`rs.name LIKE ?`)
-            params.push(`%${title}%`)
-        }
-        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
-        let limitOffset = '';
-        if (pageNum !== undefined && pageSize !== undefined) {
-            const offset = (pageNum - 1) * pageSize;
-            limitOffset = ` LIMIT ${pageSize} OFFSET ${offset}`;
-        }
-        const sql = `SELECT `
-            + `rs.id, rs.name, rs.name_jp, rs.cover, rs.start_time, rs.season, rs.fin, rs.is_short, `
-            + `COUNT(DISTINCT t.id) as taskCount, `
-            + `COUNT(DISTINCT e.id) as episodeCount, `
-            + `COUNT(DISTINCT ef.id) as episodeFailedCount, `
-            + `COUNT(DISTINCT es.id) as subtitleCount `
-            + `FROM rss_subscribe rs `
-            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
-            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
-            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
-            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
-            + `${whereClause} `
-            + `GROUP BY rs.id `
-            + `HAVING (taskCount + episodeCount + episodeFailedCount + subtitleCount) > 0 `
-            + `ORDER BY rs.season DESC `
-            + `${limitOffset}`
-        return __sqliteDB.selectAll(sql, params, null, dbName);
-    },
-    selectEpisodesExistsSubsForCount: (season, title) => {
-        const params = []
-        const whereCondition = []
-        if (__isNotBlank(season)) {
-            whereCondition.push(`rs.season = ?`)
-            params.push(season)
-        }
-        if (__isNotBlank(title)) {
-            whereCondition.push(`rs.name LIKE ?`)
-            params.push(`%${title}%`)
-        }
-        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
-        const sql = `SELECT COUNT(*) as total FROM (`
-            + `SELECT rs.id `
-            + `FROM rss_subscribe rs `
-            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
-            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
-            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
-            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
-            + `${whereClause} `
-            + `GROUP BY rs.id `
-            + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
-        return __sqliteDB.selectOne(sql, params, null, dbName).then(res => res?.total || 0)
-    },
-    selectEpisodesExistsSubsBySubsId: subsId => {
-        const sql = `SELECT COUNT(*) as total FROM (`
-            + `SELECT rs.id `
-            + `FROM rss_subscribe rs `
-            + `LEFT JOIN rss_torrent_task t ON rs.id = t.rss_subs_id `
-            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
-            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id `
-            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id `
-            + `WHERE rs.id=? `
-            + `GROUP BY rs.id `
-            + `HAVING (COUNT(DISTINCT t.id) + COUNT(DISTINCT e.id) + COUNT(DISTINCT ef.id) + COUNT(DISTINCT es.id)) > 0)`
-        return __sqliteDB.selectOne(sql, [subsId], null, dbName).then(res => res?.total || 0)
-    },
-    // Vector
-    selectVectorTextBeforeUpdate: id => {
-        const sql = `SELECT id, name, name_jp FROM rss_subscribe WHERE id=?`
-        return __sqliteDB.selectOne(sql, [id], null, dbName)
-    },
-    selectReadyVectors: (limited = 500) => {
-        return __sqliteDB.selectAll(`SELECT id FROM rss_subscribe WHERE sync_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_SYNC_STATUS.READY], null, dbName)
-    },
-    selectForVectorByIds: (ids) => {
-        return __sqliteDB.selectAll(`SELECT id, name, name_jp, season FROM rss_subscribe WHERE id IN (${ids.map(() => '?').join(',')}) AND sync_status!=?`,
-            [...ids, RSS_SUBSCRIBE_SYNC_STATUS.PENDING], null, dbName)
-    },
-    updateSyncStatusByIds: (ids, status) => {
-        return __sqliteDB.update(`UPDATE rss_subscribe SET sync_status=? WHERE id IN (${ids.map(() => '?').join(',')})`, [status, ...ids], null, dbName)
-    },
-    selectByNameVector: (name, season, similarity = 0.6) => {
-        const options = {
-            tableName: 'rss_subscribe',
-            embedColumn: 'name_vector',
-            embedStr: name,
-            selectColumns: ['id'],
-            similarity,
-            extraWhere: __isNotBlank(season) ? 'season=?' : '',
-            whereParams: [season]
-        }
-        return __sqliteDB.vectorSearch(options, dbName).then(res => res.data);
-    }
-}
+};

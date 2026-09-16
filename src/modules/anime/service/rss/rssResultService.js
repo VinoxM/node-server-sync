@@ -1,4 +1,4 @@
-import { saveTrackers, multiExpandTorrentTracker, expandTorrentTracker, getTrackersMapping } from "./rssTrackerService.js";
+import { saveTrackers, multiExpandTorrentTracker, expandTorrentTracker, getTrackersMapping } from "#modules/anime/service/rss/rssTrackerService.js";
 import { GetterContextSubscribe } from '#core/context/subscribe.js';
 import rssResultRep from "#modules/anime/repository/rss/rssResultRep.js";
 
@@ -15,7 +15,7 @@ export function getEpisodeMatches() {
 /**
  * 格式化并持久化一条 RSS 抓取条目
  * @param {Object} result - 抓取条目数据
- * @returns {Promise<ExecResult>}
+ * @returns {Promise<void>}
  */
 export async function addOneResult(result) {
     const trackers = expandTorrentTracker(result);
@@ -43,6 +43,11 @@ export async function addManyResult(resultArr) {
     return rows;
 }
 
+/**
+ * 根据订阅 ID 查询所有抓取条目（拼接完整 Magnet 链接）
+ * @param {number|string} subsId - 订阅 ID
+ * @returns {Promise<Array<any>>}
+ */
 export async function getResultsBySubsId(subsId) {
     const trackers = await getTrackersMapping();
     const { data } = await rssResultRep.selectRssResultsByPid(subsId);
@@ -54,15 +59,31 @@ export async function getResultsBySubsId(subsId) {
     });
 }
 
+/**
+ * 删除单条 RSS 抓取结果
+ * @param {number|string} id - 抓取结果主键 ID
+ * @returns {Promise<void>}
+ */
 export async function deleteOneResult(id) {
     const { rows } = await rssResultRep.deleteOneById(id);
     rows || __throwMessage('Delete rss result failed. Cause: not exists.');
 }
 
+/**
+ * 删除指定订阅下的所有抓取结果
+ * @param {number|string} subsId - 订阅 ID
+ * @returns {Promise<{ rows: number }>}
+ */
 export async function deleteAllSubscribeResults(subsId) {
     return rssResultRep.deleteByPid(subsId);
 }
 
+/**
+ * 伪删除/恢复（隐藏）单条 RSS 抓取结果
+ * @param {number|string} id - 抓取结果 ID
+ * @param {number} hide - 隐藏状态 (0: 否, 1: 是)
+ * @returns {Promise<void>}
+ */
 export async function hideOneResult(id, hide) {
     const { rows } = await rssResultRep.fakeDeleteOneById(id, hide);
     rows || __throwMessage('Hide rss result failed. Cause: not exists.');
@@ -71,7 +92,7 @@ export async function hideOneResult(id, hide) {
 /**
  * 修改单条 RSS 抓取条目信息
  * @param {Object} result - 抓取条目数据
- * @returns {Promise<ExecResult>}
+ * @returns {Promise<void>}
  */
 export async function editOneResult(result) {
     const trackers = expandTorrentTracker(result);
@@ -81,6 +102,14 @@ export async function editOneResult(result) {
     rows || __throwMessage('Edit rss result failed.');
 }
 
+/**
+ * 格式化 RSS 抓取结果条目的属性（生成自增 ID、关联 Tracker ID、提取集数及排序序号）
+ * @param {Object} rssResult - 抓取条目
+ * @param {Object} options - 选项
+ * @param {number} [options.rssResultMaxId=-1] - 当前最大主键 ID
+ * @param {number} [options.incr=0] - 增量偏移量
+ * @param {Array<{ id: number, host: string }>} [options.trackerArr=null] - Tracker 列表
+ */
 function handleRssResultProperties(rssResult, { rssResultMaxId = -1, incr = 0, trackerArr = null }) {
     if (rssResultMaxId !== -1) {
         handleRssResultId(rssResult, rssResultMaxId, incr);
@@ -92,10 +121,21 @@ function handleRssResultProperties(rssResult, { rssResultMaxId = -1, incr = 0, t
     handleRssResultSort(rssResult);
 }
 
+/**
+ * 为条目赋予连续主键 ID
+ * @param {Object} rssResult
+ * @param {number} rssResultMaxId
+ * @param {number} incr
+ */
 function handleRssResultId(rssResult, rssResultMaxId, incr) {
     rssResult.id = incr + rssResultMaxId + 1;
 }
 
+/**
+ * 将 Tracker Host 匹配转换为逗号分隔的 Tracker ID 字符串
+ * @param {Object} rssResult
+ * @param {Array<{ id: number, host: string }>} trackerArr
+ */
 function handleRssResultTrackers(rssResult, trackerArr) {
     const trs = rssResult.trackers;
     if (trs) {
@@ -103,6 +143,10 @@ function handleRssResultTrackers(rssResult, trackerArr) {
     }
 }
 
+/**
+ * 解析并回填标题中的集数
+ * @param {Object} rssResult
+ */
 function handleRssResultEpisode(rssResult) {
     if (!rssResult.hasOwnProperty('episode') || rssResult.episode.trim() === '') {
         rssResult.episode = "-";
@@ -118,14 +162,18 @@ function handleRssResultEpisode(rssResult) {
     }
 }
 
+/**
+ * 计算用于列表排序的序号
+ * @param {Object} rssResult
+ */
 function handleRssResultSort(rssResult) {
     if (!rssResult.hasOwnProperty('sort')) {
         rssResult.sort = 0;
         if (rssResult.hasOwnProperty('episode')) {
             const episode = rssResult.episode + '';
             let sort = episode.split('-')[0];
-            if (sort > 0) {
-                rssResult.sort = sort;
+            if (Number(sort) > 0) {
+                rssResult.sort = Number(sort);
             }
         }
     }

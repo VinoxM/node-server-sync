@@ -2,10 +2,14 @@ import { getCurSeason } from "#common/utils/dateUtil.js";
 import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
-import { fetchAndCleanBangumiSubject } from "../subject/subjectPullService.js";
-import { handleSubjectView } from "../subject/subjectService.js";
-import { putImageStorageLinkBatch } from "./bangumiImagesService.js";
+import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
+import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
+import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
 
+/**
+ * 差异对比并更新当前季度未完结的动画条目
+ * @returns {Promise<{ totalCount: number, handleCount: number }|undefined>}
+ */
 export async function updateNotFinSubjects() {
     const curSeason = getCurSeason().join('-');
     const { rows: totalCount, data: subjects } = await subjectsRep.selectNotFinSubjectsForDiff(curSeason);
@@ -21,11 +25,16 @@ export async function updateNotFinSubjects() {
     return { totalCount, handleCount };
 }
 
+/**
+ * 对比单个条目与 Bangumi 最新数据的差异，如有变更则触发更新
+ * @param {Object} subject - 数据库现有条目对象
+ * @returns {Promise<boolean>} 是否发生并执行了更新
+ */
 async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
     const backfillSubject = await backfillOriginUrl(subjectView, bangumiId);
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
-    const cleanedSubjectView = handleSubjectView(cleanedSubject)
+    const cleanedSubjectView = handleSubjectView(cleanedSubject);
     const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
     if (diffs.length === 0) return false;
     __log.info(`[Bangumi Difference] Subject[${id}] [${getName(subjectView.name, subjectView.nameCN)}] has ${diffs.length} diffs:`, diffs.join(', '));
@@ -37,6 +46,14 @@ async function diffAndUpsertSubject(subject) {
     return true;
 }
 
+/**
+ * 根据数据库中已存储的图片映射关系回填原始网络 URL
+ * @param {Object} subject - 番剧视图对象
+ * @param {number|string} bangumiId - Bangumi ID
+ * @param {Object} [options={}] - 配置选项
+ * @param {boolean} [options.useExtractProp=false] - 是否将原始 URL 赋给独立属性 (originCover / originImage)
+ * @returns {Promise<Object>} 回填后的条目对象
+ */
 export async function backfillOriginUrl(subject, bangumiId, options = {}) {
     const { data } = await bangumiImagesRep.selectByLinkLikely(`/subject/${bangumiId}/`);
     const { characters } = subject;
@@ -62,6 +79,12 @@ export async function backfillOriginUrl(subject, bangumiId, options = {}) {
     return subject;
 }
 
+/**
+ * 对比数据库条目与最新 Bangumi 条目对象的属性差异
+ * @param {Object} databaseSubject - 数据库中的条目数据
+ * @param {Object} bangumiSubject - 从 Bangumi 拉取并清洗的最新条目数据
+ * @returns {string[]} 发生变动的字段名称列表
+ */
 function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     const diffs = [];
     const bgm = bangumiSubject;
@@ -79,18 +102,39 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     return diffs;
 }
 
+/**
+ * 获取用于日志展示的番剧名称（优先中文名）
+ * @param {string} name - 原名
+ * @param {string} [nameCN] - 中文译名
+ * @returns {string}
+ */
 function getName(name, nameCN) {
     return __isBlank(nameCN) ? name : nameCN;
 }
 
+/**
+ * 字符串标准化（去空格）
+ * @param {any} val
+ * @returns {string}
+ */
 function normalizeStr(val) {
     return __isNotBlank(val) ? String(val).trim() : '';
 }
 
+/**
+ * 多行文本标准化（统一换行符并去前后空格）
+ * @param {any} val
+ * @returns {string}
+ */
 function normalizeMultilineStr(val) {
-    return normalizeStr(val).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    return normalizeStr(val).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
+/**
+ * 集数格式标准化
+ * @param {any} val
+ * @returns {string}
+ */
 function normalizeEpisodes(val) {
     if (__isBlank(val)) {
         return '';
@@ -99,11 +143,21 @@ function normalizeEpisodes(val) {
     return isNaN(n) ? String(val).trim() : String(n);
 }
 
+/**
+ * 数组标准化为排序后的 JSON 字符串
+ * @param {any} arr
+ * @returns {string}
+ */
 function normalizeArray(arr) {
     if (!Array.isArray(arr)) return '';
     return JSON.stringify([...arr].map(x => String(x).trim()).filter(Boolean).sort());
 }
 
+/**
+ * Staff 制作人员列表标准化为排序后的 JSON 字符串
+ * @param {Array<{ key: string, value: string|string[] }>} staff
+ * @returns {string}
+ */
 function normalizeStaff(staff) {
     if (!Array.isArray(staff)) return '';
     return JSON.stringify(
@@ -116,6 +170,11 @@ function normalizeStaff(staff) {
     );
 }
 
+/**
+ * 角色立绘及声优信息标准化为排序后的 JSON 字符串
+ * @param {Array<{ name: string, image: string, relation: string, summary: string, actors: any[] }>} chars
+ * @returns {string}
+ */
 function normalizeCharacters(chars) {
     if (!Array.isArray(chars)) return '';
     return JSON.stringify(
