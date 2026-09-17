@@ -1,3 +1,4 @@
+import { ContextSubscribe } from '#core/context/subscribe.js';
 import { getRedisClient } from '#core/database/index.js';
 
 /**
@@ -6,24 +7,68 @@ import { getRedisClient } from '#core/database/index.js';
  * @typedef {import('#types/progressTypes.d.ts').RecentProgressListResult} RecentProgressListResult
  */
 
+/** @type {Required<ProgressStoreOptions>} 默认配置常量 */
+const DEFAULT_OPTIONS = {
+    prefix: 'media',
+    ttlSeconds: 90 * 24 * 3600,
+    maxHistoryLimit: 200,
+    finishedThreshold: 0.95
+};
+
 /**
  * 媒体播放进度存储管理服务 (基于 Redis "Hash 详情 + ZSet 时间线" 双结构实现)
+ * 继承自 ContextSubscribe，从环境变量 'media.progress' 中延迟加载配置并支持热更新
  * 将平台 (platform) 与用户 (userId) 组合作为命名空间 Key，实现不同平台、不同用户的数据强隔离
  */
-export class ProgressStore {
-    /** @type {ProgressStoreOptions} */
-    #options;
+export class ProgressStore extends ContextSubscribe {
+    /** @type {ProgressStore} 全局单例实例 */
+    static instance = new ProgressStore();
+
+    /** @type {boolean} 是否已执行首次初始化与订阅 */
+    #initialized = false;
+
+    /** @type {Required<ProgressStoreOptions>} 当前生效配置 */
+    #options = { ...DEFAULT_OPTIONS };
+
+    constructor() {
+        super('ProgressStore', () => this.refresh(), true);
+    }
 
     /**
-     * @param {ProgressStoreOptions} [options={}] - 配置选项
+     * 确保配置已从环境变量完成首次延迟加载并订阅
      */
-    constructor(options = {}) {
+    #ensureInitialized() {
+        if (!this.#initialized) {
+            this.doSubscribe();
+            this.refresh();
+            this.#initialized = true;
+        }
+    }
+
+    /**
+     * 刷新配置参数（当 YAML 或全局环境变量变更时自动触发）
+     */
+    refresh() {
+        const envConfig = __env.get('media.progress', {});
+        const evaluatedTtl = __env.getEvaluate('media.progress.ttlSeconds', DEFAULT_OPTIONS.ttlSeconds);
         this.#options = {
-            prefix: options.prefix ?? 'media',
-            ttlSeconds: options.ttlSeconds ?? 90 * 24 * 3600,
-            maxHistoryLimit: options.maxHistoryLimit ?? 200,
-            finishedThreshold: options.finishedThreshold ?? 0.95
+            prefix: envConfig?.prefix ?? DEFAULT_OPTIONS.prefix,
+            ttlSeconds: Number(evaluatedTtl) || DEFAULT_OPTIONS.ttlSeconds,
+            maxHistoryLimit: Number(envConfig?.maxHistoryLimit) || DEFAULT_OPTIONS.maxHistoryLimit,
+            finishedThreshold: typeof envConfig?.finishedThreshold === 'number'
+                ? envConfig.finishedThreshold
+                : DEFAULT_OPTIONS.finishedThreshold
         };
+        __log.info(`[ProgressStore] Refreshed configuration from media.progress: prefix="${this.#options.prefix}", ttl=${this.#options.ttlSeconds}s, maxLimit=${this.#options.maxHistoryLimit}, threshold=${this.#options.finishedThreshold}`);
+    }
+
+    /**
+     * 获取当前生效的配置快照
+     * @returns {Required<ProgressStoreOptions>}
+     */
+    getOptions() {
+        this.#ensureInitialized();
+        return { ...this.#options };
     }
 
     /**
@@ -34,6 +79,7 @@ export class ProgressStore {
      * @returns {string}
      */
     #getHashKey(platform, userId) {
+        this.#ensureInitialized();
         return `${this.#options.prefix}:progress:${platform}:${userId}`;
     }
 
@@ -45,6 +91,7 @@ export class ProgressStore {
      * @returns {string}
      */
     #getTimelineKey(platform, userId) {
+        this.#ensureInitialized();
         return `${this.#options.prefix}:timeline:${platform}:${userId}`;
     }
 
@@ -55,6 +102,7 @@ export class ProgressStore {
      * @returns {Promise<boolean>} 是否成功保存
      */
     async saveProgress(payload) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis) return false;
 
@@ -120,6 +168,7 @@ export class ProgressStore {
      * @returns {Promise<MediaProgressPayload|null>} 播放进度对象，不存在时返回 null
      */
     async getProgress(platform, userId, videoId) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId, videoId)) return null;
 
@@ -145,6 +194,7 @@ export class ProgressStore {
      * @returns {Promise<Record<string, MediaProgressPayload>>} 以 videoId 为键的进度字典映射
      */
     async batchGetProgress(platform, userId, videoIds) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId) || !Array.isArray(videoIds) || videoIds.length === 0) {
             return {};
@@ -191,6 +241,7 @@ export class ProgressStore {
      * @returns {Promise<RecentProgressListResult>}
      */
     async getRecentList(platform, userId, pageNum = 1, pageSize = 20) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId)) {
             return { total: 0, pageNum, pageSize, list: [] };
@@ -254,6 +305,7 @@ export class ProgressStore {
      * @returns {Promise<RecentProgressListResult>}
      */
     async getAllRecentList(platforms, userId, pageNum = 1, pageSize = 20) {
+        this.#ensureInitialized();
         if (!Array.isArray(platforms) || platforms.length === 0 || __isBlank(userId)) {
             return { total: 0, pageNum, pageSize, list: [] };
         }
@@ -296,6 +348,7 @@ export class ProgressStore {
      * @returns {Promise<boolean>} 是否成功删除
      */
     async deleteProgress(platform, userId, videoIds) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId)) return false;
 
@@ -327,6 +380,7 @@ export class ProgressStore {
      * @returns {Promise<boolean>} 是否成功清空
      */
     async clearPlatformProgress(platform, userId) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId)) return false;
 
@@ -349,12 +403,21 @@ export class ProgressStore {
      * @returns {Promise<number>}
      */
     async getProgressCount(platform, userId) {
+        this.#ensureInitialized();
         const redis = getRedisClient();
         if (!redis || __isAnyBlank(platform, userId)) return 0;
 
         const timelineKey = this.#getTimelineKey(platform, userId);
         const res = await redis.zCard(timelineKey);
         return (res.code === 0 && Number.isInteger(res.data)) ? res.data : 0;
+    }
+
+    /**
+     * 销毁并注销配置订阅
+     */
+    destroy() {
+        super.destroy();
+        this.#initialized = false;
     }
 
     /**
@@ -389,7 +452,7 @@ export class ProgressStore {
 }
 
 /** 默认导出的全局单例实例 */
-export const progressStore = new ProgressStore();
+export const progressStore = ProgressStore.instance;
 
 /**
  * 保存播放进度 (快捷入口)

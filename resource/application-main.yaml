@@ -192,3 +192,9 @@ qdrant:
   client:
     host: qdrant.vinoxm.art
     port: 443
+media:
+  progress:
+    prefix: media
+    ttlSeconds: 90 * 24 * 60 * 60
+    maxHistoryLimit: 200
+    finishedThreshold: 0.95
