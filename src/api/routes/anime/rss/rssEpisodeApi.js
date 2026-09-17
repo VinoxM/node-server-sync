@@ -1,7 +1,9 @@
 import apiMethodConst from '#constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
 import rssEpisodeRep from '#modules/anime/repository/rss/rssEpisodeRep.js';
 import {
+    deleteEpisodeBatch,
+    deleteFailedEpisodeBatch,
     deleteOneEpisode, deleteOneFailedEpisode,
     retryFailedEpisode, updateEpisodeStatus, updateFailedEpisode
 } from '#modules/anime/service/rss/rssEpisodeService.js';
@@ -56,6 +58,18 @@ export default defineRoutes({
     },
 
     /**
+     * 批量删除已入库剧集（同步清理 MinIO 媒体文件）
+     * 请求体参数：{ episodeIds: Array<number> }
+     */
+    "/deleteEpisodeBatch": {
+        method: POST,
+        needAuth,
+        needSecret,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'episodeIds'),
+        callback: req => deleteEpisodeBatch(req.body.episodeIds)
+    },
+
+    /**
      * 获取指定订阅下解析失败的异常剧集记录列表
      * 请求体参数：{ rssSubsId: number }
      */
@@ -102,5 +116,17 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
         callback: req => deleteOneFailedEpisode(req.body.failedEpisodeId)
+    },
+
+    /**
+     * 批量删除指定的异常剧集记录
+     * 请求体参数：{ failedEpisodeIds: Array<number> }
+     */
+    '/deleteFailedEpisodeBatch': {
+        method: POST,
+        needAuth,
+        needSecret,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'failedEpisodeIds'),
+        callback: req => deleteFailedEpisodeBatch(req.body.failedEpisodeIds)
     }
 });

@@ -119,6 +119,24 @@ export async function deleteOneEpisode(episodeId) {
 }
 
 /**
+ * 批量删除剧集记录（同时清理 MinIO 对象存储文件）
+ * @param {Array<number>} episodeIds - 剧集 ID
+ * @returns {Promise<{rows: number}>}
+ */
+export async function deleteEpisodeBatch(episodeIds) {
+    if (__isNotEmptyArray(episodeIds)) return { rows: 0 };
+    let result = 0;
+    for (const episodeId of episodeIds) {
+        try {
+            const { rows } = await deleteOneEpisode(episodeId);
+            result += rows;
+        } catch (ignored) {
+        }
+    }
+    return { rows: result };
+}
+
+/**
  * 重试解析并入库失败的异常剧集
  * @param {number} failedEpisodeId - 异常剧集记录主键 ID
  * @returns {Promise<void>}
@@ -316,6 +334,24 @@ export async function deleteOneFailedEpisode(failedEpisodeId) {
         __throwMessage('Task exists, cannot delete.');
     }
     return rssEpisodeRep.deleteOneFailedById(failedEpisodeId);
+}
+
+/**
+ * 删除指定的异常剧集记录
+ * @param {Array<number>} failedEpisodeIds - 异常剧集 ID 集合
+ * @returns {Promise<{rows: number}>}
+ */
+export async function deleteFailedEpisodeBatch(failedEpisodeIds) {
+    if (__isNotEmptyArray(failedEpisodeIds)) return { rows: 0 };
+    let result = 0;
+    for (const failedEpisodeId of failedEpisodeIds) {
+        try {
+            const { rows } = await deleteOneFailedEpisode(failedEpisodeId);
+            result += rows;
+        } catch (ignored) {
+        }
+    }
+    return { rows: result };
 }
 
 /**

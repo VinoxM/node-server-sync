@@ -492,6 +492,24 @@ export async function deleteTask(taskId) {
 }
 
 /**
+ * 批量删除指定的种子任务（清理 qBittorrent 任务及标签）
+ * @param {Array<number>} taskIds - 任务 ID 集合
+ * @returns {Promise<{rows: number}>}
+ */
+export async function deleteTaskBatch(taskIds) {
+    if (__isNotEmptyArray(taskIds)) return { rows: 0 };
+    let result = 0;
+    for (const taskId of taskIds) {
+        try {
+            const { rows } = await deleteTask(taskId);
+            result += rows;
+        } catch (ignored) {
+        }
+    }
+    return { rows: result };
+}
+
+/**
  * 暂停指定的下载任务
  * @param {number} taskId - 任务 ID
  * @returns {Promise<void>}

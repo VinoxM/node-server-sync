@@ -194,8 +194,26 @@ export async function updateEpisodeSubtitle(body) {
 }
 
 /**
- * 级联删除字幕记录（删除 MinIO 对象与本地临时文件）
+ * 批量级联删除字幕记录（删除 MinIO 对象与本地临时文件）
  * @param {number} subtitleId - 字幕 ID
+ * @returns {Promise<void>}
+ */
+export async function deleteEpisodeSubtitleBatch(subtitleIds) {
+    if (__isEmptyArray(subtitleIds)) return { rows: 0 };
+    let rows = 0;
+    for (const subtitleId of subtitleIds) {
+        try {
+            await deleteEpisodeSubtitle(subtitleId);
+            rows++;
+        } catch (ignored) {
+        }
+    }
+    return { rows };
+}
+
+/**
+ * 级联删除字幕记录（删除 MinIO 对象与本地临时文件）
+ * @param {Array<number>} subtitleId - 字幕 ID
  * @returns {Promise<void>}
  */
 export async function deleteEpisodeSubtitle(subtitleId) {

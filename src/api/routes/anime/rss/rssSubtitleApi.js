@@ -1,8 +1,8 @@
 import apiMethodConst from '#constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
 import rssSubtitleRep from '#modules/anime/repository/rss/rssSubtitleRep.js';
 import {
-    deleteEpisodeSubtitle, deleteEpisodeSubtitleFile, getRssSubtitleMatchers,
+    deleteEpisodeSubtitle, deleteEpisodeSubtitleBatch, deleteEpisodeSubtitleFile, getRssSubtitleMatchers,
     recalculateEpisodeSubtitleFonts, retryUploadEpisodeSubtitle, updateEpisodeSubtitle
 } from '#modules/anime/service/rss/rssSubtitleService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
@@ -76,6 +76,18 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']),
         callback: req => deleteEpisodeSubtitle(req.body.id)
+    },
+
+    /**
+     * 批量级联删除字幕记录（同时删除 MinIO 对象与本地临时文件）
+     * 请求体参数：{ ids: Array<number> }
+     */
+    '/deleteSubtitleBatch': {
+        method: POST,
+        needAuth: needAuthSingleClient.MANAGE,
+        needSecret,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
+        callback: req => deleteEpisodeSubtitleBatch(req.body.ids)
     },
 
     /**

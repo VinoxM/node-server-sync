@@ -4,7 +4,8 @@ import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank 
 import {
     completeTask, deleteTask,
     pauseTask, queryTasks, queryTaskTorrentInfo,
-    resumeTask, updateTaskStatus, addRssTaskFromWebhook
+    resumeTask, updateTaskStatus, addRssTaskFromWebhook,
+    deleteTaskBatch
 } from "#modules/anime/service/rss/rssTaskService.js";
 import { NEED_AUTH_CLIENT } from "#common/constants/authorizationConst.js";
 import { defineRoutes } from "#common/utils/defineUtil.js";
@@ -76,6 +77,18 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => deleteTask(req.body.taskId)
+    },
+
+    /**
+     * 批量删除种子任务（清理 qBittorrent 任务及标签并删除记录）
+     * 请求体参数：{ taskIds: Array<number> }
+     */
+    "/deleteTaskBatch": {
+        method: POST,
+        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needSecret,
+        preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
+        callback: req => deleteTaskBatch(req.body.taskIds)
     },
 
     /**
