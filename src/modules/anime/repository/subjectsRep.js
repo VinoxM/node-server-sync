@@ -214,10 +214,10 @@ export default {
     /**
      * 根据订阅 ID 查询对应的可见番剧名称
      * @param {number} subsId - 订阅 ID
-     * @returns {Promise<{ name: string, nameCN: string }|null>}
+     * @returns {Promise<{ id: number, name: string, nameCN: string }|null>}
      */
     selectOneVisibleBySubsId: async subsId => {
-        const sql = `SELECT t.name, t.name_cn AS nameCN FROM rss_subscribe rs INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO}`;
+        const sql = `SELECT t.id, t.name, t.name_cn AS nameCN FROM rss_subscribe rs INNER JOIN subjects t ON t.bangumi_id=rs.bangumi_id WHERE rs.id = ? AND t.hide=${SUBJECT_HIDE_VALUE.NO}`;
         return __sqliteDB.selectOne(sql, [subsId], null, dbName);
     },
 

@@ -9,6 +9,7 @@ import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
+import { saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
 
 const { GET, POST } = apiMethodConst;
 
@@ -90,7 +91,31 @@ export default defineRoutes({
         needSecret,
         needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
-        callback: req => getRssEpisodeSource(req.body.rssSubsId, req.body.episode)
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            userInfo || __throwMessage('Permission denied.', -401, 401);
+            return getRssEpisodeSource(req.body.rssSubsId, req.body.episode, userInfo);
+        }
+    },
+
+    /**
+     * 保存指定剧集的视频的播放进度
+     * 请求体参数：{ subjectId: number, episode: number|string, duration: number, currentTime: number }
+     */
+    "/saveProgress": {
+        method: POST,
+        allowHosts: allowLanHosts,
+        needSecret,
+        needAuth,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
+        preCheck: (req) => checkBodyKeysNotBlank(req, ['subjectId', 'episode', 'duration', 'currentTime']),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            userInfo || __throwMessage('Permission denied.', -401, 401);
+            const { subjectId, episode, duration, currentTime } = req.body;
+            return saveAnimeProgress(userInfo, subjectId, episode, { duration, currentTime });
+        }
     },
 
     /**

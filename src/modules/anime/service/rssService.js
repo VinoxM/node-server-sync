@@ -4,6 +4,7 @@ import { generateMinioSourceSafely } from '#modules/media/service/mediaMinioServ
 import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
 import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 import subjectsRep from '#modules/anime/repository/subjectsRep.js';
+import { getAnimeProgress } from './animeProgressService';
 
 /**
  * 获取 RSS 异常处理卡片概览数量（解析失败剧集数与字幕失败数）
@@ -22,9 +23,9 @@ export async function getRssCardFailedViews() {
  * 根据订阅 ID 和集数获取视频播放源、内嵌字幕及关联字体资源
  * @param {number|string} rssSubsId - 订阅 ID
  * @param {number|string} episode - 集数/话数
- * @returns {Promise<{ url: string|null, subtitles: Array<{ url: string, fonts: Array<string>, title: string }>, unsupportedFonts: string[], title: string|null, sources: Array<{ episode: number|string, title: string }> }>}
+ * @returns {Promise<{ url: string|null, subtitles: Array<{ url: string, fonts: Array<string>, title: string }>, unsupportedFonts: string[], title: string|null, sources: Array<{ episode: number|string, title: string }>, currentTime: number|null }>}
  */
-export async function getRssEpisodeSource(rssSubsId, episode) {
+export async function getRssEpisodeSource(rssSubsId, episode, userInfo) {
     const subject = await subjectsRep.selectOneVisibleBySubsId(rssSubsId);
     subject || __throwMessage('Subject not exists.');
     const title = __isNotBlank(subject.nameCN) ? subject.nameCN : subject.name;
@@ -40,6 +41,8 @@ export async function getRssEpisodeSource(rssSubsId, episode) {
     if (!episodeData?.minioLink) return result;
     result.url = generateMinioSourceSafely(episodeData.minioLink);
     result.title = `${title} - ${episode}`;
+    const progressData = await getAnimeProgress(userInfo, subject.id, episode);
+    result.currentTime = progressData?.currentTime;
     const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode);
     if (rows === 0) return result;
     const unsupportedFontSet = new Set();
