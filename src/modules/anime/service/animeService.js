@@ -7,6 +7,8 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
 import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
 import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
+import { getAnimeProgressList } from "#modules/anime/service/animeProgressService.js";
+import { json } from "express";
 
 /**
  * 格式化番剧数据为日历紧凑视图结构
@@ -179,4 +181,43 @@ export async function getUserFavoitesAnime(userInfo) {
     }
     const results = Array.from(subjectMap.values());
     return handleCalendar(results, userInfo);
+}
+
+function handlePlayHistorySubject(obj, currentTime, duration, episode) {
+    const { platform, metaTags, nameAlias, nsfw, ...rest } = obj;
+    const isTV = obj.platform === SUBJECT_PLATFORM_DEFAULT || JSON.parse(obj.metaTags || '[]').includes?.(SUBJECT_PLATFORM_DEFAULT);
+    const isShort = obj.platform === SUBJECT_PLATFORM_IS_SHORT;
+    return {
+        ...rest,
+        nameAlias: JSON.parse(nameAlias || '[]'),
+        nsfw: Boolean(nsfw),
+        isTV,
+        isShort,
+        platform: isShort ? SUBJECT_PLATFORM_DEFAULT : platform,
+        currentTime,
+        duration,
+        episode
+    }
+}
+
+export async function getUserPlayHistory(userInfo, pageNum, pageSize) {
+    const result = await getAnimeProgressList(userInfo, pageNum, pageSize);
+    const { list, ...rest } = result;
+    const record = [];
+    const subjectIds = list.map(o => __isNotBlank(o.videoId) ? o.videoId.split(':')[0] : undefined).filter(__isNotBlank);
+    if (subjectIds.length > 0) {
+        const { data, rows } = await subjectsRep.selectVisibleBySubjectIds(subjectIds);
+        if (rows > 0) {
+            for (const { currentTime, duration, videoId } of list) {
+                const [subjectId, episode] = __isNotBlank(videoId) ? videoId.split(':') : [];
+                if (__isAnyBlank(subjectId, episode)) continue;
+                const subject = data.find(o => o.id === Number(subjectId));
+                subject && record.push(handlePlayHistorySubject(subject, currentTime, duration, episode));
+            }
+        }
+    }
+    return {
+        ...rest,
+        record
+    }
 }

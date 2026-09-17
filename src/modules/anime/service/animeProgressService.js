@@ -51,7 +51,7 @@ export async function getAnimeProgress(userInfo, subjectId, episode) {
  * @returns {Promise<import('#types/progressTypes.d.ts').RecentProgressListResult>}
  */
 export async function getAnimeProgressList(userInfo, pageNum = 1, pageSize = 20) {
-    if (!userInfo?.id) return { total: 0, pageNum: 1, pageSize: 20, list: [] };
+    if (!userInfo?.id) return { total: 0, pageNum, pageSize, list: [] };
     const userId = userInfo.id;
     const platform = NEED_AUTH_CLIENT.ANIME;
     const result = await getRecentMediaProgressList(platform, userId, pageNum, pageSize);

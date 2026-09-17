@@ -344,6 +344,21 @@ export default {
     },
 
     /**
+     * 根据番剧 ID 列表批量查询可见番剧列表
+     * @param {number[]} subjectIds - 番剧 ID 列表
+     * @returns {Promise<QueryResult<any>>}
+     */
+    selectVisibleBySubjectIds: (subjectIds) => {
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.cover, t.meta_tags, t.nsfw, rs.id AS subsId `
+            + 'FROM subjects t '
+            + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
+            + `AND t.id IN (${subjectIds.map(_ => '?').join(',')}) `
+            + 'GROUP BY t.id,rs.id ';
+        return __sqliteDB.selectAll(sql, subjectIds, null, dbName);
+    },
+
+    /**
      * 查询已存在的所有季节列表
      * @returns {Promise<QueryResult<{ season: string }>>}
      */

@@ -3,7 +3,7 @@ import apiMethodConst from '#constants/apiMethodConst.js';
 import { getNextSeason } from '#utils/dateUtil.js';
 import { checkBodyKeyMatch, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
-import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, searchAnime } from '#modules/anime/service/animeService.js';
+import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, getUserPlayHistory, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
@@ -95,6 +95,23 @@ export default defineRoutes({
             const userInfo = await decodeAuthorization(req);
             userInfo || __throwMessage('Permission denied.', -401, 401);
             return getRssEpisodeSource(req.body.rssSubsId, req.body.episode, userInfo);
+        }
+    },
+
+    /**
+     * 获取用户的播放历史记录
+     * 请求体参数：{ pageNum: number, pageSize: number }
+     */
+    "/getUserPlayHistory": {
+        method: POST,
+        allowHosts: allowLanHosts,
+        needSecret,
+        // needAuth,
+        preCheck: (req) => checkBodyKeysNotBlank(req, ['pageNum', 'pageSize']),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            userInfo || __throwMessage('Permission denied.', -401, 401);
+            return getUserPlayHistory(userInfo, req.body.pageNum, req.body.pageSize);
         }
     },
 
