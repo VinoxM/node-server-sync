@@ -5,6 +5,7 @@ import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js";
 import { cleanBangumiSubject } from "#modules/anime/service/subject/subjectCleanService.js";
 import { fetchSubjectsByAirDate } from "#modules/anime/service/subject/subjectFetchService.js";
+import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "#modules/anime/constants/subjectConstant.js";
 
 /**
  * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
@@ -161,17 +162,20 @@ function handleUpdateProperties(updateProperties = []) {
     return convertPropertiesToCloumns(updateProperties);
 }
 
+const SUPPORTED_INSERT_SUBSCRIBE_SUJECT_PLATFORMS = [SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT];
+
 /**
  * 批量插入番剧对应的默认订阅记录
  * @param {Array<CleanedSubject>} subjects
  * @returns {Promise<number>} 插入条数
  */
 async function insertSubjectSubscribes(subjects) {
-    const subscribes = subjects.map(subject => {
-        const { airDate, season, bangumiId } = subject;
-        const startTime = __isNotBlank(airDate) ? new Date(airDate) : new Date(season + '-01');
-        return { bangumiId, startTime };
-    });
+    const subscribes = subjects.filter(subject => SUPPORTED_INSERT_SUBSCRIBE_SUJECT_PLATFORMS.includes(subject.platform))
+        .map(subject => {
+            const { airDate, season, bangumiId } = subject;
+            const startTime = __isNotBlank(airDate) ? new Date(airDate) : new Date(season + '-01');
+            return { bangumiId, startTime };
+        });
     const { rows } = await subscribeRep.insertBatch(subscribes);
     __log.info('[Subscribe insert] Inserted subscribe rows:', rows);
     return rows;

@@ -7,9 +7,10 @@ import {
     handleSubjectView, searchSubjects, updateSubjectFin,
     updateSubjectHide, updateSubjectIsShort, updateSubjectSeason
 } from "#modules/anime/service/subject/subjectService.js";
-import { fetchAndCleanBangumiSubject, pullCleanedBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
+import { fetchAndCleanBangumiSubject, pullAnimeSubjects, pullCleanedBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN } from "#modules/anime/entity/subjectResultMap.js";
 import { allowLanHosts } from "#common/constants/allowHostsConst.js";
+import { getNextSeason } from "#common/utils/dateUtil.js";
 
 const { GET, POST } = apiMethodConst;
 const needAuth = needAuthSingleClient.MANAGE;
@@ -181,6 +182,38 @@ export default defineRoutes({
         callback: req => {
             const { id, fin } = req.body;
             return updateSubjectFin(id, fin);
+        }
+    },
+
+    /**
+     * 从 Bangumi API 拉取、清洗并同步番剧数据到数据库
+     * 请求体参数：{ season?: '2026-10', forceUpdate?: number, insertSubscribe?: number, updateProperties?: Array<string> }
+     */
+    "/pullSubjects": {
+        method: POST,
+        needAuth,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeysExists(req, ['updateProperties'])
+            && checkBodyKeyMatch(req, 'forceUpdate', [/^[01]$/])
+            && checkBodyKeyMatch(req, 'insertSubscribe', [/^[01]$/])
+            && checkBodyKeyMatch(req, 'season', [/^[0-9]{4}-(01|04|07|10)$/]),
+        callback: (/** @type {ApiRequest} */ req) => {
+            const { forceUpdate, updateProperties, insertSubscribe, season } = req.body;
+            const options = {
+                forceUpdate: Boolean(forceUpdate),
+                insertSubscribe: Boolean(insertSubscribe)
+            };
+            if (options.forceUpdate) {
+                const toUpdateProps = updateProperties.filter(p => SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN.includes(p));
+                __isEmptyArray(toUpdateProps) && __throwMessage('No supported update properties');
+                options.updateProperties = toUpdateProps;
+            }
+            const [year, month] = season.split('-');
+            const startDate = `${year}-${month}-01`;
+            const [nextYear, nextMonth] = getNextSeason([year, month]);
+            const endDate = `${nextYear}-${nextMonth}-01`;
+            return pullAnimeSubjects([startDate, endDate], options);
         }
     }
 });

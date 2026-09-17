@@ -1,4 +1,5 @@
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
+import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "#modules/anime/constants/subjectConstant.js";
 import { MATCHERS, STAFF_TAG_CLEAN } from "#modules/anime/constants/subjectTagConstant.js";
 import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js";
 import {
@@ -132,8 +133,8 @@ const SHORT_ANIME_INCLUDES = ['泡面', '泡面番'];
  */
 function getPlatformFromSubject(subject) {
     const { platform, tags } = subject;
-    if (tags.some(t => SHORT_ANIME_INCLUDES.includes(t.name)) && platform === 'TV') {
-        return 'TV_Short';
+    if (tags.some(t => SHORT_ANIME_INCLUDES.includes(t.name)) && platform === SUBJECT_PLATFORM_DEFAULT) {
+        return SUBJECT_PLATFORM_IS_SHORT;
     }
     return platform;
 }

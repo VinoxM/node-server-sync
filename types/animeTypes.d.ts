@@ -57,7 +57,7 @@ export interface SubjectPullOptions {
   limit?: number;
   /** 单个请求间隔延时 (毫秒) */
   delayMs?: number;
-  /** 是否跳过角色和声优信息抓取 */
+  /** 是否跳过角色和声优信息抓取, 默认为false */
   skipCharacter?: boolean;
   /** 是否使用原始图片, 默认为 false */
   useOriginImage?: boolean;

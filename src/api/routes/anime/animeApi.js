@@ -1,8 +1,6 @@
 import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
-import { getNextSeason } from '#utils/dateUtil.js';
 import { checkBodyKeyMatch, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
-import { pullAnimeSubjects, pullCurrentSeasonAnime } from '#modules/anime/service/subject/subjectPullService.js';
 import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, getUserPlayHistory, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { allowLanHosts } from '#common/constants/allowHostsConst.js';
@@ -132,29 +130,6 @@ export default defineRoutes({
             userInfo || __throwMessage('Permission denied.', -401, 401);
             const { subjectId, episode, duration, currentTime } = req.body;
             return saveAnimeProgress(userInfo, subjectId, episode, { duration, currentTime });
-        }
-    },
-
-    /**
-     * 从 Bangumi API 拉取、清洗并同步番剧数据到数据库（默认禁用，通过后台任务/管理接口调用）
-     * 请求体参数：{ season?: '2026-10', force?: boolean }
-     */
-    "/pullAnime": {
-        disabled: true,
-        method: POST,
-        needSecret,
-        callback: (/** @type {ApiRequest} */ req) => {
-            const forceUpdate = req.body?.force === 'true' || Boolean(req.body?.force);
-            const options = { forceUpdate, insertSubscribe: true };
-            if (__isNotBlank(req.body?.season)) {
-                /^[0-9]{4}-(01|04|07|10)$/.test(req.body.season) || __throwMessage('Invalid season.');
-                const [year, month] = req.body.season.split('-');
-                const startDate = `${year}-${month}-01`;
-                const [nextYear, nextMonth] = getNextSeason([year, month]);
-                const endDate = `${nextYear}-${nextMonth}-01`;
-                return pullAnimeSubjects([startDate, endDate], options);
-            }
-            return pullCurrentSeasonAnime(options);
         }
     }
 });
