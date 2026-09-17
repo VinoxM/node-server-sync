@@ -4,7 +4,7 @@ import { generateMinioSourceSafely } from '#modules/media/service/mediaMinioServ
 import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
 import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 import subjectsRep from '#modules/anime/repository/subjectsRep.js';
-import { getAnimeProgress } from './animeProgressService';
+import { getAnimeProgress } from '#modules/anime/service/animeProgressService.js';
 
 /**
  * 获取 RSS 异常处理卡片概览数量（解析失败剧集数与字幕失败数）
