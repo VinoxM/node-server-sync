@@ -29,35 +29,45 @@ export async function getRssEpisodeSource(rssSubsId, episode, userInfo) {
     const subject = await subjectsRep.selectOneVisibleBySubsId(rssSubsId);
     subject || __throwMessage('Subject not exists.');
     const title = __isNotBlank(subject.nameCN) ? subject.nameCN : subject.name;
-    const sourcesData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId, episode);
-    const episodeData = sourcesData?.data?.find(r => r.episode === episode);
+    const sourcesData = await rssEpisodeRep.selectSourceBySubsIdAndEpisode(rssSubsId);
+    let episodeData = null;
+    const episodes = [];
+    const sources = []
+    sourcesData.data.forEach(r => {
+        if (r.episode === episode) {
+            episodeData = r;
+        }
+        episodes.push(episode);
+        sources.push({ episode: r.episode, title: `${title} - ${r.episode}` });
+    })
     const result = {
         url: null,
         subtitles: [],
         unsupportedFonts: [],
         title: null,
-        sources: sourcesData?.data.map(d => ({ episode: d.episode, title: `${title} - ${d.episode}` }))
+        currentTime: null,
+        sources
     };
-    if (!episodeData?.minioLink) return result;
-    result.url = generateMinioSourceSafely(episodeData.minioLink);
-    result.title = `${title} - ${episode}`;
+    if (episodeData?.minioLink) {
+        result.url = generateMinioSourceSafely(episodeData.minioLink);
+        result.title = `${title} - ${episode}`;
+        const { data } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode);
+        const unsupportedFontSet = new Set();
+        for (const subtitle of data) {
+            const { minioLink, fonts, title } = subtitle;
+            const obj = { url: generateMinioSourceSafely(minioLink), fonts, title };
+            if (__isNotBlank(fonts)) {
+                const fontNameArr = fonts.split(',');
+                const fontArr = await rssFontsRep.selectByTitles(fontNameArr);
+                fontNameArr.forEach(f => fontArr.some(_f => _f.title === f) || unsupportedFontSet.add(f));
+                obj.fonts = fontArr.map(f => generateMinioSourceSafely(f.minioLink));
+            }
+            result.subtitles.push(obj);
+        }
+        result.unsupportedFonts = Array.from(unsupportedFontSet);
+    }
     const progressData = await getAnimeProgress(userInfo, subject.id, episode);
     result.currentTime = progressData?.currentTime;
-    const { data, rows } = await rssSubtitleRep.selectBySubsIdAndEpisode(rssSubsId, episode);
-    if (rows === 0) return result;
-    const unsupportedFontSet = new Set();
-    for (const subtitle of data) {
-        const { minioLink, fonts, title } = subtitle;
-        const obj = { url: generateMinioSourceSafely(minioLink), fonts, title };
-        if (__isNotBlank(fonts)) {
-            const fontNameArr = fonts.split(',');
-            const fontArr = await rssFontsRep.selectByTitles(fontNameArr);
-            fontNameArr.forEach(f => fontArr.some(_f => _f.title === f) || unsupportedFontSet.add(f));
-            obj.fonts = fontArr.map(f => generateMinioSourceSafely(f.minioLink));
-        }
-        result.subtitles.push(obj);
-    }
-    result.unsupportedFonts = Array.from(unsupportedFontSet);
     return result;
 }
 

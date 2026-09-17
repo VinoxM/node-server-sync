@@ -67,3 +67,7 @@ export async function createSubscribeBySubjectId(subjectId) {
     const res = await subscribeRep.insertOne({ bangumiId, startTime });
     return res.rows;
 }
+
+export async function resetVectorStatusByBangumiIds(bangumiIds) {
+
+}

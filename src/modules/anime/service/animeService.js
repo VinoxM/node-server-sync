@@ -7,8 +7,8 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
 import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
 import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
-import { getAnimeProgressList } from "#modules/anime/service/animeProgressService.js";
-import { json } from "express";
+import { getAnimeEpisodesProgress, getAnimeProgressList } from "#modules/anime/service/animeProgressService.js";
+import { EPISODE_STATUS } from "#modules/anime/constants/rssTaskStatusConst.js";
 
 /**
  * 格式化番剧数据为日历紧凑视图结构
@@ -114,8 +114,19 @@ export async function getAnimeInformation(id, userInfo) {
         episodes = await getRssEpisodesByRssSubscribeId(subsId);
     }
     if (__isNotEmptyArray(episodes)) {
-        episodes = episodes.map(ep => ({ id: ep.id, episode: ep.episode, status: ep.status }))
+        const episodeArr = [];
+        episodes = episodes.map(ep => (ep.status === EPISODE_STATUS.COMPLETE && episodeArr.push(ep.episode), { id: ep.id, episode: ep.episode, status: ep.status }))
             .toSorted((a, b) => a.episode - b.episode);
+        const { map } = await getAnimeEpisodesProgress(userInfo, id, episodeArr);
+        episodes = episodes.map(ep => {
+            if (map[ep.episode]) {
+                return {
+                    ...ep,
+                    progress: map[ep.episode]
+                }
+            }
+            return ep;
+        })
     }
     return {
         ...subjectView,

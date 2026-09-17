@@ -49,3 +49,36 @@ export interface RecentProgressListResult {
   /** 播放进度记录列表 */
   list: MediaProgressPayload[];
 }
+
+/**
+ * 番剧单集播放进度详情
+ */
+export interface AnimeEpisodeProgressItem {
+  /** 集数标识 (如 1, 2, "01") */
+  episode: string | number;
+  /** 当前播放时间点 (秒) */
+  currentTime: number;
+  /** 视频总时长 (秒) */
+  duration: number;
+  /** 播放进度百分比 (0.0 ~ 1.0) */
+  percentage: number;
+  /** 是否已完播 */
+  isFinished: boolean;
+  /** 最后播放时间戳 (毫秒)，未播放时为 null */
+  updatedAt: number | null;
+  /** 附加扩展元数据 */
+  extra?: Record<string, any>;
+}
+
+/**
+ * 批量获取番剧多集播放进度结果
+ */
+export interface AnimeEpisodesProgressResult {
+  /** 该番剧最近播放的一集进度记录（若均未播放则为 null） */
+  latest: AnimeEpisodeProgressItem | null;
+  /** 各剧集进度列表 */
+  list: AnimeEpisodeProgressItem[];
+  /** 以 episode 为 Key 的进度映射字典 */
+  map: Record<string | number, AnimeEpisodeProgressItem | null>;
+}
+

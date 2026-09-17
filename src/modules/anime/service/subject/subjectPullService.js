@@ -6,6 +6,7 @@ import { bangumiApi } from "#modules/anime/service/bangumi/bangumiApiService.js"
 import { cleanBangumiSubject } from "#modules/anime/service/subject/subjectCleanService.js";
 import { fetchSubjectsByAirDate } from "#modules/anime/service/subject/subjectFetchService.js";
 import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "#modules/anime/constants/subjectConstant.js";
+import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssSubscribeService.js";
 
 /**
  * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
@@ -128,6 +129,10 @@ export async function upsertCleanedSubjects(subjects, options = {}) {
         updatedRows = (await subjectsRep.updateBatch(updateSubjects, handleUpdateProperties(updateProperties))).rows;
     }
     __log.info(`[Subject Upsert] Total: ${subjects.length}, Inserted ${insertedRows}, Updated ${updatedRows}`);
+    if (updatedRows > 0) {
+        const bangumiIds = updateSubjects.map(o => o.bangumiId);
+        await resetVectorStatusByBangumiIds(bangumiIds);
+    }
     return {
         inserted: insertedRows,
         updated: updatedRows

@@ -486,6 +486,14 @@ export const getRecentMediaProgressList = (platform, userId, pageNum, pageSize) 
 export const deleteMediaProgress = (platform, userId, videoIds) => progressStore.deleteProgress(platform, userId, videoIds);
 
 /**
+ * 批量查询一组视频的播放进度 (快捷入口)
+ * @param {string|number} platform
+ * @param {string|number} userId
+ * @param {Array<string|number>} videoIds
+ */
+export const batchGetMediaProgress = (platform, userId, videoIds) => progressStore.batchGetProgress(platform, userId, videoIds);
+
+/**
  * 清空某平台所有播放记录 (快捷入口)
  * @param {string|number} platform
  * @param {string|number} userId

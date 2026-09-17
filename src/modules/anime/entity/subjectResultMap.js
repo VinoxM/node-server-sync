@@ -20,6 +20,18 @@ export const SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN = [
 ]
 
 /**
+ * 变更后需要更新向量状态的字段属性
+ * @readonly
+ * @enum {string}
+ */
+export const NEED_TO_RESET_VECTOR_STATUS_COLUMN = [
+    'name',
+    'nameCN',
+    'nameAlias',
+    'summary'
+]
+
+/**
  * subjects 表字段与实体属性映射配置列表
  * @type {Array<{ property: string, column: string, defaultValue?: () => any }>}
  */

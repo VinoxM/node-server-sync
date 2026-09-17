@@ -1,10 +1,11 @@
 import { getCurSeason } from "#common/utils/dateUtil.js";
-import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
+import { convertPropertiesToCloumns, NEED_TO_RESET_VECTOR_STATUS_COLUMN } from "#modules/anime/entity/subjectResultMap.js";
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
 import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
+import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssSubscribeService.js";
 
 /**
  * 差异对比并更新当前季度未完结的动画条目
@@ -39,7 +40,10 @@ async function diffAndUpsertSubject(subject) {
     if (diffs.length === 0) return false;
     __log.info(`[Bangumi Difference] Subject[${id}] [${getName(subjectView.name, subjectView.nameCN)}] has ${diffs.length} diffs:`, diffs.join(', '));
     diffs.push('updateTime');
-    await subjectsRep.updateOne(cleanedSubject, convertPropertiesToCloumns(diffs));
+    const { rows } = await subjectsRep.updateOne(cleanedSubject, convertPropertiesToCloumns(diffs));
+    if (diffs.some(s => NEED_TO_RESET_VECTOR_STATUS_COLUMN.includes(s)) && rows > 0) {
+        await resetVectorStatusByBangumiIds([bangumiId]);
+    }
     if (__isNotEmptyArray(cleanedSubject.images)) {
         await putImageStorageLinkBatch(cleanedSubject.images);
     }

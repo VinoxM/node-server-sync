@@ -1,5 +1,6 @@
 import { NEED_AUTH_CLIENT } from "#common/constants/authorizationConst.js";
 import {
+    batchGetMediaProgress,
     clearMediaProgress,
     deleteMediaProgress,
     getMediaProgress,
@@ -44,6 +45,74 @@ export async function getAnimeProgress(userInfo, subjectId, episode) {
 }
 
 /**
+ * 批量获取指定番剧各剧集的播放进度及最后播放时间 (方案二：批量拉取比对)
+ * @param {Object} userInfo - 用户身份信息 (需包含 id)
+ * @param {string|number} subjectId - 番剧 ID
+ * @param {Array<string|number>} episodes - 剧集列表 (如 [1, 2, 3, ...] 或 ['01', '02'])
+ * @returns {Promise<import('#types/progressTypes.d.ts').AnimeEpisodesProgressResult>} 包含最近播放的一集 (latest)、各集列表 (list) 与字典映射 (map)
+ */
+export async function getAnimeEpisodesProgress(userInfo, subjectId, episodes) {
+    const emptyResult = { latest: null, list: [], map: {} };
+    if (!userInfo?.id || __isBlank(subjectId) || !Array.isArray(episodes) || episodes.length === 0) {
+        return emptyResult;
+    }
+
+    const userId = userInfo.id;
+    const platform = NEED_AUTH_CLIENT.ANIME;
+    const validEpisodes = episodes.filter(ep => !__isBlank(ep));
+    if (validEpisodes.length === 0) return emptyResult;
+
+    const videoIds = validEpisodes.map(ep => `${subjectId}:${ep}`);
+    const progressMap = await batchGetMediaProgress(platform, userId, videoIds);
+
+    const list = [];
+    const map = {};
+    let latest = null;
+    let maxUpdatedAt = -1;
+
+    for (const ep of validEpisodes) {
+        const vid = `${subjectId}:${ep}`;
+        const record = progressMap[vid];
+
+        if (record && typeof record === 'object') {
+            const item = {
+                episode: ep,
+                currentTime: record.currentTime ?? 0,
+                duration: record.duration ?? 0,
+                percentage: record.percentage ?? 0,
+                isFinished: Boolean(record.isFinished),
+                updatedAt: record.updatedAt ?? null,
+                extra: record.extra
+            };
+            list.push(item);
+            map[ep] = item;
+
+            if (typeof item.updatedAt === 'number' && item.updatedAt > maxUpdatedAt) {
+                maxUpdatedAt = item.updatedAt;
+                latest = item;
+            }
+        } else {
+            const emptyItem = {
+                episode: ep,
+                currentTime: 0,
+                duration: 0,
+                percentage: 0,
+                isFinished: false,
+                updatedAt: null
+            };
+            list.push(emptyItem);
+            map[ep] = null;
+        }
+    }
+
+    return {
+        latest,
+        list,
+        map
+    };
+}
+
+/**
  * 分页获取指定用户的番剧最近播放历史列表 (按播放时间倒序)
  * @param {Object} userInfo - 用户身份信息
  * @param {number} [pageNum=1] - 当前页码 (从 1 开始)
@@ -51,7 +120,7 @@ export async function getAnimeProgress(userInfo, subjectId, episode) {
  * @returns {Promise<import('#types/progressTypes.d.ts').RecentProgressListResult>}
  */
 export async function getAnimeProgressList(userInfo, pageNum = 1, pageSize = 20) {
-    if (!userInfo?.id) return { total: 0, pageNum, pageSize, list: [] };
+    if (!userInfo?.id) return { total: 0, pageNum: 1, pageSize: 20, list: [] };
     const userId = userInfo.id;
     const platform = NEED_AUTH_CLIENT.ANIME;
     const result = await getRecentMediaProgressList(platform, userId, pageNum, pageSize);
