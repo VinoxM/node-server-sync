@@ -1,4 +1,4 @@
-import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "#modules/anime/constants/subjectConstant.js";
+import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "#modules/anime/constants/subjectConstant.js";
 
 const dbName = 'anime';
 
@@ -91,7 +91,7 @@ export default {
     selectSubscribeResultsEpisodes: id => {
         const sql = `SELECT rs.id, rr.episode `
             + `FROM rss_subscribe rs `
-            + `INNER JOIN rss_result rr ON rr.pid=rs.id `
+            + `INNER JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
             + `WHERE rs.id=? AND rs.fin=${SUBSCRIBE_FIN_VALUE.NO}`;
         return __sqliteDB.selectAll(sql, [id], null, dbName);
     },

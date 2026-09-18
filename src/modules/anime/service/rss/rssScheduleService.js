@@ -222,7 +222,9 @@ async function updateSubscribesFin(toUpdateIds) {
         if (!Number.isInteger(totalEpisodes) || totalEpisodes <= 0) continue;
         const { rows, data: results } = await rssSubscribeRep.selectSubscribeResultsEpisodes(id);
         if (rows === 0) continue;
-        const total = results.filter(r => regex.test(r.episode) && Number.isInteger(Number(r.episode))).length;
+        const episodes = new Set();
+        results.forEach(r => regex.test(r.episode) && Number.isInteger(Number(r.episode)) && episodes.add(r.episode));
+        const total = episodes.size;
         if (totalEpisodes === total) {
             toUpdateFinIds.push(id);
         }
