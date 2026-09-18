@@ -3,7 +3,7 @@
  * @readonly
  * @enum {number}
  */
-export const RSS_SUBSCRIBE_SYNC_STATUS = {
+export const RSS_SUBSCRIBE_VECTOR_STATUS = {
     /** 准备就绪 */
     READY: -1,
     /** 同步中/处理中 */

@@ -1,13 +1,14 @@
 import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
-import { checkBodyKeyMatch, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
+import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, getUserPlayHistory, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
-import { saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
+import { deleteAnimeProgress, saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
+import { searchBySemantic } from '#modules/anime/service/rss/rssVectorService.js';
 
 const { GET, POST } = apiMethodConst;
 
@@ -37,6 +38,21 @@ export default defineRoutes({
             __isNotBlank(fin) && !Object.values(SUBSCRIBE_FIN_VALUE).includes(fin) && __throwMessage('Invalid fin filter.');
             const userInfo = await decodeAuthorization(req);
             return searchAnime(req.body, userInfo);
+        }
+    },
+
+    /**
+     * 按相似度检索番剧列表
+     * 请求体参数：{ query: string, season?: string }
+     */
+    "/search.semantic": {
+        method: POST,
+        needSecret,
+        preCheck: req => checkBodyKeyNotBlank(req, 'query'),
+        callback: async (req) => {
+            const { season, query } = req.body;
+            const userInfo = await decodeAuthorization(req);
+            return searchBySemantic(query, season, userInfo);
         }
     },
 
@@ -104,7 +120,7 @@ export default defineRoutes({
         method: POST,
         allowHosts: allowLanHosts,
         needSecret,
-        // needAuth,
+        needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['pageNum', 'pageSize']),
         callback: async req => {
             const userInfo = await decodeAuthorization(req);
@@ -130,6 +146,24 @@ export default defineRoutes({
             userInfo || __throwMessage('Permission denied.', -401, 401);
             const { subjectId, episode, duration, currentTime } = req.body;
             return saveAnimeProgress(userInfo, subjectId, episode, { duration, currentTime });
+        }
+    },
+
+    /**
+    * 删除指定剧集的视频的播放进度
+    * 请求体参数：{ subjectId: number, episode: number|string }
+    */
+    "/delProgress": {
+        method: POST,
+        allowHosts: allowLanHosts,
+        needSecret,
+        needAuth,
+        preCheck: (req) => checkBodyKeysNotBlank(req, ['subjectId', 'episode']),
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            userInfo || __throwMessage('Permission denied.', -401, 401);
+            const { subjectId, episode } = req.body;
+            return deleteAnimeProgress(userInfo, subjectId, episode);
         }
     }
 });

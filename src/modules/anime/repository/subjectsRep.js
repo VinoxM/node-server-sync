@@ -1,6 +1,6 @@
 import { isCurSeason } from "#common/utils/dateUtil.js";
 import { RSS_SUBTITLE_STATUS } from "#modules/anime/constants/rssSubtitleStatusConst.js";
-import { EPISODE_FAILED_REASON, TASK_STATUS } from "#modules/anime/constants/rssTaskStatusConst.js";
+import { EPISODE_FAILED_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "#modules/anime/constants/subjectConstant.js";
 import { SUBJECT_RESULT_MAP } from "../entity/subjectResultMap.js";
 
@@ -356,6 +356,24 @@ export default {
             + `AND t.id IN (${subjectIds.map(_ => '?').join(',')}) `
             + 'GROUP BY t.id,rs.id ';
         return __sqliteDB.selectAll(sql, subjectIds, null, dbName);
+    },
+
+    /**
+     * 根据番剧 Bangumi ID 列表批量查询可见番剧列表
+     * @param {number[]} bangumiIds - 番剧 Bangumi ID 列表
+     * @returns {Promise<QueryResult<any>>}
+     */
+    selectVisibleByBangumiIds: (bangumiIds) => {
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
+            + `rs.id AS subsId, rs.fin, rs.start_time, `
+            + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count '
+            + 'FROM subjects t '
+            + 'INNER JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
+            + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
+            + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
+            + `AND t.bangumi_id IN (${bangumiIds.map(_ => '?').join(',')}) `
+            + 'GROUP BY t.id,rs.id ';
+        return __sqliteDB.selectAll(sql, bangumiIds, null, dbName);
     },
 
     /**

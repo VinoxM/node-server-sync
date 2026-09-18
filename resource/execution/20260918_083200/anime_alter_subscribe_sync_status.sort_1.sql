@@ -1,0 +1,2 @@
+ALTER TABLE rss_subscribe
+ADD COLUMN vector_status INTEGER NOT NULL DEFAULT -1;

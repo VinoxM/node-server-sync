@@ -5,7 +5,7 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
 import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
-import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssSubscribeService.js";
+import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssVectorService.js";
 
 /**
  * 差异对比并更新当前季度未完结的动画条目

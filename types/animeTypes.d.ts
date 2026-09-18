@@ -95,4 +95,12 @@ export interface AnimeCalendarItem {
   G: number;
   /** 总集数 */
   A: number;
+  /** 最后更新时间戳 */
+  P: number;
+  /** 平台 */
+  F: string;
+  /** 是否限制级 */
+  B: boolean;
+  /** 搜索结果相似度 */
+  M?: number;
 }

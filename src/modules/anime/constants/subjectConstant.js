@@ -79,10 +79,15 @@ export const SUBJECT_NSFW_VALUE = {
     YES: 1
 };
 
-/** 泡面番平台类型常量 */
+/** 
+ * 泡面番平台类型常量
+ * @readonly
+ */
 export const SUBJECT_PLATFORM_IS_SHORT = 'TV_Short';
 
-/** 标准 TV 动画平台类型常量 */
+/** 标准 TV 动画平台类型常量
+ * @readonly
+ */
 export const SUBJECT_PLATFORM_DEFAULT = 'TV';
 
 export const SUBJECT_PLATFORM_SEARCH_MAPPING = {

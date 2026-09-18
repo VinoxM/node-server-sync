@@ -1,4 +1,5 @@
 import { SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE } from "#modules/anime/constants/subjectConstant.js";
+import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 
 const dbName = 'anime';
 
@@ -130,5 +131,21 @@ export default {
     updateFinByBangumiId: (bangumiId, fin) => {
         const sql = `UPDATE rss_subscribe SET fin = ? WHERE bangumi_id = ?`;
         return __sqliteDB.update(sql, [fin, bangumiId], null, dbName);
-    }
+    },
+
+    selectReadyVectors: (limited = 500) => {
+        return __sqliteDB.selectAll(`SELECT bangumi_id FROM rss_subscribe WHERE vector_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_VECTOR_STATUS.READY], null, dbName);
+    },
+
+    selectForVectorByBangumiIds: (bangumiIds) => {
+        const sql = `SELECT t.bangumi_id, t.name, t.name_cn AS nameCN, t.season, t.name_alias, t.summary, t.summary_cn AS summaryCN `
+            + `FROM rss_subscribe rs `
+            + `INNER JOIN subjects t ON rs.bangumi_id=t.bangumi_id `
+            + `WHERE t.bangumi_id IN (${bangumiIds.map(() => '?').join(',')}) AND rs.vector_status!=? `;
+        return __sqliteDB.selectAll(sql, [...bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.PENDING], null, dbName)
+    },
+
+    updateVectorStatusByBangumiIds: (bangumiIds, status) => {
+        return __sqliteDB.update(`UPDATE rss_subscribe SET vector_status=? WHERE bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`, [status, ...bangumiIds], null, dbName)
+    },
 };
