@@ -124,7 +124,7 @@ export async function deleteOneEpisode(episodeId) {
  * @returns {Promise<{rows: number}>}
  */
 export async function deleteEpisodeBatch(episodeIds) {
-    if (__isNotEmptyArray(episodeIds)) return { rows: 0 };
+    if (__isEmptyArray(episodeIds)) return { rows: 0 };
     let result = 0;
     for (const episodeId of episodeIds) {
         try {
@@ -342,7 +342,7 @@ export async function deleteOneFailedEpisode(failedEpisodeId) {
  * @returns {Promise<{rows: number}>}
  */
 export async function deleteFailedEpisodeBatch(failedEpisodeIds) {
-    if (__isNotEmptyArray(failedEpisodeIds)) return { rows: 0 };
+    if (__isEmptyArray(failedEpisodeIds)) return { rows: 0 };
     let result = 0;
     for (const failedEpisodeId of failedEpisodeIds) {
         try {

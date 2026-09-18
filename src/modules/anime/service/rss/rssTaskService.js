@@ -497,7 +497,7 @@ export async function deleteTask(taskId) {
  * @returns {Promise<{rows: number}>}
  */
 export async function deleteTaskBatch(taskIds) {
-    if (__isNotEmptyArray(taskIds)) return { rows: 0 };
+    if (__isEmptyArray(taskIds)) return { rows: 0 };
     let result = 0;
     for (const taskId of taskIds) {
         try {
