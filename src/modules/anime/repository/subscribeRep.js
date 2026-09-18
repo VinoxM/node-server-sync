@@ -141,7 +141,7 @@ export default {
     /**
      * 查询待同步/就绪状态 (READY) 的订阅记录 Bangumi ID 列表
      * @param {number} [limited=500] - 单次查询条数上限
-     * @returns {Promise<QueryResult<{ bangumi_id: number }>>}
+     * @returns {Promise<QueryResult<{ bangumiId: number }>>}
      */
     selectReadyVectors: (limited = 500) => {
         return __sqliteDB.selectAll(`SELECT bangumi_id FROM rss_subscribe WHERE vector_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_VECTOR_STATUS.READY], null, dbName);

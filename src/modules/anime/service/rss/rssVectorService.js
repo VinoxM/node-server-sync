@@ -6,6 +6,7 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 
 const collectionName = 'RssSubscribe';
+const batchUpsertLimited = 10;
 
 /**
  * 将指定 Bangumi ID 的订阅向量状态重置为待同步 (READY)
@@ -19,12 +20,22 @@ export async function resetVectorStatusByBangumiIds(bangumiIds) {
 
 /**
  * 定时任务/自动回填：批量处理待同步 (READY) 的番剧名称与简介向量
+ * @param {AbortSignal} [jobSignal] - 中断信号
  * @param {number} [limited=500] - 单次处理上限
  * @returns {Promise<void>}
  */
-export async function backfillEmptyNameVector(limited = 500) {
+export async function backfillEmptyNameVector(jobSignal, limited = 500) {
     const subs = await subscribeRep.selectReadyVectors(limited).then(res => res.data);
-    await updateNameVectorByBangumiIds(subs.map(d => d.bangumiId));
+    const bangumiIds = subs.map(d => d.bangumiId);
+    const batchSize = Math.floor(bangumiIds.length / batchUpsertLimited);
+    for (let i = 0; i < bangumiIds.length; i += batchSize) {
+        if (jobSignal?.aborted) {            
+            __log.warn('[RssSubscribe Vector] Backfill received abort signal, breaking loop gracefully.');
+            break;
+        }
+        const batch = bangumiIds.slice(i, i + batchSize);
+        await updateNameVectorByBangumiIds(batch);
+    }
 }
 
 /**
@@ -61,7 +72,7 @@ function resolveVectorStrArray(strArr) {
  * @param {Array<number|string>} [bangumiIds=[]] - Bangumi ID 列表
  * @returns {Promise<void>}
  */
-export async function updateNameVectorByBangumiIds(bangumiIds = []) {
+async function updateNameVectorByBangumiIds(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
     await ensureSubjectSubscribeCollection();
     const { data } = await subscribeRep.selectForVectorByBangumiIds(bangumiIds);
@@ -137,16 +148,10 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
     await ensureSubjectSubscribeCollection();
     __log.info(`[RssSubscribe Search] Semantic search [queryText=${queryText}, season=${season || ''}, similarity=${similarity}]`);
     // 语义向量搜索
+    const seasonFilters = __isBlank(season) ? null : [{ key: 'season', match: { value: season } }];
     const semanticResults = await qdrantClient.search(collectionName, queryText, {
         limit: 20,
-        filter: __isBlank(season) ? null : {
-            must: [
-                {
-                    key: 'season',
-                    match: { value: season }
-                }
-            ]
-        },
+        filter: seasonFilters ? { must: seasonFilters } : null,
         withPayload: false,
         scoreThreshold: similarity
     });
@@ -155,7 +160,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
     try {
         textResults = await qdrantClient.search(collectionName, queryText, {
             filter: {
-                must: [{ key: 'fullTitle', match: { text: queryText } }]
+                must: [{ key: 'fullTitle', match: { text: queryText } }, ...(seasonFilters ?? [])]
             },
             limit: 20,
             withPayload: false,
@@ -174,7 +179,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
     const valResults = Array.from(mergedResults.values());
     const similarityKey = 'score';
     if (__isNotEmptyArray(idResults)) {
-        const { data: result } = await subjectsRep.selectVisibleByBangumiIds(idResults);
+        const { data: result } = await subjectsRep.selectVisibleByBangumiIds(idResults, season);
         const resultData = result.map(r => {
             r.similarity = valResults.find(o => o.id === r.bangumiId)?.[similarityKey];
             return r;

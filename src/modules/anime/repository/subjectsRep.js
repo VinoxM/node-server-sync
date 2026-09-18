@@ -363,7 +363,8 @@ export default {
      * @param {number[]} bangumiIds - 番剧 Bangumi ID 列表
      * @returns {Promise<QueryResult<any>>}
      */
-    selectVisibleByBangumiIds: (bangumiIds) => {
+    selectVisibleByBangumiIds: (bangumiIds, season) => {
+        const params = [...bangumiIds];
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count '
@@ -372,8 +373,9 @@ export default {
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
             + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
             + `AND t.bangumi_id IN (${bangumiIds.map(_ => '?').join(',')}) `
+            + (__isNotBlank(season) ? (params.push(season) ,'AND t.season=? ') : '')
             + 'GROUP BY t.id,rs.id ';
-        return __sqliteDB.selectAll(sql, bangumiIds, null, dbName);
+        return __sqliteDB.selectAll(sql, params, null, dbName);
     },
 
     /**

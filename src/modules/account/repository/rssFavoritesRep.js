@@ -17,7 +17,7 @@ export default {
         let params = [uid];
         if (!__isEmptyArray(subsIds)) {
             const arr = Array.from(subsIds);
-            sql += 'AND rss_subs_id IN(' + new Array(arr.length).fill('?').join(',') + ')';
+            sql += ' AND rss_subs_id IN(' + new Array(arr.length).fill('?').join(',') + ')';
             params = [uid, ...arr];
         }
         sql += ' ORDER BY rss_subs_id DESC';

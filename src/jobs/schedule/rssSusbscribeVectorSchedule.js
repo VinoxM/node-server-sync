@@ -9,5 +9,6 @@ export default defineScheduleJob({
     scheduleKey: "rssSubscribeVector",
     jobName: "Rss Subscribe Vector Backfill",
     defaultCron: "0 0 6 * * *",
-    jobCallback: () => backfillEmptyNameVector()
+    abortable: true,
+    jobCallback: (signal) => backfillEmptyNameVector(signal)
 });
