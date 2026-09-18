@@ -27,13 +27,12 @@ export async function resetVectorStatusByBangumiIds(bangumiIds) {
 export async function backfillEmptyNameVector(jobSignal, limited = 500) {
     const subs = await subscribeRep.selectReadyVectors(limited).then(res => res.data);
     const bangumiIds = subs.map(d => d.bangumiId);
-    const batchSize = Math.floor(bangumiIds.length / batchUpsertLimited);
-    for (let i = 0; i < bangumiIds.length; i += batchSize) {
+    for (let i = 0; i < bangumiIds.length; i += batchUpsertLimited) {
         if (jobSignal?.aborted) {            
             __log.warn('[RssSubscribe Vector] Backfill received abort signal, breaking loop gracefully.');
             break;
         }
-        const batch = bangumiIds.slice(i, i + batchSize);
+        const batch = bangumiIds.slice(i, i + batchUpsertLimited);
         await updateNameVectorByBangumiIds(batch);
     }
 }
@@ -107,8 +106,8 @@ async function updateNameVectorByBangumiIds(bangumiIds = []) {
     if (finalStatus === RSS_SUBSCRIBE_VECTOR_STATUS.COMPLETE && __isNotEmptyArray(failedResults)) {
         const failedIds = failedResults.flatMap(r => r.ids);
         __log.warn(`[RssSubscribe Vector] ${failedIds.length} bangumiIds upsert failed:`, failedIds);
-        await subscribeRep.updateVectorStatusByBangumiIds(failedResults, RSS_SUBSCRIBE_VECTOR_STATUS.READY);
-        const failedResultsSet = new Set(failedResults);
+        await subscribeRep.updateVectorStatusByBangumiIds(failedIds, RSS_SUBSCRIBE_VECTOR_STATUS.READY);
+        const failedResultsSet = new Set(failedIds);
         completeResults = bangumiIds.filter(id => !failedResultsSet.has(id));
     }
     __log.info(`[RssSubscribe Vector] Update by bangumiIds:`, completeResults);
