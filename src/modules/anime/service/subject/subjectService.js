@@ -109,7 +109,8 @@ export async function getSubjectForEdit(subjectId) {
     const backfilledSubjectView = await backfillOriginUrl(subjectView, subject.bangumiId, { useExtractProp: true });
     return {
         ...backfilledSubjectView,
-        nsfw: subject.nsfw
+        nsfw: subject.nsfw,
+        updateTime: subject.updateTime
     };
 }
 
