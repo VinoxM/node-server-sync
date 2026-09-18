@@ -5,17 +5,32 @@ import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscri
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 
+const collectionName = 'RssSubscribe';
+
+/**
+ * 将指定 Bangumi ID 的订阅向量状态重置为待同步 (READY)
+ * @param {Array<number|string>} bangumiIds - Bangumi ID 列表
+ * @returns {Promise<ExecResult|{ rows: number }>}
+ */
 export async function resetVectorStatusByBangumiIds(bangumiIds) {
     if (__isEmptyArray(bangumiIds)) return { rows: 0 };
     return subscribeRep.updateVectorStatusByBangumiIds(bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.READY);
 }
 
+/**
+ * 定时任务/自动回填：批量处理待同步 (READY) 的番剧名称与简介向量
+ * @param {number} [limited=500] - 单次处理上限
+ * @returns {Promise<void>}
+ */
 export async function backfillEmptyNameVector(limited = 500) {
     const subs = await subscribeRep.selectReadyVectors(limited).then(res => res.data);
     await updateNameVectorByBangumiIds(subs.map(d => d.bangumiId));
 }
 
-const collectionName = 'RssSubscribe';
+/**
+ * 确保 Qdrant 中存在 RssSubscribe 集合并建立 fullTitle 字段的多语言文本索引
+ * @returns {Promise<void>}
+ */
 async function ensureSubjectSubscribeCollection() {
     const ensure = await qdrantClient.ensureCollection(collectionName);
     if (!ensure) {
@@ -29,6 +44,11 @@ async function ensureSubjectSubscribeCollection() {
     }
 }
 
+/**
+ * 格式化字符串数组为换行符分隔的文本
+ * @param {Array<string>} strArr - 字符串数组
+ * @returns {string}
+ */
 function resolveVectorStrArray(strArr) {
     if (__isNotEmptyArray(strArr)) {
         return `${strArr.filter(__isNotBlank).join('\n')}`;
@@ -36,6 +56,11 @@ function resolveVectorStrArray(strArr) {
     return '';
 }
 
+/**
+ * 批量提取指定 Bangumi ID 的条目元数据，计算 Embeddings 并 Upsert 到 Qdrant 向量数据库
+ * @param {Array<number|string>} [bangumiIds=[]] - Bangumi ID 列表
+ * @returns {Promise<void>}
+ */
 export async function updateNameVectorByBangumiIds(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
     await ensureSubjectSubscribeCollection();
@@ -79,6 +104,11 @@ export async function updateNameVectorByBangumiIds(bangumiIds = []) {
     await subscribeRep.updateVectorStatusByBangumiIds(completeResults, finalStatus);
 }
 
+/**
+ * 从 Qdrant 向量库中删除指定 Bangumi ID 的向量记录
+ * @param {Array<number|string>} [bangumiIds=[]] - Bangumi ID 列表
+ * @returns {Promise<void>}
+ */
 export async function deleteNameVectorByBangumiIds(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
     const exists = await qdrantClient.collectionExists(collectionName);
@@ -88,13 +118,25 @@ export async function deleteNameVectorByBangumiIds(bangumiIds = []) {
     }
 }
 
-const similarityGetter = new GetterContextSubscribe("RssSemanticSearch", () => __env.get('rss.semanticSearch', {}))
-export async function searchBySemantic(queryText, season, userInfo) {
-    const rssSemanticSearch = similarityGetter.getValue()
-    const similarity = rssSemanticSearch?.similarity ?? 0.6
-    await ensureSubjectSubscribeCollection()
-    __log.info(`[RssSubscribe Search] Semantic search [queryText=${queryText}, season=${season || ''}, similarity=${similarity}]`)
-    // semantic search
+/**
+ * 语义搜索配置上下文订阅（读取 similarity 相似度阈值）
+ */
+const similarityGetter = new GetterContextSubscribe("RssSemanticSearch", () => __env.get('rss.semanticSearch', {}));
+
+/**
+ * 结合 Qdrant 向量语义相似度与全文匹配进行番剧智能混合检索
+ * @param {string} queryText - 搜索文本
+ * @param {string} [season] - 季度过滤 (如 '2026-10')
+ * @param {number} [similarity] - 相似度
+ * @param {UserInfo} [userInfo] - 当前用户信息（用于日历视图过滤）
+ * @returns {Promise<Array<import('#types/animeTypes.d.ts').AnimeCalendarItem>>}
+ */
+export async function searchBySemantic(queryText, season, similarityThreshold, userInfo) {
+    const rssSemanticSearch = similarityGetter.getValue();
+    const similarity = similarityThreshold ?? rssSemanticSearch?.similarity ?? 0.6;
+    await ensureSubjectSubscribeCollection();
+    __log.info(`[RssSubscribe Search] Semantic search [queryText=${queryText}, season=${season || ''}, similarity=${similarity}]`);
+    // 语义向量搜索
     const semanticResults = await qdrantClient.search(collectionName, queryText, {
         limit: 20,
         filter: __isBlank(season) ? null : {
@@ -108,7 +150,7 @@ export async function searchBySemantic(queryText, season, userInfo) {
         withPayload: false,
         scoreThreshold: similarity
     });
-    // full text search
+    // 全文检索 (fullTitle)
     let textResults = [];
     try {
         textResults = await qdrantClient.search(collectionName, queryText, {
@@ -121,13 +163,13 @@ export async function searchBySemantic(queryText, season, userInfo) {
         });
     } catch (e) {
         // ignored
-        __log.error(`[RssSubscribe Search] Search [queryText=${queryText}, season=${season || ''}] by full text failed. Cause:`, e.message ?? e)
+        __log.error(`[RssSubscribe Search] Search [queryText=${queryText}, season=${season || ''}] by full text failed. Cause:`, e.message ?? e);
     }
-    // merge results
+    // 合并去重检索结果
     const mergedResults = new Map();
     textResults.forEach(item => mergedResults.set(item.id, item));
     semanticResults.forEach(item => mergedResults.set(item.id, item));
-    // backfill result information
+    // 回填番剧详细信息并按相似度得分降序排序
     const idResults = Array.from(mergedResults.keys());
     const valResults = Array.from(mergedResults.values());
     const similarityKey = 'score';

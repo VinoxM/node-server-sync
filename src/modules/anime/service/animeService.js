@@ -46,9 +46,9 @@ export async function searchAnime(body, userInfo) {
 }
 
 /**
- * 根据番剧 ID 获取前台展示用的完整番剧详情（含别名、Staff、角色声优、RSS 抓取结果与已入库剧集）
+ * 根据番剧 ID 获取前台展示用的完整番剧详情（含别名、Staff、角色声优、RSS 抓取结果、已入库剧集及用户播放进度）
  * @param {number} id - 番剧 ID
- * @param {UserInfo} [userInfo] - 当前登录用户信息 (用于加载已入库剧集)
+ * @param {UserInfo} [userInfo] - 当前登录用户信息 (用于加载已入库剧集和播放进度)
  * @returns {Promise<any>}
  */
 export async function getAnimeInformation(id, userInfo) {
@@ -71,10 +71,10 @@ export async function getAnimeInformation(id, userInfo) {
                 return {
                     ...ep,
                     progress: map[ep.episode]
-                }
+                };
             }
             return ep;
-        })
+        });
     }
     return {
         ...subjectView,
@@ -142,6 +142,14 @@ export async function getUserFavoitesAnime(userInfo) {
     return handleCalendar(results, userInfo);
 }
 
+/**
+ * 格式化播放历史记录中的番剧展示对象
+ * @param {Object} obj - 数据库条目记录
+ * @param {number} currentTime - 当前已播放进度时间（秒）
+ * @param {number} duration - 视频总时长（秒）
+ * @param {string|number} episode - 当前播放的话数/集数
+ * @returns {Object}
+ */
 function handlePlayHistorySubject(obj, currentTime, duration, episode) {
     const { platform, metaTags, nameAlias, nsfw, ...rest } = obj;
     const isTV = obj.platform === SUBJECT_PLATFORM_DEFAULT || JSON.parse(obj.metaTags || '[]').includes?.(SUBJECT_PLATFORM_DEFAULT);
@@ -156,9 +164,16 @@ function handlePlayHistorySubject(obj, currentTime, duration, episode) {
         currentTime,
         duration,
         episode
-    }
+    };
 }
 
+/**
+ * 分页获取当前登录用户的番剧播放历史记录列表
+ * @param {UserInfo} userInfo - 用户信息
+ * @param {number} pageNum - 页码
+ * @param {number} pageSize - 单页条数
+ * @returns {Promise<{ record: Array<any>, total: number, pageNum: number, pageSize: number }>}
+ */
 export async function getUserPlayHistory(userInfo, pageNum, pageSize) {
     const result = await getAnimeProgressList(userInfo, pageNum, pageSize);
     const { list, ...rest } = result;
@@ -178,5 +193,5 @@ export async function getUserPlayHistory(userInfo, pageNum, pageSize) {
     return {
         ...rest,
         record
-    }
+    };
 }

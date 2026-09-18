@@ -7,7 +7,7 @@ import { allowLanHosts } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
-import { deleteAnimeProgress, saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
+import { clearAnimeProgress, deleteAnimeProgress, saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
 import { searchBySemantic } from '#modules/anime/service/rss/rssVectorService.js';
 
 const { GET, POST } = apiMethodConst;
@@ -50,9 +50,13 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'query'),
         callback: async (req) => {
-            const { season, query } = req.body;
+            const { season, query, similarity } = req.body;
             const userInfo = await decodeAuthorization(req);
-            return searchBySemantic(query, season, userInfo);
+            let similarityThreshold = Number(similarity);
+            if (Number.isNaN(similarityThreshold) || similarityThreshold > 0.95 || similarityThreshold < 0.3) {
+                similarityThreshold = null;
+            }
+            return searchBySemantic(query, season, similarityThreshold, userInfo);
         }
     },
 
@@ -130,7 +134,7 @@ export default defineRoutes({
     },
 
     /**
-     * 保存指定剧集的视频的播放进度
+     * 保存指定剧集的视频播放进度
      * 请求体参数：{ subjectId: number, episode: number|string, duration: number, currentTime: number }
      */
     "/saveProgress": {
@@ -150,7 +154,7 @@ export default defineRoutes({
     },
 
     /**
-    * 删除指定剧集的视频的播放进度
+    * 删除指定剧集的视频播放进度
     * 请求体参数：{ subjectId: number, episode: number|string }
     */
     "/delProgress": {
@@ -164,6 +168,21 @@ export default defineRoutes({
             userInfo || __throwMessage('Permission denied.', -401, 401);
             const { subjectId, episode } = req.body;
             return deleteAnimeProgress(userInfo, subjectId, episode);
+        }
+    },
+
+    /**
+    * 清空所有剧集的视频播放进度
+    */
+    "/clearProgress": {
+        method: POST,
+        allowHosts: allowLanHosts,
+        needSecret,
+        needAuth,
+        callback: async req => {
+            const userInfo = await decodeAuthorization(req);
+            userInfo || __throwMessage('Permission denied.', -401, 401);
+            return clearAnimeProgress(userInfo);
         }
     }
 });
