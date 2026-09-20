@@ -53,7 +53,7 @@ export default defineRoutes({
             const { season, query, similarity } = req.body;
             const userInfo = await decodeAuthorization(req);
             let similarityThreshold = Number(similarity);
-            if (Number.isNaN(similarityThreshold) || similarityThreshold > 0.95 || similarityThreshold < 0.3) {
+            if (Number.isNaN(similarityThreshold) || similarityThreshold > 0.7 || similarityThreshold < 0.3) {
                 similarityThreshold = null;
             }
             return searchBySemantic(query, season, similarityThreshold, userInfo);
