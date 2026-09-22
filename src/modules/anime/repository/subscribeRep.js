@@ -25,15 +25,16 @@ async function insertAny(subscribes) {
     if (!subscribes || subscribes.length === 0) {
         return { rows: 0 };
     }
-    const valueSql = `(${new Array(FULL_COLUMNS.length - 1).fill('?').join(',')})`;
-    const sql = `INSERT OR IGNORE INTO rss_subscribe (${FULL_COLUMNS.slice(1).join(',')}) VALUES ${subscribes.map(() => valueSql).join(',')}`;
+    const valueSql = `(${new Array(INSERT_COLUMNS_LENGTH + 1).fill('?').join(',')})`; // with 'vector_status' column
+    const sql = `INSERT OR IGNORE INTO rss_subscribe (${FULL_COLUMNS.slice(1).join(',')}, vector_status) VALUES ${subscribes.map(() => valueSql).join(',')}`;
     const values = subscribes.flatMap(data => [
         data.bangumiId,
         data.startTime,
         data.url,
         data.regex,
         data.fin ?? SUBSCRIBE_FIN_VALUE.NO,
-        data.goon ?? SUBSCRIBE_GOON_VALUE.NO
+        data.goon ?? SUBSCRIBE_GOON_VALUE.NO,
+        data.vectorStatus ?? RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED
     ]);
     return __sqliteDB.insert(sql, values, null, dbName);
 }
@@ -139,12 +140,14 @@ export default {
     },
 
     /**
-     * 查询待同步/就绪状态 (READY) 的订阅记录 Bangumi ID 列表
+     * 查询指定向量状态的订阅记录 Bangumi ID 列表
+     * @param {number} status - 查询向量状态
      * @param {number} [limited=500] - 单次查询条数上限
      * @returns {Promise<QueryResult<{ bangumiId: number }>>}
      */
-    selectReadyVectors: (limited = 500) => {
-        return __sqliteDB.selectAll(`SELECT bangumi_id FROM rss_subscribe WHERE vector_status=? LIMIT ${limited}`, [RSS_SUBSCRIBE_VECTOR_STATUS.READY], null, dbName);
+    selectByVectorStatus: (status, limited = 500) => {
+        const queryStatus = Object.values(RSS_SUBSCRIBE_VECTOR_STATUS).includes(status) ? status : RSS_SUBSCRIBE_VECTOR_STATUS.READY;
+        return __sqliteDB.selectAll(`SELECT bangumi_id FROM rss_subscribe WHERE vector_status=? LIMIT ${limited}`, [queryStatus], null, dbName);
     },
 
     /**
@@ -158,6 +161,21 @@ export default {
             + `INNER JOIN subjects t ON rs.bangumi_id=t.bangumi_id `
             + `WHERE t.bangumi_id IN (${bangumiIds.map(() => '?').join(',')}) AND rs.vector_status!=? `;
         return __sqliteDB.selectAll(sql, [...bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.PENDING], null, dbName);
+    },
+
+    /**
+     * 批量重置指定 Bangumi ID 订阅记录的向量同步状态
+     * @param {Array<number|string>} bangumiIds - Bangumi ID 集合
+     * @returns {Promise<ExecResult>}
+     */
+    resetVectorStatusByBangumiIds: (bangumiIds) => {
+        const sql = `UPDATE rss_subscribe AS rs `
+            + `SET rs.vector_status = `
+            + `CASE t.summary_cn `
+            + `WHEN IS NULL THEN ${RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED} `
+            + `ELSE ${RSS_SUBSCRIBE_VECTOR_STATUS.READY} END FROM subjects t `
+            + `WHERE rs.bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`
+        return __sqliteDB.update(sql, bangumiIds, null, dbName);
     },
 
     /**

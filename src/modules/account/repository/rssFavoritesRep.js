@@ -1,7 +1,5 @@
 const dbName = 'account';
 
-const enablePrint = { print: true };
-
 /**
  * 用户 RSS 订阅收藏数据访问仓库
  */
@@ -44,7 +42,7 @@ export default {
      */
     deleteUserFavorite: (uid, subsId) => {
         const sql = 'DELETE FROM user_rss_favorites WHERE uid = ? AND rss_subs_id = ?';
-        return __sqliteDB.delete(sql, [uid, subsId], enablePrint, dbName);
+        return __sqliteDB.delete(sql, [uid, subsId], null, dbName);
     },
 
     /**

@@ -1,9 +1,11 @@
 import { handleCalendar } from "#common/utils/subjectUtil.js";
+import { tryTranslateJaToZh } from "#common/utils/translateUtil.js";
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { qdrantClient } from "#core/instance/qdrantClient.js";
 import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
+import { getSummaryCNFromSummary } from "../subject/subjectCleanService.js";
 
 const collectionName = 'RssSubscribe';
 const batchUpsertLimited = 10;
@@ -15,7 +17,44 @@ const batchUpsertLimited = 10;
  */
 export async function resetVectorStatusByBangumiIds(bangumiIds) {
     if (__isEmptyArray(bangumiIds)) return { rows: 0 };
-    return subscribeRep.updateVectorStatusByBangumiIds(bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.READY);
+    return subscribeRep.resetVectorStatusByBangumiIds(bangumiIds);
+}
+
+/**
+ * 批量回填指定 Bangumi ID 条目的中文简介
+ * @param {AbortSignal} [jobSignal] - 中断信号
+ * @param {number} [limited=500] - 单次处理上限
+ * @returns {Promise<void>}
+ */
+export async function backfillSubjectSummaryCN(jobSignal, limited = 500) {
+    const preparedSubs = await subscribeRep.selectByVectorStatus(RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED, limited).then(res => res.data);
+    const bangumiIds = preparedSubs.map(d => d.bangumiId);
+    if (__isEmptyArray(bangumiIds)) return;
+    const { data: subjects } = await subjectsRep.selectByBangumiIds(bangumiIds);
+    const toUpdateSubjects = [], needToResetBangumiIds = [];
+    for (const { bangumiId, summary, summaryCN } of subjects) {
+        if (jobSignal?.aborted) {
+            __log.warn('[RssSubscribe Vector] Backfill summaryCN received abort signal, breaking loop gracefully.');
+            break;
+        }
+        if (__isNotBlank(summary) && __isBlank(summaryCN)) {
+            const summaryObj = getSummaryCNFromSummary(summary);
+            if (__isNotBlank(summaryObj.summaryCN)) {
+                toUpdateSubjects.push({ bangumiId, ...summaryObj });
+                needToResetBangumiIds.push(bangumiId);
+            } else {
+                const translated = await tryTranslateJaToZh(summary);
+                if (__isNotBlank(translated)) {
+                    toUpdateSubjects.push({ bangumiId, summary, summaryCN: translated });
+                    needToResetBangumiIds.push(bangumiId);
+                }
+            }
+        }
+    }
+    if (__isNotEmptyArray(toUpdateSubjects)) {
+        await subjectsRep.updateBatch(toUpdateSubjects, ['summary', 'summary_cn']);
+        await resetVectorStatusByBangumiIds(needToResetBangumiIds);
+    }
 }
 
 /**
@@ -24,12 +63,12 @@ export async function resetVectorStatusByBangumiIds(bangumiIds) {
  * @param {number} [limited=500] - 单次处理上限
  * @returns {Promise<void>}
  */
-export async function backfillEmptyNameVector(jobSignal, limited = 500) {
-    const subs = await subscribeRep.selectReadyVectors(limited).then(res => res.data);
-    const bangumiIds = subs.map(d => d.bangumiId);
+export async function backfillSubscribeVector(jobSignal, limited = 500) {
+    const readySubs = await subscribeRep.selectByVectorStatus(RSS_SUBSCRIBE_VECTOR_STATUS.READY, limited).then(res => res.data);
+    const bangumiIds = readySubs.map(d => d.bangumiId);
     for (let i = 0; i < bangumiIds.length; i += batchUpsertLimited) {
-        if (jobSignal?.aborted) {            
-            __log.warn('[RssSubscribe Vector] Backfill received abort signal, breaking loop gracefully.');
+        if (jobSignal?.aborted) {
+            __log.warn('[RssSubscribe Vector] Backfill vector received abort signal, breaking loop gracefully.');
             break;
         }
         const batch = bangumiIds.slice(i, i + batchUpsertLimited);

@@ -4,15 +4,19 @@ import { AsyncExecutor as Executor } from '#core/infra/asyncExecutor.js';
 import { Tracer } from '#core/infra/tracer.js';
 import { extractTextEmbedding } from '#utils/transformUtil.js';
 
-const defaultOptions = { print: false, resultMap: null };
+const defaultOptions = { print: 'debug', resultMap: null };
+const emptyPrint = () => { };
 
 /**
  * 根据 options 配置获取日志打印函数
  * @param {DbOptions} [options] - 选项
  * @returns {Function} 日志打印函数
  */
-function getPrinter(options) {
-    return options?.print ? __log.info : __log.debug;
+function getPrinter(options = {}) {
+    if (__isNotBlank(options.print) && options.print in __log) {
+        return __log[options.print]
+    }
+    return emptyPrint;
 }
 
 /**
@@ -221,7 +225,7 @@ export class SqliteDB {
     async #tableExists({ tableName, DDL, sqlScript, forceImport, recreate }, dbName) {
         const sql = `SELECT count(*) AS count FROM sqlite_master WHERE type='table' AND name = ?`;
         return new Promise(resolve => {
-            this.#queryOne(sql, [tableName], null, dbName).then((res) => {
+            this.#queryOne(sql, [tableName], { print: null }, dbName).then((res) => {
                 const count = res?.count || 0;
                 const tableImport = () => {
                     __log.info(`[Initialize Table] ${tableName}`);

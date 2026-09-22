@@ -213,6 +213,22 @@ async function getCharactersBySubjectId(subjectId, options = {}) {
     return { results, images };
 }
 
+const SUMMARY_CN_SPLIT_KEYWORDS = ['原文', '简介原文'];
+export function getSummaryCNFromSummary(summary) {
+    const result = { summary, summaryCN: null };
+    if (__isNotBlank(summary)) {
+        const lines = String(summary).split('\n');
+        const index = lines.findIndex(line => SUMMARY_CN_SPLIT_KEYWORDS.some(s => line.includes(s)));
+        if (index > -1) {
+            const summaryJP = lines.slice(index + 1).join('\n').trim();
+            const summaryCN = lines.slice(0, index).join('\n').trim();
+            result.summary = summaryJP;
+            result.summaryCN = summaryCN;
+        }
+    }
+    return result;
+}
+
 /**
  * 清洗 Bangumi 原始 API 条目数据为标准数据库入库结构
  * 包括计算所属季度、提取中文别名、解析制作人员 Staff、抓取主角配角与声优图片并入库图片转存表
@@ -241,6 +257,7 @@ export async function cleanBangumiSubject(subject, options = {}) {
         characters.push(...charactersResult.results);
     }
     const cover = ensureImageStorageLink(images, subject.images?.large || subject.image, generateSubjectCoverLink(subject.id), options);
+    const { summary, summaryCN } = getSummaryCNFromSummary(subject.summary);
     const result = {
         bangumiId: subject.id,
         name: subject.name,
@@ -249,7 +266,8 @@ export async function cleanBangumiSubject(subject, options = {}) {
         platform,
         airDate: subject.date,
         season,
-        summary: subject.summary,
+        summary,
+        summaryCN,
         totalEpisodes: subject.total_episodes,
         cover,
         metaTags: JSON.stringify(Array.from(metaTags)),

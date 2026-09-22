@@ -1,7 +1,5 @@
 const dbName = 'account';
 
-const enablePrint = { print: true };
-
 /**
  * 用户账户数据访问仓库
  */
@@ -66,6 +64,6 @@ export default {
         }
         const sql = 'UPDATE auth_user SET password = ?, update_time = ? WHERE uname = ?';
         const params = [password, new Date(), uname];
-        return __sqliteDB.update(sql, params, enablePrint, dbName).then(res => res.rows);
+        return __sqliteDB.update(sql, params, null, dbName).then(res => res.rows);
     }
 };

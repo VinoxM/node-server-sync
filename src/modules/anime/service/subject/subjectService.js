@@ -26,7 +26,7 @@ export function handleSubjectView(subject) {
     if (!subject) return subject;
     const {
         subsId, nameAlias, platform, metaTags, staff, characters,
-        hide, nsfw, updateTime, createTime, summaryCN, season,
+        hide, nsfw, updateTime, createTime, season,
         ...rest
     } = subject;
     const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;

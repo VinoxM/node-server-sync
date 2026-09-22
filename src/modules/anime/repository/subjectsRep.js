@@ -139,6 +139,16 @@ export default {
     },
 
     /**
+     * 根据 Bangumi ID 列表获取完整实体属性
+     * @param {Array<number>} bangumiIds - Bangumi ID 列表
+     * @returns {Promise<any|null>}
+     */
+    selectByBangumiIds: bangumiIds => {
+        if (__isEmptyArray(bangumiIds)) return { rows: 0, data: [] };
+        return __sqliteDB.selectAll(`SELECT ${FULL_COLUMNS.join(',')} FROM subjects WHERE bangumi_id IN (${bangumiIds.map(_ => '?').join(',')})`, bangumiIds, null, dbName);
+    },
+
+    /**
      * 根据主键 ID 获取前台展示用的条目与订阅关联明细
      * @param {number} id - 主键 ID
      * @returns {Promise<any|null>}
@@ -373,7 +383,7 @@ export default {
             + `LEFT JOIN rss_result rr ON rr.pid=rs.id AND rr.hide=${SUBSCRIBE_RESULT_HIDE_VALUE.NO} `
             + `WHERE t.hide=${SUBJECT_HIDE_VALUE.NO} `
             + `AND t.bangumi_id IN (${bangumiIds.map(_ => '?').join(',')}) `
-            + (__isNotBlank(season) ? (params.push(season) ,'AND t.season=? ') : '')
+            + (__isNotBlank(season) ? (params.push(season), 'AND t.season=? ') : '')
             + 'GROUP BY t.id,rs.id ';
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
@@ -456,10 +466,10 @@ export default {
     /**
      * 查询尚未完结（需执行元数据 Diff 对比同步）的番剧列表
      * @param {string} curSeason - 当前季度 (如 '2026-10')
-     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
+     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryCN: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
      */
     selectNotFinSubjectsForDiff: (curSeason) => {
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.total_episodes, t.meta_tags, t.staff, t.characters `
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.summary_cn AS summaryCN, t.total_episodes, t.meta_tags, t.staff, t.characters `
             + `FROM subjects t `
             + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${SUBSCRIBE_FIN_VALUE.NO} `
             + `WHERE t.season <= ?`;

@@ -1,5 +1,7 @@
-import ScriptImporter from "#core/infra/scriptImporter.js";
+import TextImporter from "#core/infra/textImporter.js";
 import sshExecutorConst from "./constants/sshExecutorConst.js";
+
+const SCRIPTS_FOLDER = '@/src/modules/ssh/scripts';
 
 /**
  * 读取并校验指定的 SSH Shell 脚本文件内容
@@ -10,7 +12,7 @@ import sshExecutorConst from "./constants/sshExecutorConst.js";
  * @throws {Error} 当脚本内容为空时抛出异常
  */
 function importSshScript(label, title, descGenerator) {
-    const script = new ScriptImporter(label).value;
+    const script = new TextImporter({ label, folder: SCRIPTS_FOLDER }).value;
     if (__isBlank(script)) {
         throw new Error(`Script ${label} is blank.`);
     }

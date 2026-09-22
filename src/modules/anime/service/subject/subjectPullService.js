@@ -7,6 +7,7 @@ import { cleanBangumiSubject } from "#modules/anime/service/subject/subjectClean
 import { fetchSubjectsByAirDate } from "#modules/anime/service/subject/subjectFetchService.js";
 import { SUBJECT_PLATFORM_DEFAULT, SUBJECT_PLATFORM_IS_SHORT } from "#modules/anime/constants/subjectConstant.js";
 import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssVectorService.js";
+import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 
 /**
  * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
@@ -162,8 +163,8 @@ export async function upsertOneCleanedSubject(subject, options = {}) {
  * @returns {Array<string>}
  */
 function handleUpdateProperties(updateProperties = []) {
-    if (updateProperties.length > 0 && !updateProperties.includes('update_time')) {
-        updateProperties.push('update_time');
+    if (updateProperties.length > 0) {
+        updateProperties.includes('update_time') || updateProperties.push('update_time');
     }
     return convertPropertiesToCloumns(updateProperties);
 }
@@ -178,9 +179,10 @@ const SUPPORTED_INSERT_SUBSCRIBE_SUJECT_PLATFORMS = [SUBJECT_PLATFORM_DEFAULT, S
 async function insertSubjectSubscribes(subjects) {
     const subscribes = subjects.filter(subject => SUPPORTED_INSERT_SUBSCRIBE_SUJECT_PLATFORMS.includes(subject.platform))
         .map(subject => {
-            const { airDate, season, bangumiId } = subject;
+            const { airDate, season, bangumiId, summaryCN } = subject;
             const startTime = __isNotBlank(airDate) ? new Date(airDate) : new Date(season + '-01');
-            return { bangumiId, startTime };
+            const vectorStatus = __isNotBlank(summaryCN) ? RSS_SUBSCRIBE_VECTOR_STATUS.READY : RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED;
+            return { bangumiId, startTime, vectorStatus };
         });
     const { rows } = await subscribeRep.insertBatch(subscribes);
     __log.info('[Subscribe insert] Inserted subscribe rows:', rows);

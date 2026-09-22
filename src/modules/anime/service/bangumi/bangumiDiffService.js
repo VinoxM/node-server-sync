@@ -99,6 +99,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     if (normalizeStr(db.platform) !== normalizeStr(bgm.platform)) diffs.push('platform');
     if (normalizeStr(db.airDate) !== normalizeStr(bgm.airDate)) diffs.push('airDate');
     if (normalizeMultilineStr(db.summary) !== normalizeMultilineStr(bgm.summary)) diffs.push('summary');
+    if (normalizeMultilineStr(db.summaryCN) !== normalizeMultilineStr(bgm.summaryCN)) diffs.push('summaryCN');
     if (normalizeEpisodes(db.totalEpisodes) !== normalizeEpisodes(bgm.totalEpisodes)) diffs.push('totalEpisodes');
     if (normalizeArray(db.metaTags) !== normalizeArray(bgm.metaTags)) diffs.push('metaTags');
     if (normalizeStaff(db.staff) !== normalizeStaff(bgm.staff)) diffs.push('staff');

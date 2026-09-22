@@ -1,5 +1,4 @@
 const dbName = 'anime';
-const enablePrint = { print: true };
 
 /**
  * RSS 过滤正则表达式使用历史与热度排行榜仓储服务
@@ -13,7 +12,7 @@ export default {
      */
     insertRegex: (regex, score) => {
         const sql = "INSERT INTO rss_regex_history(regex, score) VALUES(?, ?)";
-        return __sqliteDB.insert(sql, [regex, score], enablePrint, dbName);
+        return __sqliteDB.insert(sql, [regex, score], null, dbName);
     },
 
     /**
@@ -24,7 +23,7 @@ export default {
      */
     updateRegex: (regex, score) => {
         const sql = "UPDATE rss_regex_history SET score = ? WHERE regex = ?";
-        return __sqliteDB.update(sql, [score, regex], enablePrint, dbName);
+        return __sqliteDB.update(sql, [score, regex], null, dbName);
     },
 
     /**
@@ -34,7 +33,7 @@ export default {
      */
     selectScoreByRegex: async (regex) => {
         const sql = "SELECT score FROM rss_regex_history WHERE regex = ?";
-        return __sqliteDB.selectOne(sql, [regex], enablePrint, dbName).then(data => data?.score || null);
+        return __sqliteDB.selectOne(sql, [regex], null, dbName).then(data => data?.score || null);
     },
 
     /**
@@ -45,6 +44,6 @@ export default {
     selectByRank: (limit) => {
         const sql = "SELECT rrh.id id,rrh.regex regex,rrh.score score FROM rss_regex_history rrh " +
             "INNER JOIN (SELECT id, score FROM rss_regex_history ORDER BY score DESC LIMIT ?) t ON rrh.id=t.id";
-        return __sqliteDB.selectAll(sql, [limit], enablePrint, dbName);
+        return __sqliteDB.selectAll(sql, [limit], null, dbName);
     }
 };

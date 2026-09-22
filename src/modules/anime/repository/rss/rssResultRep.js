@@ -1,7 +1,6 @@
 import { dateFormatForDB } from '#utils/dateUtil.js';
 
 const dbName = 'anime';
-const enablePrint = { print: true };
 
 const INSERT_COLUMNS = ['id', 'pid', 'title', 'torrent', 'pub_date', 'tracker', 'episode', 'sort'];
 const BATCH_INSERT_PARAMS_LIMIT = 500;
@@ -74,7 +73,7 @@ export default {
      */
     updateOne: (result) => {
         const sql = "UPDATE rss_result SET title=?,torrent=?,pub_date=?,tracker=?,episode=?, sort=? WHERE id=?";
-        return __sqliteDB.update(sql, [result.title, result.torrent, result.pubDate, result.tracker, result.episode, result.sort, result.id], enablePrint, dbName);
+        return __sqliteDB.update(sql, [result.title, result.torrent, result.pubDate, result.tracker, result.episode, result.sort, result.id], null, dbName);
     },
 
     /**
@@ -84,7 +83,7 @@ export default {
      */
     deleteOneById: (id) => {
         const sql = "DELETE FROM rss_result WHERE id = ?";
-        return __sqliteDB.delete(sql, [id], enablePrint, dbName);
+        return __sqliteDB.delete(sql, [id], null, dbName);
     },
 
     /**
@@ -96,7 +95,7 @@ export default {
     deleteByPid: (pid, transactionDB) => {
         const sql = 'DELETE FROM rss_result WHERE pid = ?';
         const db = transactionDB || __sqliteDB;
-        return db.delete(sql, [pid], enablePrint, dbName);
+        return db.delete(sql, [pid], null, dbName);
     },
 
     /**
@@ -109,7 +108,7 @@ export default {
         if (__isEmptyArray(pids)) return Promise.resolve();
         const sql = `DELETE FROM rss_result WHERE pid IN (${pids.map(_ => "?").join(",")})`;
         const db = transactionDB || __sqliteDB;
-        return db.delete(sql, pids, enablePrint, dbName);
+        return db.delete(sql, pids, null, dbName);
     },
 
     /**
@@ -120,7 +119,7 @@ export default {
      */
     fakeDeleteOneById: (id, hide) => {
         const sql = "UPDATE rss_result SET hide = ? WHERE id = ?";
-        return __sqliteDB.update(sql, [hide, id], enablePrint, dbName);
+        return __sqliteDB.update(sql, [hide, id], null, dbName);
     },
 
     /**

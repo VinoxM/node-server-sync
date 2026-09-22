@@ -1,4 +1,4 @@
-import { backfillEmptyNameVector } from "#modules/anime/service/rss/rssVectorService.js";
+import { backfillSubjectSummaryCN, backfillSubscribeVector } from "#modules/anime/service/rss/rssVectorService.js";
 import { defineScheduleJob } from "#utils/defineUtil.js";
 
 /**
@@ -10,5 +10,8 @@ export default defineScheduleJob({
     jobName: "Rss Subscribe Vector Backfill",
     defaultCron: "0 0 6 * * *",
     abortable: true,
-    jobCallback: (signal) => backfillEmptyNameVector(signal)
+    jobCallback: async (signal) => {
+        signal?.aborted || await backfillSubjectSummaryCN(signal);
+        // signal?.aborted || await backfillSubscribeVector(signal);
+    }
 });

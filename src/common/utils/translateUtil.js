@@ -16,7 +16,7 @@ const CONFIG = {
     maxChunkChars: 800,      // 单个 Text Chunk 最大字符数 (建议 500~1000 字)
     concurrency: 2,          // 并发请求数 (取决于服务器 CPU/GPU 负载能力)
     temperature: 0.1,        // 低随机性，保持翻译稳定
-    systemPrompt: '你是一个轻小说翻译模型，请将下面的日文文本翻译成中文。'
+    systemPrompt: '你是一个ACG方向的日译中翻译模型，请将下面的文本从日文翻译成中文，如果文本大部分内容已经是中文，则直接回复 “无需翻译”。'
 };
 
 /**
@@ -136,4 +136,18 @@ export const translateJaToZh = async (fullText) => {
     });
     __log.debug(`[Sakura] Translation complete, reassembling text...`);
     return translatedChunks.join('\n\n');
+}
+
+/**
+ * 尝试自动切分并批量并发翻译日文长文本为中文（基于 Sakura 大语言模型）, 如果翻译失败返回null
+ * @param {string} fullText - 待翻译的日文长文本
+ * @returns {Promise<string|null>} 拼接完成的中文文本
+ */
+export async function tryTranslateJaToZh(fullText) {
+    try {
+        return await translateJaToZh(fullText);
+    } catch (ex) {
+        __log.error(`[Sakura] Translation failed, cause:`, ex.message || ex);
+        return null;
+    }
 }

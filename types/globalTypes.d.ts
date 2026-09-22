@@ -157,7 +157,7 @@ declare global {
      */
     interface DbOptions {
         /** 是否打印当前 SQL 执行日志 */
-        print?: boolean;
+        print?: 'info' | 'debug' | null;
         /** 列名到实体属性名的映射 */
         resultMap?: Record<string, string> | Array<{ column: string; property: string }> | null;
         /** 批量执行模式 */

@@ -1,7 +1,5 @@
 const dbName = 'kuro';
 
-const enablePrint = { print: true };
-
 /**
  * 库洛游戏 (Kuro Game) 社区与签到数据访问仓库
  */
@@ -25,7 +23,7 @@ export default {
      */
     insertOrUpdateAccount: ({ uid, token }) => {
         const sql = 'REPLACE INTO kuro_community_account(uid, token) VALUES(?,?)';
-        return __sqliteDB.insert(sql, [uid, token], enablePrint, dbName);
+        return __sqliteDB.insert(sql, [uid, token], null, dbName);
     },
 
     /**
@@ -35,7 +33,7 @@ export default {
      */
     deleteAccountByUid: (uid) => {
         const sql = 'DELETE FROM kuro_community_account WHERE uid=?';
-        return __sqliteDB.delete(sql, [uid], enablePrint, dbName);
+        return __sqliteDB.delete(sql, [uid], null, dbName);
     },
 
     /**
@@ -57,7 +55,7 @@ export default {
      */
     insertOrUpdateSignGames: ({ uid, games }) => {
         const sql = 'REPLACE INTO kuro_game_sign(uid, game_ids) VALUES(?, ?)';
-        return __sqliteDB.insert(sql, [uid, games], enablePrint, dbName);
+        return __sqliteDB.insert(sql, [uid, games], null, dbName);
     },
 
     /**
