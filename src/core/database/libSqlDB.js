@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client';
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { AsyncExecutor as Executor } from '#core/infra/asyncExecutor.js';
 import { Tracer } from '#core/infra/tracer.js';
-import { extractTextEmbedding } from '#utils/transformUtil.js';
+import { extractTextEmbedding } from '#agent';
 
 const defaultOptions = { print: 'debug', resultMap: null };
 const emptyPrint = () => { };
@@ -12,8 +12,9 @@ const emptyPrint = () => { };
  * @param {DbOptions} [options] - 选项
  * @returns {Function} 日志打印函数
  */
-function getPrinter(options = {}) {
-    if (__isNotBlank(options.print) && options.print in __log) {
+function getPrinter(options) {
+    options = options ?? defaultOptions;
+    if (__isNotBlank(options.print) && __log?.[options.print]) {
         return __log[options.print]
     }
     return emptyPrint;
@@ -74,6 +75,7 @@ export class SqliteDB {
      * @returns {Promise<ExecResult>} 执行影响结果
      */
     async #exec(sql, parameters, options = defaultOptions, dbName) {
+        options = options ?? defaultOptions;
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
@@ -108,6 +110,7 @@ export class SqliteDB {
      * @returns {Promise<BatchExecResult>} 批处理执行结果
      */
     async #execBatch(batchArgs = [], options = defaultOptions, dbName) {
+        options = options ?? defaultOptions;
         if (!batchArgs || batchArgs.length === 0) {
             return { rows: 0, results: [] };
         }
@@ -157,6 +160,7 @@ export class SqliteDB {
      * @returns {Promise<void>}
      */
     async #execMulti(sql, options = defaultOptions, dbName) {
+        options = options ?? defaultOptions;
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
@@ -176,10 +180,11 @@ export class SqliteDB {
      * @returns {Promise<QueryResult<T>>} 查询结果对象
      */
     async #query(sql, parameters, options = defaultOptions, dbName) {
+        options = options ?? defaultOptions;
         if (!dbName) {
             dbName = this.#defaultDbName;
         }
-        const { resultMap } = options ?? defaultOptions;
+        const { resultMap } = options;
         const client = await this.#connect(dbName);
 
         const printer = getPrinter(options);
@@ -464,7 +469,7 @@ export class SqliteDB {
             vectorStr, vectorStr,
             indexName, vectorStr, limit
         );
-        const opts = options.options || defaultOptions;
+        const opts = options?.options ?? defaultOptions;
         return this.#query(sql, params, opts, dbName);
     }
 
@@ -537,6 +542,7 @@ class TransactionLibSqlDB {
      * @returns {Promise<ExecResult>}
      */
     async #exec(sql, parameters, options = defaultOptions) {
+        options = options ?? defaultOptions;
         const printer = getPrinter(options);
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters);
@@ -564,7 +570,8 @@ class TransactionLibSqlDB {
      * @returns {Promise<QueryResult<T>>}
      */
     async #query(sql, parameters, options = defaultOptions) {
-        const { resultMap } = options ?? defaultOptions;
+        options = options ?? defaultOptions;
+        const { resultMap } = options;
         const printer = getPrinter(options);
         printer(`===> Preparing: ${sql}`);
         const params = tryResolveParams(parameters);
@@ -734,7 +741,7 @@ class TransactionLibSqlDB {
             vectorStr, vectorStr,
             indexName, vectorStr, limit
         );
-        const opts = options.options || defaultOptions;
+        const opts = options?.options ?? defaultOptions;
         return this.#query(sql, params, opts);
     }
 }

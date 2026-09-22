@@ -1,6 +1,6 @@
 import { ContextSubscribe } from "../context/subscribe.js";
 import { QdrantClient as QdrantApiClient } from '@qdrant/js-client-rest';
-import { extractTextEmbedding, extractTextHybridEmbedding } from "#utils/transformUtil.js";
+import { extractTextEmbedding, extractTextHybridEmbedding } from "#agent";
 
 /**
  * Qdrant 底层连接与通用操作管理器 (模块私有，不对外导出)

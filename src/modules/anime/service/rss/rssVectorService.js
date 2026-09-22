@@ -1,14 +1,16 @@
 import { handleCalendar } from "#common/utils/subjectUtil.js";
-import { tryTranslateJaToZh } from "#common/utils/translateUtil.js";
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { qdrantClient } from "#core/instance/qdrantClient.js";
 import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscribeConsts.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
-import { getSummaryCNFromSummary } from "../subject/subjectCleanService.js";
 
-const collectionName = 'RssSubscribe';
-const batchUpsertLimited = 10;
+/**
+ * 订阅在 Qdrant 中的向量集合名字
+ * @readonly
+ * @enum {string}
+ */
+const SUBSCRIBE_COLLECTION_NAME = 'RssSubscribe';
 
 /**
  * 将指定 Bangumi ID 的订阅向量状态重置为待同步 (READY)
@@ -21,69 +23,13 @@ export async function resetVectorStatusByBangumiIds(bangumiIds) {
 }
 
 /**
- * 批量回填指定 Bangumi ID 条目的中文简介
- * @param {AbortSignal} [jobSignal] - 中断信号
- * @param {number} [limited=500] - 单次处理上限
- * @returns {Promise<void>}
- */
-export async function backfillSubjectSummaryCN(jobSignal, limited = 500) {
-    const preparedSubs = await subscribeRep.selectByVectorStatus(RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED, limited).then(res => res.data);
-    const bangumiIds = preparedSubs.map(d => d.bangumiId);
-    if (__isEmptyArray(bangumiIds)) return;
-    const { data: subjects } = await subjectsRep.selectByBangumiIds(bangumiIds);
-    const toUpdateSubjects = [], needToResetBangumiIds = [];
-    for (const { bangumiId, summary, summaryCN } of subjects) {
-        if (jobSignal?.aborted) {
-            __log.warn('[RssSubscribe Vector] Backfill summaryCN received abort signal, breaking loop gracefully.');
-            break;
-        }
-        if (__isNotBlank(summary) && __isBlank(summaryCN)) {
-            const summaryObj = getSummaryCNFromSummary(summary);
-            if (__isNotBlank(summaryObj.summaryCN)) {
-                toUpdateSubjects.push({ bangumiId, ...summaryObj });
-                needToResetBangumiIds.push(bangumiId);
-            } else {
-                const translated = await tryTranslateJaToZh(summary);
-                if (__isNotBlank(translated)) {
-                    toUpdateSubjects.push({ bangumiId, summary, summaryCN: translated });
-                    needToResetBangumiIds.push(bangumiId);
-                }
-            }
-        }
-    }
-    if (__isNotEmptyArray(toUpdateSubjects)) {
-        await subjectsRep.updateBatch(toUpdateSubjects, ['summary', 'summary_cn']);
-        await resetVectorStatusByBangumiIds(needToResetBangumiIds);
-    }
-}
-
-/**
- * 定时任务/自动回填：批量处理待同步 (READY) 的番剧名称与简介向量
- * @param {AbortSignal} [jobSignal] - 中断信号
- * @param {number} [limited=500] - 单次处理上限
- * @returns {Promise<void>}
- */
-export async function backfillSubscribeVector(jobSignal, limited = 500) {
-    const readySubs = await subscribeRep.selectByVectorStatus(RSS_SUBSCRIBE_VECTOR_STATUS.READY, limited).then(res => res.data);
-    const bangumiIds = readySubs.map(d => d.bangumiId);
-    for (let i = 0; i < bangumiIds.length; i += batchUpsertLimited) {
-        if (jobSignal?.aborted) {
-            __log.warn('[RssSubscribe Vector] Backfill vector received abort signal, breaking loop gracefully.');
-            break;
-        }
-        const batch = bangumiIds.slice(i, i + batchUpsertLimited);
-        await updateNameVectorByBangumiIds(batch);
-    }
-}
-
-/**
  * 确保 Qdrant 中存在 RssSubscribe 集合并建立 fullTitle 字段的多语言文本索引
  * @returns {Promise<void>}
  */
 async function ensureSubjectSubscribeCollection() {
-    const ensure = await qdrantClient.ensureCollection(collectionName);
+    const ensure = await qdrantClient.ensureCollection(SUBSCRIBE_COLLECTION_NAME);
     if (!ensure) {
-        await qdrantClient.createPayloadIndex(collectionName, 'fullTitle', {
+        await qdrantClient.createPayloadIndex(SUBSCRIBE_COLLECTION_NAME, 'fullTitle', {
             type: 'text',
             tokenizer: 'multilingual',
             min_token_len: 1,
@@ -110,18 +56,18 @@ function resolveVectorStrArray(strArr) {
  * @param {Array<number|string>} [bangumiIds=[]] - Bangumi ID 列表
  * @returns {Promise<void>}
  */
-async function updateNameVectorByBangumiIds(bangumiIds = []) {
+export async function updateSubscribeVector(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
     await ensureSubjectSubscribeCollection();
     const { data } = await subscribeRep.selectForVectorByBangumiIds(bangumiIds);
     if (data.length === 0) return;
-    __log.info(`[RssSubscribe Vector] Update by ids:`, bangumiIds);
+    __log.info(`[RssSubscribe Vector] Ready to update vector:`, data.length);
     await subscribeRep.updateVectorStatusByBangumiIds(bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.PENDING);
     let finalStatus = RSS_SUBSCRIBE_VECTOR_STATUS.COMPLETE;
     let failedResults = [];
     let completeResults = bangumiIds;
     try {
-        const results = await qdrantClient.upsertBatchWithEmbed(collectionName, data.map(d => ({
+        const results = await qdrantClient.upsertBatchWithEmbed(SUBSCRIBE_COLLECTION_NAME, data.map(d => ({
             id: d.bangumiId,
             payload: {
                 season: d.season,
@@ -160,10 +106,10 @@ async function updateNameVectorByBangumiIds(bangumiIds = []) {
  */
 export async function deleteNameVectorByBangumiIds(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
-    const exists = await qdrantClient.collectionExists(collectionName);
+    const exists = await qdrantClient.collectionExists(SUBSCRIBE_COLLECTION_NAME);
     if (exists) {
         __log.info(`[RssSubscribe Vector] Delete by ids:`, bangumiIds);
-        await qdrantClient.delete(collectionName, { ids: bangumiIds });
+        await qdrantClient.delete(SUBSCRIBE_COLLECTION_NAME, { ids: bangumiIds });
     }
 }
 
@@ -187,7 +133,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
     __log.info(`[RssSubscribe Search] Semantic search [queryText=${queryText}, season=${season || ''}, similarity=${similarity}]`);
     // 语义向量搜索
     const seasonFilters = __isBlank(season) ? null : [{ key: 'season', match: { value: season } }];
-    const semanticResults = await qdrantClient.search(collectionName, queryText, {
+    const semanticResults = await qdrantClient.search(SUBSCRIBE_COLLECTION_NAME, queryText, {
         limit: 20,
         filter: seasonFilters ? { must: seasonFilters } : null,
         withPayload: false,
@@ -196,7 +142,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
     // 全文检索 (fullTitle)
     let textResults = [];
     try {
-        textResults = await qdrantClient.search(collectionName, queryText, {
+        textResults = await qdrantClient.search(SUBSCRIBE_COLLECTION_NAME, queryText, {
             filter: {
                 must: [{ key: 'fullTitle', match: { text: queryText } }, ...(seasonFilters ?? [])]
             },

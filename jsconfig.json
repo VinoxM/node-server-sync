@@ -1,27 +1,12 @@
 {
   "compilerOptions": {
-    "paths": {
-      "#types/*": [
-        "./types/*"
-      ],
-      "#*": [
-        "./src/*"
-      ],
-      "#utils/*": [
-        "./src/common/utils/*"
-      ],
-      "#constants/*": [
-        "./src/common/constants/*"
-      ],
-      "#tmp/*": [
-        "./temporary/*"
-      ]
-    },
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
     // "checkJs": true
   },
   "include": [
     "src/**/*",
     "types/**/*",
     "temporary/**/*"
-, "deprecated/api/routes/rss.v2", "deprecated/api/routes/rss.v1", "deprecated/modules/rss"  ]
+  ]
 }

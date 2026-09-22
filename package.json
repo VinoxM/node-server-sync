@@ -4,10 +4,12 @@
     "main": "index.js",
     "type": "module",
     "imports": {
-        "#*": "./src/*",
+        "#agent": "./src/modules/agent/index.js",
+        "#agent/*": "./src/modules/agent/*",
         "#utils/*": "./src/common/utils/*",
         "#constants/*": "./src/common/constants/*",
-        "#tmp/*": "./temporary/*"
+        "#tmp/*": "./temporary/*",
+        "#*": "./src/*"
     },
     "scripts": {
         "dev": "node ./src/application.js --active=main,sqlite,dev",

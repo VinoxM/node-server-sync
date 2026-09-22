@@ -169,12 +169,13 @@ export default {
      * @returns {Promise<ExecResult>}
      */
     resetVectorStatusByBangumiIds: (bangumiIds) => {
-        const sql = `UPDATE rss_subscribe AS rs `
-            + `SET rs.vector_status = `
-            + `CASE t.summary_cn `
-            + `WHEN IS NULL THEN ${RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED} `
-            + `ELSE ${RSS_SUBSCRIBE_VECTOR_STATUS.READY} END FROM subjects t `
-            + `WHERE rs.bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`
+        const sql = `UPDATE rss_subscribe `
+            + `SET vector_status = (`
+            + `SELECT CASE WHEN t.summary_cn IS NULL THEN -1 ELSE 0 END `
+            + `FROM subjects t `
+            + `WHERE t.bangumi_id = rss_subscribe.bangumi_id `
+            + `) `
+            + `WHERE bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`
         return __sqliteDB.update(sql, bangumiIds, null, dbName);
     },
 

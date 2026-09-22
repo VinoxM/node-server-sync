@@ -5,8 +5,12 @@ import { RSS_SUBSCRIBE_VECTOR_STATUS } from "#modules/anime/constants/rssSubscri
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 
-/** @type {string} Qdrant 混合检索集合名称 */
-const collectionName = 'RssSubscribeHybrid';
+/** 
+ * Qdrant 混合检索集合名称
+ * @readonly
+ * @enum {string}
+ */
+const SUBSCRIBE_COLLECTION_NAME = 'RssSubscribeHybrid';
 
 /** @type {number} 单次批量 Upsert 条数限制 */
 const batchUpsertLimited = 10;
@@ -18,26 +22,7 @@ const batchUpsertLimited = 10;
  */
 export async function resetVectorStatusByBangumiIds(bangumiIds) {
     if (__isEmptyArray(bangumiIds)) return { rows: 0 };
-    return subscribeRep.updateVectorStatusByBangumiIds(bangumiIds, RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED);
-}
-
-/**
- * 定时任务/自动回填：批量处理待同步 (READY) 的番剧名称与简介混合向量 (Dense + Sparse)
- * @param {AbortSignal} [jobSignal] - 中断信号
- * @param {number} [limited=500] - 单次处理上限
- * @returns {Promise<void>}
- */
-export async function backfillEmptyNameVector(jobSignal, limited = 500) {
-    const subs = await subscribeRep.selectByVectorStatus(RSS_SUBSCRIBE_VECTOR_STATUS.READY, limited).then(res => res.data);
-    const bangumiIds = subs.map(d => d.bangumiId);
-    for (let i = 0; i < bangumiIds.length; i += batchUpsertLimited) {
-        if (jobSignal?.aborted) {
-            __log.warn('[RssSubscribe HybridVector] Backfill received abort signal, breaking loop gracefully.');
-            break;
-        }
-        const batch = bangumiIds.slice(i, i + batchUpsertLimited);
-        await updateNameVectorByBangumiIds(batch);
-    }
+    return subscribeRep.resetVectorStatusByBangumiIds(bangumiIds);
 }
 
 /**
@@ -45,7 +30,7 @@ export async function backfillEmptyNameVector(jobSignal, limited = 500) {
  * @returns {Promise<void>}
  */
 async function ensureSubjectSubscribeCollection() {
-    await qdrantHybridClient.ensureCollection(collectionName);
+    await qdrantHybridClient.ensureCollection(SUBSCRIBE_COLLECTION_NAME);
 }
 
 /**
@@ -65,7 +50,7 @@ function resolveVectorStrArray(strArr) {
  * @param {Array<number|string>} [bangumiIds=[]] - Bangumi ID 列表
  * @returns {Promise<void>}
  */
-async function updateNameVectorByBangumiIds(bangumiIds = []) {
+export async function updateSubscribeVector(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
     await ensureSubjectSubscribeCollection();
     const { data } = await subscribeRep.selectForVectorByBangumiIds(bangumiIds);
@@ -76,7 +61,7 @@ async function updateNameVectorByBangumiIds(bangumiIds = []) {
     let failedResults = [];
     let completeResults = bangumiIds;
     try {
-        const results = await qdrantHybridClient.upsertBatchWithEmbed(collectionName, data.map(d => ({
+        const results = await qdrantHybridClient.upsertBatchWithEmbed(SUBSCRIBE_COLLECTION_NAME, data.map(d => ({
             id: d.bangumiId,
             payload: {
                 season: d.season,
@@ -115,10 +100,10 @@ async function updateNameVectorByBangumiIds(bangumiIds = []) {
  */
 export async function deleteNameVectorByBangumiIds(bangumiIds = []) {
     if (__isEmptyArray(bangumiIds)) return;
-    const exists = await qdrantHybridClient.collectionExists(collectionName);
+    const exists = await qdrantHybridClient.collectionExists(SUBSCRIBE_COLLECTION_NAME);
     if (exists) {
         __log.info(`[RssSubscribe HybridVector] Delete by ids:`, bangumiIds);
-        await qdrantHybridClient.delete(collectionName, { ids: bangumiIds });
+        await qdrantHybridClient.delete(SUBSCRIBE_COLLECTION_NAME, { ids: bangumiIds });
     }
 }
 
@@ -146,7 +131,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
 
     // 2. 发起 Qdrant 原生 Dense + Sparse 双路召回与 RRF 融合排序（单次 RPC）
     // Dense 稠密分支直接使用 scoreThreshold 做语义余弦底噪过滤，Sparse 精确关键词匹配条目保留
-    const points = await qdrantHybridClient.search(collectionName, queryText, {
+    const points = await qdrantHybridClient.search(SUBSCRIBE_COLLECTION_NAME, queryText, {
         limit: 20,
         filter: seasonFilters ? { must: seasonFilters } : null,
         scoreThreshold: similarity,
@@ -165,7 +150,7 @@ export async function searchBySemantic(queryText, season, similarityThreshold, u
         r.similarity = similarityMap.get(r.bangumiId);
         return r;
     }).sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
-      .slice(0, 20);
+        .slice(0, 20);
 
     return handleCalendar(resultData, userInfo);
 }
