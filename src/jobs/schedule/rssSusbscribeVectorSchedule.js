@@ -1,4 +1,4 @@
-import { backfillSubjectSummaryCN, backfillSubscribeVector } from "#modules/anime/service/rss/rssVectorService.js";
+import { backfillSubjectSummaryCNSchedule, backfillSubscribeVectorSchedule } from "#modules/anime/service/subject/subjectScheduleService.js";
 import { defineScheduleJob } from "#utils/defineUtil.js";
 
 /**
@@ -11,7 +11,7 @@ export default defineScheduleJob({
     defaultCron: "0 0 6 * * *",
     abortable: true,
     jobCallback: async (signal) => {
-        signal?.aborted || await backfillSubjectSummaryCN(signal);
-        // signal?.aborted || await backfillSubscribeVector(signal);
+        signal?.aborted || await backfillSubjectSummaryCNSchedule(signal);
+        signal?.aborted || await backfillSubscribeVectorSchedule(signal);
     }
 });
