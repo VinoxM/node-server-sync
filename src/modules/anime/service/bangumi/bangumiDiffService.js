@@ -5,7 +5,7 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
 import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
-import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssVectorService.js";
+import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssHybridVectorService.js";
 
 /**
  * 差异对比并更新当前季度未完结的动画条目
@@ -98,8 +98,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     if (normalizeArray(db.nameAlias) !== normalizeArray(bgm.nameAlias)) diffs.push('nameAlias');
     if (normalizeStr(db.platform) !== normalizeStr(bgm.platform)) diffs.push('platform');
     if (normalizeStr(db.airDate) !== normalizeStr(bgm.airDate)) diffs.push('airDate');
-    if (normalizeMultilineStr(db.summary) !== normalizeMultilineStr(bgm.summary)) diffs.push('summary');
-    if (normalizeMultilineStr(db.summaryCN) !== normalizeMultilineStr(bgm.summaryCN)) diffs.push('summaryCN');
+    if (normalizeMultilineStr(db.summary) !== normalizeMultilineStr(bgm.summary)) diffs.push('summary', 'summaryMulti');
     if (normalizeEpisodes(db.totalEpisodes) !== normalizeEpisodes(bgm.totalEpisodes)) diffs.push('totalEpisodes');
     if (normalizeArray(db.metaTags) !== normalizeArray(bgm.metaTags)) diffs.push('metaTags');
     if (normalizeStaff(db.staff) !== normalizeStaff(bgm.staff)) diffs.push('staff');

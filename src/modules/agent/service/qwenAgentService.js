@@ -43,7 +43,9 @@ export const qwenAgent = new ChatAgentClient({
     model: QWEN_DEFAULT_CONFIG.model,
     defaultParams: {
         temperature: QWEN_DEFAULT_CONFIG.temperature,
-        options: QWEN_DEFAULT_CONFIG.options
+        max_tokens: QWEN_DEFAULT_CONFIG.max_tokens,
+        repeat_penalty: QWEN_DEFAULT_CONFIG.repeat_penalty,
+        frequency_penalty: QWEN_DEFAULT_CONFIG.frequency_penalty
     },
     defaultTimeout: QWEN_DEFAULT_CONFIG.timeout,
     name: 'QwenAgent'

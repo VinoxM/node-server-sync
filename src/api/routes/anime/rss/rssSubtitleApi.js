@@ -1,6 +1,5 @@
 import apiMethodConst from '#constants/apiMethodConst.js';
-import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
-import rssSubtitleRep from '#modules/anime/repository/rss/rssSubtitleRep.js';
+import { checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
 import {
     deleteEpisodeSubtitle, deleteEpisodeSubtitleBatch, deleteEpisodeSubtitleFile, getRssSubtitleMatchers,
     recalculateEpisodeSubtitleFonts, retryUploadEpisodeSubtitle, updateEpisodeSubtitle
@@ -17,18 +16,6 @@ const needSecret = () => "mAou5820.anime.rssSubtitle";
  */
 export default defineRoutes({
     basePath: "/anime/rss/subtitle",
-
-    /**
-     * 获取指定订阅下的所有已解析字幕列表
-     * 请求体参数：{ rssSubsId: number }
-     */
-    '/getSubtitles': {
-        method: POST,
-        needAuth: needAuthSingleClient.MANAGE,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
-        callback: req => rssSubtitleRep.selectBySubsId(req.body.rssSubsId).then(({ data }) => data)
-    },
 
     /**
      * 更新字幕信息（集数、标题、关联字体、文件路径等）

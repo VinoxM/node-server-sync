@@ -136,7 +136,7 @@ class ScheduleJob {
             this.execute(false);
         });
 
-        __log.info(`[Schedule] Job Started: [${this.#jobName}] (Cron: "${this.#cronExpr}", Abortable: ${this.#abortable})`);
+        __log.info(`[Schedule] Job Registered: [${this.#jobName}] (Cron: "${this.#cronExpr}", Abortable: ${this.#abortable})`);
 
         if (this.#immediate) {
             this.execute(false);
@@ -432,7 +432,7 @@ export class Schedule extends ContextSubscribe {
         this.doSubscribe();
         this.cancelAllJob(true);
         this.#rawConfigs.clear();
-        return importFolderScripts("@/src/jobs/schedule", false, module => {
+        return importFolderScripts("@/src/jobs/schedule", true, module => {
             this.addJob(module.default);
         });
     }

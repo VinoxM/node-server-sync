@@ -8,7 +8,7 @@ import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
 import { clearAnimeProgress, deleteAnimeProgress, saveAnimeProgress } from '#modules/anime/service/animeProgressService.js';
-import { searchBySemantic } from '#modules/anime/service/rss/rssVectorService.js';
+import { searchBySemantic } from '#modules/anime/service/rss/rssHybridVectorService.js';
 
 const { GET, POST } = apiMethodConst;
 

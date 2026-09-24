@@ -5,7 +5,8 @@ import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, che
 import {
     getExistsSeasons, getSubjectForEdit, getSubjectForEditView,
     handleSubjectView, searchSubjects, updateSubjectFin,
-    updateSubjectHide, updateSubjectIsShort, updateSubjectSeason
+    updateSubjectHide, updateSubjectIsShort, updateSubjectSeason,
+    updateSubjectSummaryMulti
 } from "#modules/anime/service/subject/subjectService.js";
 import { fetchAndCleanBangumiSubject, pullAnimeSubjects, pullCleanedBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN } from "#modules/anime/entity/subjectResultMap.js";
@@ -182,6 +183,22 @@ export default defineRoutes({
         callback: req => {
             const { id, fin } = req.body;
             return updateSubjectFin(id, fin);
+        }
+    },
+
+    /**
+     * 更新番剧条目多语言简介
+     * 请求体参数：{ id: number, summaryMulti: object }
+     */
+    '/update.summaryMulti': {
+        method: POST,
+        needAuth,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeysExists(req, ['summaryMulti']),
+        callback: req => {
+            const { id, summaryMulti } = req.body;
+            return updateSubjectSummaryMulti(id, summaryMulti);
         }
     },
 

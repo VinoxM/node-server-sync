@@ -27,6 +27,6 @@ export default {
      */
     selectExists: (fileName) => {
         const sql = 'SELECT EXISTS (SELECT 1 FROM migrations WHERE file_name=? AND successful=1) AS [exists]';
-        return __sqliteDB.selectOne(sql, [fileName], null, dbName);
+        return __sqliteDB.selectOne(sql, [fileName], { print: false }, dbName);
     }
 };

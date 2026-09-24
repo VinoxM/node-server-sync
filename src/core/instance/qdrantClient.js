@@ -331,19 +331,20 @@ export class QdrantClient {
      * @returns {Promise<Array<{ ids: (number|string)[], status: string, operation_id?: number }>>}
      */
     async upsert(collectionName, points, opts = {}) {
-        const batchSize = opts.batchSize ?? QdrantClient.UPSERT_BATCH_SIZE;
+        // 仅透传 Qdrant 原生支持的请求字段，避免 batchSize 等控制参数被当作未知字段下发
+        const { batchSize = QdrantClient.UPSERT_BATCH_SIZE, wait = true, ...restOpts } = opts;
         const results = [];
         for (let i = 0; i < points.length; i += batchSize) {
             const batch = points.slice(i, i + batchSize);
             __log.debug(`[QdrantClient] upsert collection=${collectionName} batch=[${i}-${i + batch.length})/${points.length}`);
             const result = await this.#connection.getClient().upsert(collectionName, {
-                wait: true,
+                wait,
                 points: batch.map(p => ({
                     id: p.id,
                     vector: p.vector,
                     payload: p.payload,
                 })),
-                ...opts,
+                ...restOpts,
             });
             results.push({
                 ids: batch.map(p => p.id),
@@ -485,8 +486,22 @@ export class QdrantClient {
 }
 
 /**
+ * 计算 DBSF (Distribution-Based Score Fusion) 归一化所需的分数分布参数
+ * @param {Array<{ score?: number }>} points - 单路召回结果
+ * @returns {{ mean: number, std: number }} 各分支分数的均值与标准差
+ */
+function resolveDbsfParams(points) {
+    const scores = points.map(p => p.score ?? 0);
+    if (scores.length === 0) return { mean: 0, std: 1 };
+    const mean = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+    const variance = scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / scores.length;
+    // 标准差为 0 时（分数完全一致）回退为 1，避免除零导致 NaN
+    return { mean, std: Math.sqrt(variance) || 1 };
+}
+
+/**
  * Qdrant 混合检索客户端管理器 (Dense + Sparse 混合检索，单例模式)
- * 采用组合模式持有私有连接，封装稠密语义向量 + 稀疏词权向量的双路提取、多向量命名集合管理、分批 Upsert 与基于 Prefetch + RRF/DBSF 的多路召回融合检索
+ * 采用组合模式持有私有连接，封装稠密语义向量 + 稀疏词权向量的双路提取、多向量命名集合管理、分批 Upsert 与单次 queryBatch 多路召回 + 客户端 RRF / DBSF 融合检索
  */
 export class QdrantHybridClient {
     /** @type {QdrantHybridClient} 单例实例 */
@@ -500,6 +515,9 @@ export class QdrantHybridClient {
 
     /** @type {number} 向量默认维度 (1024) */
     static DIMENSION = 1024;
+
+    /** @type {number} RRF 融合默认平滑常数 k（计分公式 1/(k+rank)，取值越大越弱化单路排名优势） */
+    static RRF_K = 60;
 
     /** @type {number} 单次 upsert 最大 point 数，防止请求 body 超限 */
     static UPSERT_BATCH_SIZE = 100;
@@ -660,15 +678,20 @@ export class QdrantHybridClient {
      * @returns {Promise<Array<{ ids: (number|string)[], status: string, operation_id?: number }>>}
      */
     async upsert(collectionName, points, opts = {}) {
-        const batchSize = opts.batchSize ?? QdrantHybridClient.UPSERT_BATCH_SIZE;
-        const denseName = opts.denseName ?? QdrantHybridClient.DENSE_NAME;
-        const sparseName = opts.sparseName ?? QdrantHybridClient.SPARSE_NAME;
+        // 仅透传 Qdrant 原生支持的请求字段，避免 batchSize/denseName/sparseName 被当作未知字段下发
+        const {
+            batchSize = QdrantHybridClient.UPSERT_BATCH_SIZE,
+            denseName = QdrantHybridClient.DENSE_NAME,
+            sparseName = QdrantHybridClient.SPARSE_NAME,
+            wait = true,
+            ...restOpts
+        } = opts;
         const results = [];
         for (let i = 0; i < points.length; i += batchSize) {
             const batch = points.slice(i, i + batchSize);
             __log.debug(`[QdrantHybridClient] upsert collection=${collectionName} batch=[${i}-${i + batch.length})/${points.length}`);
             const result = await this.#connection.getClient().upsert(collectionName, {
-                wait: opts.wait ?? true,
+                wait,
                 points: batch.map(p => {
                     const vec = p.vector || {};
                     const dense = vec[denseName] ?? vec.dense;
@@ -682,7 +705,7 @@ export class QdrantHybridClient {
                         payload: p.payload
                     };
                 }),
-                ...opts
+                ...restOpts
             });
             results.push({
                 ids: batch.map(p => p.id),
@@ -732,7 +755,8 @@ export class QdrantHybridClient {
 
     /**
      * 混合检索 (Dense + Sparse Hybrid Search)
-     * 基于 Qdrant 多路召回 Prefetch + RRF（Reciprocal Rank Fusion）/ DBSF 算法实现高效混合排序
+     * 通过单次 queryBatch RPC 发起多路召回（非服务端 fusion），并在客户端执行 RRF / DBSF 融合排序。
+     * 返回对象的 `score` 为融合分数（非相似度），各分支原始分数见 `denseScore` / `sparseScore`
      * @param {string} collectionName - 集合名
      * @param {string | {
      *   dense?: number[],
@@ -747,20 +771,36 @@ export class QdrantHybridClient {
      *   filter?: object,
      *   fusion?: 'rrf' | 'dbsf',
      *   rrfK?: number,
-     *   weights?: number[],
+     *   weights?: [number, number],
      *   denseName?: string,
      *   sparseName?: string,
      *   withPayload?: boolean,
      *   withVector?: boolean,
      *   scoreThreshold?: number,
-     * }} [opts={}] - 检索条件与配置
-     * @returns {Promise<object[]>} 匹配的 Points 结果数组
+     *   denseScoreThreshold?: number,
+     *   sparseScoreThreshold?: number,
+     * }} [opts={}] - 检索条件与配置（scoreThreshold 等价于 denseScoreThreshold，仅作用于稠密分支）
+     * @returns {Promise<object[]>} 匹配的 Points 结果数组（按融合分数降序）
      */
     async search(collectionName, query, opts = {}) {
-        const denseName = opts.denseName ?? QdrantHybridClient.DENSE_NAME;
-        const sparseName = opts.sparseName ?? QdrantHybridClient.SPARSE_NAME;
-        const limit = opts.limit ?? 10;
-        const candidateLimit = opts.candidateLimit ?? (limit * 2 > 20 ? limit * 2 : 20);
+        const {
+            denseName = QdrantHybridClient.DENSE_NAME,
+            sparseName = QdrantHybridClient.SPARSE_NAME,
+            limit = 10,
+            offset = 0,
+            candidateLimit = Math.max(limit * 2, 20),
+            filter,
+            fusion = 'rrf',
+            rrfK = QdrantHybridClient.RRF_K,
+            weights,
+            withPayload = true,
+            withVector = false,
+        } = opts;
+        const [denseWeight = 1, sparseWeight = 1] = Array.isArray(weights) ? weights : [];
+        const useDbsf = fusion === 'dbsf';
+        if (!useDbsf && fusion !== 'rrf') {
+            __log.warn(`[QdrantHybridClient] Unknown fusion "${fusion}", fallback to "rrf".`);
+        }
 
         let denseVector = null;
         let sparseVector = null;
@@ -788,10 +828,10 @@ export class QdrantHybridClient {
                 query: denseVector,
                 using: denseName,
                 limit: candidateLimit,
-                filter: opts.filter,
+                filter,
                 score_threshold: opts.denseScoreThreshold ?? opts.scoreThreshold,
-                with_payload: opts.withPayload ?? true,
-                with_vector: opts.withVector ?? false
+                with_payload: withPayload,
+                with_vector: withVector
             });
             hasDense = true;
         }
@@ -804,10 +844,10 @@ export class QdrantHybridClient {
                 },
                 using: sparseName,
                 limit: candidateLimit,
-                filter: opts.filter,
+                filter,
                 score_threshold: opts.sparseScoreThreshold,
-                with_payload: opts.withPayload ?? true,
-                with_vector: opts.withVector ?? false
+                with_payload: withPayload,
+                with_vector: withVector
             });
             hasSparse = true;
         }
@@ -817,7 +857,7 @@ export class QdrantHybridClient {
             return [];
         }
 
-        __log.debug(`[QdrantHybridClient] hybrid search collection=${collectionName} branches=${searches.length} limit=${limit} denseThreshold=${opts.denseScoreThreshold ?? opts.scoreThreshold}`);
+        __log.debug(`[QdrantHybridClient] hybrid search collection=${collectionName} branches=${searches.length} limit=${limit} fusion=${fusion} rrfK=${rrfK} denseThreshold=${opts.denseScoreThreshold ?? opts.scoreThreshold}`);
         const batchResults = await this.#connection.getClient().queryBatch(collectionName, { searches });
 
         let densePoints = [];
@@ -863,16 +903,23 @@ export class QdrantHybridClient {
             pointMap.set(p.id, item);
         });
 
-        const offset = opts.offset ?? 0;
-        const mergedPoints = Array.from(pointMap.values()).map(item => {
-            const denseRrf = item.denseRank ? (1 / (item.denseRank + 1)) : 0;
-            const sparseRrf = item.sparseRank ? (1 / (item.sparseRank + 1)) : 0;
-            return {
-                ...item,
-                score: denseRrf + sparseRrf
-            };
-        }).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-          .slice(offset, offset + limit);
+        // 融合排序：RRF 采用标准平滑常数 k 计分 1/(k+rank)；DBSF 以各分支均值 ± 3σ 作为归一化区间
+        // 注意 score 为融合分数（非相似度），各分支原始分数保留在 denseScore / sparseScore
+        const denseDbsf = useDbsf ? resolveDbsfParams(densePoints) : null;
+        const sparseDbsf = useDbsf ? resolveDbsfParams(sparsePoints) : null;
+        const fuse = (rank, score, weight, stats) => {
+            if (!rank) return 0;
+            if (!useDbsf) return weight / (rrfK + rank);
+            const { mean, std } = stats;
+            return weight * ((score - (mean - 3 * std)) / (6 * std));
+        };
+
+        const mergedPoints = Array.from(pointMap.values()).map(item => ({
+            ...item,
+            score: fuse(item.denseRank, item.denseScore ?? 0, denseWeight, denseDbsf)
+                + fuse(item.sparseRank, item.sparseScore ?? 0, sparseWeight, sparseDbsf)
+        })).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+            .slice(offset, offset + limit);
 
         __log.debug(`[QdrantHybridClient] hybrid search result count=${mergedPoints.length}`);
         return mergedPoints;

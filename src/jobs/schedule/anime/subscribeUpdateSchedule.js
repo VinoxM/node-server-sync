@@ -2,8 +2,8 @@ import { defineScheduleJob } from '#utils/defineUtil.js';
 import { autoUpdateSubscribe } from '#modules/anime/service/rss/rssScheduleService.js';
 
 export default defineScheduleJob({
-    scheduleKey: "rssSubscribe",
-    jobName: "RSS Subscribe",
+    scheduleKey: "subscribeUpdate",
+    jobName: "RSS Subscribe Update",
     defaultCron: "0 7/30 * * * *",
     retry: {
         maxCount: 3,

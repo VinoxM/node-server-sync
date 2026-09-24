@@ -1,6 +1,5 @@
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from '#utils/preCheckUtil.js';
-import rssEpisodeRep from '#modules/anime/repository/rss/rssEpisodeRep.js';
 import {
     deleteEpisodeBatch,
     deleteFailedEpisodeBatch,
@@ -34,18 +33,6 @@ export default defineRoutes({
     },
 
     /**
-     * 获取指定订阅下已成功解析入库的剧集列表
-     * 请求体参数：{ rssSubsId: number }
-     */
-    '/getEpisodes': {
-        method: POST,
-        needAuth,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
-        callback: req => rssEpisodeRep.selectBySubsId(req.body.rssSubsId).then(({ data }) => data)
-    },
-
-    /**
      * 删除单条已入库剧集（同步清理 MinIO 媒体文件）
      * 请求体参数：{ episodeId: number }
      */
@@ -67,18 +54,6 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'episodeIds'),
         callback: req => deleteEpisodeBatch(req.body.episodeIds)
-    },
-
-    /**
-     * 获取指定订阅下解析失败的异常剧集记录列表
-     * 请求体参数：{ rssSubsId: number }
-     */
-    '/getFailedEpisodes': {
-        method: POST,
-        needAuth,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
-        callback: req => rssEpisodeRep.selectFailedBySubsId(req.body.rssSubsId).then(({ data }) => data)
     },
 
     /**

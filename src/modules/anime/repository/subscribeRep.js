@@ -17,6 +17,15 @@ const INSERT_COLUMNS_LENGTH = FULL_COLUMNS.length - 1; // Exclude 'id' column
 const BATCH_INSERT_PARAMS_LIMIT = 500;
 
 /**
+ * 依据条目摘要 (summary_multi / summary) 推导目标向量同步状态的 SQL 表达式
+ * 必须用 COALESCE 兜底：无关联 subjects 记录时子查询返回 NULL，而 vector_status 为
+ * NOT NULL DEFAULT -1，会导致整条 UPDATE 因约束失败而回滚（影响同批次所有记录）
+ */
+const RESOLVE_VECTOR_STATUS_SQL = `COALESCE((`
+    + `SELECT CASE WHEN t.summary_multi IS NULL AND t.summary IS NOT NULL THEN ${RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED} ELSE ${RSS_SUBSCRIBE_VECTOR_STATUS.READY} END `
+    + `FROM subjects t WHERE t.bangumi_id = rss_subscribe.bangumi_id), ${RSS_SUBSCRIBE_VECTOR_STATUS.READY})`;
+
+/**
  * 内部辅助方法：批量或单条插入订阅记录（若已存在相同 bangumi_id 则忽略）
  * @param {Array<any>} subscribes - 订阅对象数组
  * @returns {Promise<{ rows: number }|ExecResult>}
@@ -153,10 +162,12 @@ export default {
     /**
      * 根据 Bangumi ID 集合查询非挂起 (PENDING) 状态的条目向量文本源数据
      * @param {Array<number|string>} bangumiIds - Bangumi ID 集合
-     * @returns {Promise<QueryResult<{ bangumiId: number, name: string, nameCN: string, season: string, nameAlias: string, summary: string, summaryCN: string }>>}
+     * @returns {Promise<QueryResult<{ bangumiId: number, name: string, nameCN: string, season: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryMulti: string, metaTags: string, staff: string, characters: string, hide: number, nsfw: number }>>}
      */
     selectForVectorByBangumiIds: (bangumiIds) => {
-        const sql = `SELECT t.bangumi_id, t.name, t.name_cn AS nameCN, t.season, t.name_alias, t.summary, t.summary_cn AS summaryCN `
+        const sql = `SELECT t.bangumi_id, t.name, t.name_cn AS nameCN, t.season, t.name_alias AS nameAlias, `
+            + `t.platform, t.air_date AS airDate, t.summary, t.summary_multi, `
+            + `t.meta_tags AS metaTags, t.staff, t.characters, t.hide, t.nsfw `
             + `FROM rss_subscribe rs `
             + `INNER JOIN subjects t ON rs.bangumi_id=t.bangumi_id `
             + `WHERE t.bangumi_id IN (${bangumiIds.map(() => '?').join(',')}) AND rs.vector_status!=? `;
@@ -164,19 +175,24 @@ export default {
     },
 
     /**
-     * 批量重置指定 Bangumi ID 订阅记录的向量同步状态
+     * 批量重置指定 Bangumi ID 订阅记录的向量同步状态（依据摘要情况推导为 PREPARED / READY）
      * @param {Array<number|string>} bangumiIds - Bangumi ID 集合
      * @returns {Promise<ExecResult>}
      */
     resetVectorStatusByBangumiIds: (bangumiIds) => {
-        const sql = `UPDATE rss_subscribe `
-            + `SET vector_status = (`
-            + `SELECT CASE WHEN t.summary_cn IS NULL THEN -1 ELSE 0 END `
-            + `FROM subjects t `
-            + `WHERE t.bangumi_id = rss_subscribe.bangumi_id `
-            + `) `
-            + `WHERE bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`
+        const sql = `UPDATE rss_subscribe SET vector_status = ${RESOLVE_VECTOR_STATUS_SQL} `
+            + `WHERE bangumi_id IN (${bangumiIds.map(() => '?').join(',')})`;
         return __sqliteDB.update(sql, bangumiIds, null, dbName);
+    },
+
+    /**
+     * 回收异常中断残留的 PENDING (同步中) 记录，将其重置为可再次调度的待同步状态
+     * 注意：需确保当前没有同批次向量任务在运行（定时任务启动阶段调用）
+     * @returns {Promise<ExecResult>}
+     */
+    resetStalePendingVectorStatus: () => {
+        const sql = `UPDATE rss_subscribe SET vector_status = ${RESOLVE_VECTOR_STATUS_SQL} WHERE vector_status = ?`;
+        return __sqliteDB.update(sql, [RSS_SUBSCRIBE_VECTOR_STATUS.PENDING], null, dbName);
     },
 
     /**

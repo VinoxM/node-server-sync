@@ -37,9 +37,23 @@ sse:
   disabled:
     - barrage
 schedule:
-  rssSubscribe:
+  # anime
+  bangumiImagesSync:
+    enable: true
+    cron: 0 0 0/3 * * *
+  subjectBackfill:
+    enable: true
+    cron: 0 15 0/3 * * *
+  subjectDiff:
+    enable: true
+    cron: 0 20 4 * * *
+  subscribeUpdate:
     enable: true
     cron: 0 7/30 * * * *
+  subscribeVector:
+    enable: true
+    cron: 0 30 0/2 * * *
+  # others
   clashSubscribe:
     enable: true
     cron: 0 0 0/12 * * *
@@ -52,18 +66,9 @@ schedule:
   storageSummary:
     enable: true
     cron: 0 0 0/2 * * *
-  rssSubscribeVector:
-    enable: true
-    cron: 0 30 0/2 * * *
   biliveStreamAutoSync:
     enable: true
     cron: 0 0 4 * * *
-  bangumiImagesSync:
-    enable: true
-    cron: 0 0 0/3 * * *
-  bangumiSubjectDiff:
-    enable: true
-    cron: 0 20 4 * * *
 rss:
   convertMkvToMp4:
     enable: false

@@ -45,7 +45,7 @@ export const SUBJECT_RESULT_MAP = [
     { property: 'airDate', column: 'air_date' },
     { property: 'season', column: 'season' },
     { property: 'summary', column: 'summary' },
-    { property: 'summaryCN', column: 'summary_cn' },
+    { property: 'summaryMulti', column: 'summary_multi' },
     { property: 'totalEpisodes', column: 'total_episodes' },
     { property: 'cover', column: 'cover' },
     { property: 'metaTags', column: 'meta_tags' },

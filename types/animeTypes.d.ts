@@ -18,8 +18,8 @@ export interface CleanedSubject {
   season: string;
   /** 剧情简介 */
   summary?: string;
-  /** 剧情简介 中文 */
-  summaryCN?: string;
+  /** 剧情简介 多语言(中/日) */
+  summaryMulti?: string;
   /** 总集数 */
   totalEpisodes?: number;
   /** 封面图 MinIO 相对路径 */

@@ -40,6 +40,7 @@ export const sakuraAgent = new ChatAgentClient({
         temperature: SAKURA_DEFAULT_CONFIG.temperature,
         top_p: SAKURA_DEFAULT_CONFIG.top_p,
         max_tokens: SAKURA_DEFAULT_CONFIG.max_tokens,
+        repeat_penalty: SAKURA_DEFAULT_CONFIG.repeat_penalty,
         stop: SAKURA_DEFAULT_CONFIG.stop
     },
     defaultTimeout: SAKURA_DEFAULT_CONFIG.timeout,

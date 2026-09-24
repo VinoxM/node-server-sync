@@ -8,6 +8,7 @@ import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
 import { backfillOriginUrl } from "#modules/anime/service/bangumi/bangumiDiffService.js";
 import { generateCharacterImageLink } from "#modules/anime/service/bangumi/bangumiImagesService.js";
+import { resetVectorStatusByBangumiIds } from "../rss/rssHybridVectorService.js";
 
 /**
  * 获取数据库中已存在的所有番剧季度列表
@@ -26,7 +27,7 @@ export function handleSubjectView(subject) {
     if (!subject) return subject;
     const {
         subsId, nameAlias, platform, metaTags, staff, characters,
-        hide, nsfw, updateTime, createTime, season,
+        hide, nsfw, updateTime, createTime, season, summaryMulti,
         ...rest
     } = subject;
     const isShort = platform === SUBJECT_PLATFORM_IS_SHORT;
@@ -39,7 +40,8 @@ export function handleSubjectView(subject) {
         metaTags: JSON.parse(metaTags || '[]'),
         staff: JSON.parse(staff || '[]'),
         characters: JSON.parse(characters || '[]'),
-        isShort
+        summaryMulti: JSON.parse(summaryMulti || '{}'),
+        isShort,
     };
 }
 
@@ -202,4 +204,26 @@ export async function updateSubjectFin(id, fin) {
     const { bangumiId } = subject;
     const { rows } = await subscribeRep.updateFinByBangumiId(bangumiId, fin);
     rows === 0 && __throwMessage('Subject subscribe not exists.');
+}
+
+/**
+ * 更新番剧条目描述
+ * @param {number} id - 番剧 ID
+ * @param {object} summaryMulti - 目标值
+ * @returns {Promise<void>}
+ */
+export async function updateSubjectSummaryMulti(id, summaryMulti) {
+    const cn = summaryMulti?.cn || '';
+    const jp = summaryMulti?.jp || '';
+    const subject = await subjectsRep.selectOneById(id);
+    subject || __throwMessage('Subject not exists.');
+    const { bangumiId, summaryMulti: dbSummaryMulti } = subject;
+    const cnDb = dbSummaryMulti?.cn || '';
+    const jpDb = dbSummaryMulti?.jp || '';
+    const cnEq = String(cn).trim() === String(cnDb).trim();
+    const jpEq = String(jp).trim() === String(jpDb).trim();
+    if (cnEq && jpEq) return;
+    const summaryMultiStr = __isAllBlank(cn, jp) ? null : JSON.stringify({ cn, jp });
+    const { rows } = await subjectsRep.updateOne({ bangumiId, summaryMulti: summaryMultiStr }, ['summary_multi']);
+    rows && await resetVectorStatusByBangumiIds([bangumiId]);
 }

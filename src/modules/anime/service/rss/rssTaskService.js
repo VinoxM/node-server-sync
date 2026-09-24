@@ -469,15 +469,6 @@ async function setupTasksHashByUUID(tasks) {
 }
 
 /**
- * 查询指定订阅关联的全部任务列表
- * @param {number} rssSubsId - 订阅 ID
- * @returns {Promise<any[]>}
- */
-export async function queryTasks(rssSubsId) {
-    return rssTaskRep.selectBySubsIdWithResultExists(rssSubsId).then(({ data }) => data);
-}
-
-/**
  * 删除指定的种子任务（清理 qBittorrent 任务及标签）
  * @param {number} taskId - 任务 ID
  * @returns {Promise<ExecResult>}

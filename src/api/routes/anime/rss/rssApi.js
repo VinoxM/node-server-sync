@@ -2,7 +2,7 @@ import { allowLanHosts } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import { defineRoutes } from "#common/utils/defineUtil.js";
-import { getRssCardFailedViews, getSubscribeBySubjectId, updateSubscribe } from "#modules/anime/service/rssService.js";
+import { getRssCardFailedViews, getSubjectSubscribeTasks, getSubscribeBySubjectId, updateSubscribe } from "#modules/anime/service/rssService.js";
 import { needAuthSingleClient } from "#common/constants/authorizationConst.js";
 import { getEpisodeMatches } from "#modules/anime/service/rss/rssResultService.js";
 import { analysisRssSubscribe, createSubscribeBySubjectId } from "#modules/anime/service/rss/rssSubscribeService.js";
@@ -107,5 +107,18 @@ export default defineRoutes({
             const results = await analysisRssSubscribe({ regex: req.body.regex, url: req.body.url });
             return results.map(item => ({ title: item.title, pubDate: item.pubDate, torrent: item.torrent }));
         }
+    },
+
+    /**
+     * 根据条目 ID 查询订阅信息以及下载任务相关列表信息
+     * 请求体参数：{ subjectId: number }
+     */
+    "/getSubjectSubscribeTasks": {
+        method: POST,
+        needAuth: needAuthSingleClient.MANAGE,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeyNotBlank(req, 'subjectId'),
+        callback: req => getSubjectSubscribeTasks(req.body.subjectId)
     }
 });

@@ -422,14 +422,19 @@ export default {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count, '
-            + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
+            + `COUNT(DISTINCT rtt.id) AS taskCount, `
+            + `COUNT(DISTINCT e.id) AS episodeCount, `
+            + 'COUNT(DISTINCT ef.id) AS failedEpisode, '
+            + 'COUNT(DISTINCT es.id) AS failedSubtitle '
             + queryCase
             + 'FROM subjects t '
             + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + 'LEFT JOIN rss_result rr ON rr.pid=rs.id '
-            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason!=${EPISODE_FAILED_REASON.SUCCESS} `
-            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status=${RSS_SUBTITLE_STATUS.FAILED} `
-            + `WHERE${whereCause.join(whereJoin)}`
+            + `LEFT JOIN rss_torrent_task rtt ON rs.id = rtt.rss_subs_id `
+            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason != ${ EPISODE_FAILED_REASON.SUCCESS } `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status = ${ RSS_SUBTITLE_STATUS.FAILED } `
+            + `WHERE${ whereCause.join(whereJoin) } `
             + `GROUP BY t.id, subsId`;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },
@@ -451,14 +456,19 @@ export default {
         const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.platform, t.air_date, t.season, t.total_episodes, t.cover, t.meta_tags, t.nsfw, t.hide, `
             + `rs.id AS subsId, rs.fin, rs.start_time, `
             + 'MAX(rr.pub_date) lastPub, MAX(rr.episode) latestEp, COUNT(DISTINCT rr.episode) count, '
-            + 'COUNT(ef.id) failedEpisode, COUNT(es.id) failedSubtitle '
+            + `COUNT(DISTINCT rtt.id) AS taskCount, `
+            + `COUNT(DISTINCT e.id) AS episodeCount, `
+            + 'COUNT(DISTINCT ef.id) AS failedEpisode, '
+            + 'COUNT(DISTINCT es.id) AS failedSubtitle '
             + queryCase
             + 'FROM subjects t '
             + 'LEFT JOIN rss_subscribe rs ON rs.bangumi_id=t.bangumi_id '
             + 'LEFT JOIN rss_result rr ON rr.pid=rs.id '
-            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason!=${EPISODE_FAILED_REASON.SUCCESS} `
-            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status=${RSS_SUBTITLE_STATUS.FAILED} `
-            + `WHERE t.id=? `
+            + `LEFT JOIN rss_torrent_task rtt ON rs.id = rtt.rss_subs_id `
+            + `LEFT JOIN rss_episode e ON rs.id = e.rss_subs_id `
+            + `LEFT JOIN rss_episode_failed ef ON rs.id = ef.rss_subs_id AND ef.reason != ${ EPISODE_FAILED_REASON.SUCCESS } `
+            + `LEFT JOIN rss_episode_subtitle es ON rs.id = es.rss_subs_id AND es.status = ${ RSS_SUBTITLE_STATUS.FAILED } `
+            + `WHERE t.id =? `
             + `GROUP BY t.id, subsId`;
         return __sqliteDB.selectOne(sql, params, null, dbName);
     },
@@ -466,13 +476,13 @@ export default {
     /**
      * 查询尚未完结（需执行元数据 Diff 对比同步）的番剧列表
      * @param {string} curSeason - 当前季度 (如 '2026-10')
-     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryCN: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
+     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryMulti: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
      */
     selectNotFinSubjectsForDiff: (curSeason) => {
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.summary_cn AS summaryCN, t.total_episodes, t.meta_tags, t.staff, t.characters `
+        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.summary_multi AS summaryMulti, t.total_episodes, t.meta_tags, t.staff, t.characters`
             + `FROM subjects t `
-            + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${SUBSCRIBE_FIN_VALUE.NO} `
-            + `WHERE t.season <= ?`;
+            + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${ SUBSCRIBE_FIN_VALUE.NO } `
+            + `WHERE t.season <= ? `;
         return __sqliteDB.selectAll(sql, [curSeason], null, dbName);
     }
 };

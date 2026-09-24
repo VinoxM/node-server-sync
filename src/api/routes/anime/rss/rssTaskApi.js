@@ -3,7 +3,7 @@ import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import {
     completeTask, deleteTask,
-    pauseTask, queryTasks, queryTaskTorrentInfo,
+    pauseTask, queryTaskTorrentInfo,
     resumeTask, updateTaskStatus, addRssTaskFromWebhook,
     deleteTaskBatch
 } from "#modules/anime/service/rss/rssTaskService.js";
@@ -53,18 +53,6 @@ export default defineRoutes({
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => queryTaskTorrentInfo(req.body.taskIds)
-    },
-
-    /**
-     * 查询指定订阅关联的全部任务列表
-     * 请求体参数：{ rssSubsId: number }
-     */
-    "/getTasks": {
-        method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'rssSubsId'),
-        callback: req => queryTasks(req.body.rssSubsId)
     },
 
     /**

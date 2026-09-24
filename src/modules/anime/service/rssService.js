@@ -5,6 +5,7 @@ import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
 import subscribeRep from '#modules/anime/repository/subscribeRep.js';
 import subjectsRep from '#modules/anime/repository/subjectsRep.js';
 import { getAnimeProgress } from '#modules/anime/service/animeProgressService.js';
+import rssTaskRep from '../repository/rss/rssTaskRep.js';
 
 /**
  * 获取 RSS 异常处理卡片概览数量（解析失败剧集数与字幕失败数）
@@ -96,4 +97,27 @@ export async function getSubscribeBySubjectId(subjectId) {
 export async function updateSubscribe(body) {
     const { subsId, ...rest } = body;
     return subscribeRep.updateOne({ ...rest, id: subsId });
+}
+
+/**
+ * 根据条目 ID 查询番剧订阅的简短信息, 以及 任务列表/剧集列表/失败剧集列表/字幕列表
+ * @param {number} subjectId - 条目 ID
+ * @returns {Promise<{ subscribe: any|null, tasks: Array<any>|undefined, episodes: Array<any>|undefined, failedEpisodes: Array<any>|undefined, subtitles: Array<any>|undefined }>}
+ */
+export async function getSubjectSubscribeTasks(subjectId) {
+    const result = { subscribe: null };
+    const subscribe = await subscribeRep.selectBySubjectId(subjectId);
+    if (subscribe) {
+        result.subscribe = subscribe;
+        const { id: rssSubsId } = subscribe;
+        const { data: tasks } = await rssTaskRep.selectBySubsIdWithResultExists(rssSubsId);
+        const { data: episodes } = await rssEpisodeRep.selectBySubsId(rssSubsId);
+        const { data: failedEpisodes } = await rssEpisodeRep.selectFailedBySubsId(rssSubsId);
+        const { data: subtitles } = await rssSubtitleRep.selectBySubsId(rssSubsId);
+        result.episodes = episodes;
+        result.failedEpisodes = failedEpisodes;
+        result.subtitles = subtitles;
+        result.tasks = tasks;
+    }
+    return result;
 }
