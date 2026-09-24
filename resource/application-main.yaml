@@ -33,6 +33,7 @@ api:
       - /common/*
       - /media/*
       - /anime/*
+      - /schedule/getJobSnapshots
 sse:
   disabled:
     - barrage
