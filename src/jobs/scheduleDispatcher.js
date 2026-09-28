@@ -6,8 +6,22 @@ import { ContextSubscribe } from '#core/context/subscribe.js';
 /**
  * @typedef {import('#types/scheduleTypes.d.ts').ScheduleJobConfig} ScheduleJobConfig
  * @typedef {import('#types/scheduleTypes.d.ts').ScheduleRetryConfig} ScheduleRetryConfig
+ * @typedef {import('#types/scheduleTypes.d.ts').ScheduleJobStatus} ScheduleJobStatus
+ * @typedef {import('#types/scheduleTypes.d.ts').ScheduleJobSnapshot} ScheduleJobSnapshot
  * @typedef {import('#types/scheduleTypes.d.ts').GracefulShutdownResult} GracefulShutdownResult
  */
+
+/**
+ * 定时任务生命周期状态枚举
+ * - `ACTIVE`: 正常参与 Cron 调度
+ * - `CANCELLED`: 计划已被运行时取消，实例与静态配置保留，可查询、可手动触发、可恢复
+ * @readonly
+ * @enum {ScheduleJobStatus}
+ */
+export const ScheduleStatus = Object.freeze({
+    ACTIVE: 'active',
+    CANCELLED: 'cancelled'
+});
 
 /**
  * 单个定时任务实体类
@@ -58,6 +72,12 @@ class ScheduleJob {
 
     /** @type {NodeJS.Timeout|null} 失败重试等待定时器 */
     #retryTimer = null;
+
+    /** @type {ScheduleJobStatus} 任务生命周期状态 (active: 正常参与调度, cancelled: 计划已被运行时取消但实例保留可查询) */
+    #status = ScheduleStatus.ACTIVE;
+
+    /** @type {number|null} 任务计划被取消的时间戳（毫秒），未取消时为 null */
+    #cancelledAt = null;
 
     /** @type {{ totalRuns: number, successRuns: number, failRuns: number, lastRunTime: number|null, lastDuration: number }} 运行统计指标 */
     #stats = {
@@ -121,11 +141,44 @@ class ScheduleJob {
         return Boolean(this.#abortController?.signal?.aborted);
     }
 
+    /** @returns {ScheduleJobStatus} 任务生命周期状态 */
+    get status() {
+        return this.#status;
+    }
+
+    /** @returns {boolean} 任务计划是否已被运行时取消 */
+    get isCancelled() {
+        return this.#status === ScheduleStatus.CANCELLED;
+    }
+
+    /**
+     * 标记任务计划已被运行时取消（保留实例与静态配置，仅停止参与调度）
+     * 注意：必须由 `Schedule` 显式调用，不可写入 `ScheduleJob.cancel()` 内部
+     * （`start()` 会先调用 `cancel(false)` 做重注册，否则会误标记为已取消）
+     */
+    markCancelled() {
+        this.#status = ScheduleStatus.CANCELLED;
+        this.#cancelledAt = Date.now();
+    }
+
+    /**
+     * 清除取消标记，使任务重新具备参与调度的资格（仅改状态，不负责注册调度器）
+     */
+    markActive() {
+        this.#status = ScheduleStatus.ACTIVE;
+        this.#cancelledAt = null;
+    }
+
     /**
      * 启动任务调度（注册 Cron 定时器并处理 immediate 首次运行）
      * @returns {this}
      */
     start() {
+        if (this.isCancelled) {
+            __log.warn(`[Schedule] Job [${this.#jobName}] is cancelled, schedule registration skipped.`);
+            return this;
+        }
+
         if (!this.#enabled || __isBlank(this.#cronExpr) || !__isFunction(this.#jobCallback)) {
             return this;
         }
@@ -146,24 +199,61 @@ class ScheduleJob {
     }
 
     /**
+     * 恢复被运行时取消的任务计划（清除取消标记并重新注册 Cron 调度）
+     * 恢复时使用的 Cron 表达式为 `updateConfig()` 期间已同步的最新配置值，不会丢失配置变更
+     * @returns {boolean} 是否执行了恢复操作（原本未处于取消状态时返回 false）
+     */
+    resume() {
+        if (!this.isCancelled) {
+            return false;
+        }
+
+        this.markActive();
+        this.start();
+        __log.info(`[Schedule] Job Plan Resumed: [${this.#jobName}] (Cron: "${this.#cronExpr}", Enabled: ${this.#enabled})`);
+        return true;
+    }
+
+    /**
      * 动态热更新配置参数（平滑切换 Cron 表达式或启停状态）
+     *
+     * 拆分为两个独立步骤：
+     * 1. **无条件同步配置** —— 始终把最新 cron/enable 写入实例，保证快照中的 `cron` 与配置文件一致，
+     *    避免已取消任务在后续 `resumeJob()` 恢复时使用过期的 Cron 表达式。
+     * 2. **有条件重排调度** —— 任务处于 `cancelled` 状态时不自动注册调度器（防止热重载静默复活），
+     *    仅当配置中 `enable` 发生 false -> true 的显式翻转时，才视为运维的恢复意图并重新激活。
      * @param {Record<string, any>} [envConfig={}] - 最新的环境配置对象
      */
     updateConfig(envConfig = {}) {
         const newEnabled = envConfig?.enable ?? true;
         const newCron = envConfig?.cron ?? envConfig?.corn ?? this.#rawConfig.defaultCron;
 
-        const isEnabledChanged = newEnabled !== this.#enabled;
-        const isCronChanged = newCron !== this.#cronExpr;
+        const oldEnabled = this.#enabled;
+        const oldCron = this.#cronExpr;
+
+        const isEnabledChanged = newEnabled !== oldEnabled;
+        const isCronChanged = newCron !== oldCron;
+
+        // 1. 无条件同步最新配置，保证快照可观测性与恢复后的正确性
+        this.#enabled = newEnabled;
+        this.#cronExpr = newCron;
+
+        // 2. 已取消的任务默认不参与自动重排，避免热重载导致计划静默复活
+        if (this.isCancelled) {
+            if (isEnabledChanged && newEnabled) {
+                this.markActive();
+                __log.info(`[Schedule] Job [${this.#jobName}] was cancelled but config explicitly re-enabled it, resuming schedule...`);
+            } else {
+                (isEnabledChanged || isCronChanged) && __log.info(`[Schedule] Job [${this.#jobName}] is cancelled; config synced (enabled: ${oldEnabled} -> ${newEnabled}, cron: "${oldCron}" -> "${newCron}") but schedule stays cancelled.`);
+                return;
+            }
+        }
 
         if (!isEnabledChanged && !isCronChanged) {
             return;
         }
 
-        __log.info(`[Schedule] Updating Job [${this.#jobName}]: enabled (${this.#enabled} -> ${newEnabled}), cron ("${this.#cronExpr}" -> "${newCron}")`);
-
-        this.#enabled = newEnabled;
-        this.#cronExpr = newCron;
+        __log.info(`[Schedule] Updating Job [${this.#jobName}]: enabled (${oldEnabled} -> ${newEnabled}), cron ("${oldCron}" -> "${newCron}")`);
 
         if (this.#enabled) {
             this.start();
@@ -347,7 +437,7 @@ class ScheduleJob {
 
     /**
      * 获取任务当前运行指标与快照信息
-     * @returns {{ key: string, name: string, cron: string, enabled: boolean, abortable: boolean, isRunning: boolean, isAborted: boolean, nextInvocation: string|null, stats: typeof this.#stats }}
+     * @returns {ScheduleJobSnapshot}
      */
     getSnapshot() {
         return {
@@ -355,6 +445,9 @@ class ScheduleJob {
             name: this.#jobName,
             cron: this.#cronExpr,
             enabled: this.#enabled,
+            status: this.#status,
+            cancelled: this.isCancelled,
+            cancelledAt: this.#cancelledAt,
             abortable: this.#abortable,
             isRunning: this.#isRunning,
             isAborted: this.isAborted,
@@ -402,6 +495,40 @@ export class Schedule extends ContextSubscribe {
     }
 
     /**
+     * 按任务 Key 或可读名称解析任务实体（兼容调用方传递 key 或 name 两种标识）
+     * @param {string} keyOrName - 任务 Key 或任务名称
+     * @returns {ScheduleJob|undefined}
+     */
+    #resolveJob(keyOrName) {
+        if (__isBlank(keyOrName)) {
+            return undefined;
+        }
+        const job = this.#jobs.get(keyOrName);
+        if (job) {
+            return job;
+        }
+        for (const item of this.#jobs.values()) {
+            if (item.name === keyOrName) {
+                return item;
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * 解析任务实体，不存在时抛出业务异常
+     * @param {string} keyOrName - 任务 Key 或任务名称
+     * @returns {ScheduleJob}
+     */
+    #requireJob(keyOrName) {
+        const job = this.#resolveJob(keyOrName);
+        if (!job) {
+            __throwMessage(`No such Job: ${keyOrName}`);
+        }
+        return job;
+    }
+
+    /**
      * 注册单个定时任务
      * @param {ScheduleJobConfig} scheduleConfig - 任务静态配置
      */
@@ -414,6 +541,13 @@ export class Schedule extends ContextSubscribe {
 
         const envConfigs = this.#getScheduleConfig();
         const envConfig = envConfigs[scheduleConfig.scheduleKey];
+
+        // 脚本重新加载时以全新实例覆盖旧实例，同时清除历史取消标记
+        const existing = this.#jobs.get(scheduleConfig.scheduleKey);
+        if (existing) {
+            existing.cancel(true);
+            this.#jobs.delete(scheduleConfig.scheduleKey);
+        }
 
         const job = new ScheduleJob(scheduleConfig, envConfig);
         this.#jobs.set(job.key, job);
@@ -462,34 +596,29 @@ export class Schedule extends ContextSubscribe {
     }
 
     /**
-     * 手动触发指定 Key 的任务立即执行一次
-     * @param {string} scheduleKey - 任务 Key
+     * 手动触发指定任务立即执行一次
+     * 注：已取消计划的任务仍可手动执行单次（取消计划 ≠ 禁用任务）
+     * @param {string} scheduleKey - 任务 Key 或任务名称
      * @returns {string}
      */
     executeJob(scheduleKey) {
         if (this.#isShuttingDown) {
             __throwMessage('Schedule dispatcher is currently shutting down, cannot execute jobs.', -5);
         }
-        if (!this.#jobs.has(scheduleKey)) {
-            __throwMessage(`No such Job: ${scheduleKey}`);
-        }
-        const job = this.#jobs.get(scheduleKey);
+        const job = this.#requireJob(scheduleKey);
         __log.info(`[Schedule] Job Manual Triggered: ${job.name}`);
         job.execute(true);
         return 'Job execution triggered.';
     }
 
     /**
-     * 仅中断指定 Key 任务当前的单次执行（保留 Cron 定时调度与任务注册）
-     * @param {string} scheduleKey - 任务 Key
+     * 仅中断指定任务当前的单次执行（保留 Cron 定时调度与任务注册）
+     * @param {string} scheduleKey - 任务 Key 或任务名称
      * @param {string} [reason] - 中止原因描述
      * @returns {string} 执行结果说明
      */
     abortJob(scheduleKey, reason) {
-        if (!this.#jobs.has(scheduleKey)) {
-            __throwMessage(`No such Job: ${scheduleKey}`);
-        }
-        const job = this.#jobs.get(scheduleKey);
+        const job = this.#requireJob(scheduleKey);
         if (!job.isAbortable) {
             __throwMessage(`Job [${job.name}] is configured as non-abortable.`);
         }
@@ -515,18 +644,40 @@ export class Schedule extends ContextSubscribe {
     }
 
     /**
-     * 取消并注销指定 Key 的任务
-     * @param {string} scheduleKey - 任务 Key
+     * 取消指定任务的计划（停止参与调度，但**保留实例与静态配置**以便持续查询与恢复）
+     * 取消后任务仍会出现在 `getJobSnapshots()` 结果中，快照字段 `status` 为 `cancelled`
+     * @param {string} scheduleKey - 任务 Key 或任务名称
      * @param {boolean} [abortRunning=true] - 是否协同中断正在执行中的任务
+     * @returns {string} 执行结果说明
      */
     cancelJob(scheduleKey, abortRunning = true) {
-        if (!this.#jobs.has(scheduleKey)) {
-            __throwMessage(`No such Job: ${scheduleKey}`);
+        const job = this.#requireJob(scheduleKey);
+        if (job.isCancelled) {
+            return `Job [${job.name}] plan has already been cancelled.`;
         }
-        const job = this.#jobs.get(scheduleKey);
+
         job.cancel(abortRunning);
-        this.#jobs.delete(scheduleKey);
-        this.#rawConfigs.delete(scheduleKey);
+        job.markCancelled();
+        __log.info(`[Schedule] Job Plan Cancelled: [${job.name}] (instance kept for query & resume)`);
+        return `Job [${job.name}] plan cancelled.`;
+    }
+
+    /**
+     * 恢复指定任务的计划（清除取消标记并重新注册 Cron 调度）
+     * @param {string} scheduleKey - 任务 Key 或任务名称
+     * @returns {string} 执行结果说明
+     */
+    resumeJob(scheduleKey) {
+        if (this.#isShuttingDown) {
+            __throwMessage('Schedule dispatcher is currently shutting down, cannot resume jobs.', -5);
+        }
+        const job = this.#requireJob(scheduleKey);
+        if (!job.resume()) {
+            return `Job [${job.name}] is not cancelled, nothing to resume.`;
+        }
+        return job.isEnabled
+            ? `Job [${job.name}] plan resumed.`
+            : `Job [${job.name}] cancellation cleared, but current config 'enable' is false, schedule not registered.`;
     }
 
     /**
@@ -599,11 +750,18 @@ export class Schedule extends ContextSubscribe {
     }
 
     /**
-     * 获取所有任务的运行状态快照列表
-     * @returns {Array<ReturnType<ScheduleJob['getSnapshot']>>}
+     * 获取定时任务运行状态快照列表
+     * 默认包含「计划已取消」的任务（取消仅停止调度，条目与静态配置保留，便于持续查询与恢复）
+     * @param {{ status?: ScheduleJobStatus|null, includeCancelled?: boolean }} [options={}] - 过滤选项
+     * @returns {ScheduleJobSnapshot[]}
      */
-    getJobSnapshots() {
-        return Array.from(this.#jobs.values()).map(job => job.getSnapshot());
+    getJobSnapshots(options = {}) {
+        const { status = null, includeCancelled = true } = options;
+        return Array.from(this.#jobs.values())
+            .filter(job => (status
+                ? job.status === status
+                : (includeCancelled || !job.isCancelled)))
+            .map(job => job.getSnapshot());
     }
 
     /**
@@ -630,11 +788,20 @@ export const gracefulShutdownSchedule = (timeoutMs = 20000) => Schedule.instance
 export const startSchedule = () => Schedule.instance.start();
 
 /**
- * 取消指定定时任务（快捷入口）
- * @param {string} scheduleKey - 任务标识 Key
+ * 取消指定定时任务计划（快捷入口）
+ * 取消仅停止调度并标记状态，任务仍保留在快照中可查询，可通过 resumeJob 恢复
+ * @param {string} scheduleKey - 任务标识 Key 或任务名称
  * @param {boolean} [abortRunning=true] - 是否协同中断正在执行中的任务
+ * @returns {string}
  */
 export const cancelJob = (scheduleKey, abortRunning = true) => Schedule.instance.cancelJob(scheduleKey, abortRunning);
+
+/**
+ * 恢复指定定时任务被取消的计划（快捷入口）
+ * @param {string} scheduleKey - 任务标识 Key 或任务名称
+ * @returns {string}
+ */
+export const resumeJob = (scheduleKey) => Schedule.instance.resumeJob(scheduleKey);
 
 /**
  * 仅中断指定定时任务当前的单次执行（快捷入口）
@@ -653,15 +820,16 @@ export const abortAllJob = (reason) => Schedule.instance.abortAllJob(reason);
 
 /**
  * 手动触发指定定时任务（快捷入口）
- * @param {string} scheduleKey - 任务标识 Key
+ * @param {string} scheduleKey - 任务标识 Key 或任务名称
  */
 export const emitJob = (scheduleKey) => Schedule.instance.executeJob(scheduleKey);
 
 /**
  * 获取全部定时任务运行指标快照（快捷入口）
- * @returns {Array<ReturnType<ScheduleJob['getSnapshot']>>}
+ * @param {{ status?: ScheduleJobStatus|null, includeCancelled?: boolean }} [options] - 过滤选项
+ * @returns {ScheduleJobSnapshot[]}
  */
-export const getScheduleSnapshots = () => Schedule.instance.getJobSnapshots();
+export const getScheduleSnapshots = (options) => Schedule.instance.getJobSnapshots(options);
 
 /** 全局调度器单例实例导出 */
 export const schedule = Schedule.instance;

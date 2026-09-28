@@ -31,4 +31,61 @@ export interface GracefulShutdownResult {
   pendingJobs: string[];
 }
 
+/**
+ * 定时任务生命周期状态
+ * - `active`: 正常参与 Cron 调度
+ * - `cancelled`: 计划已被运行时取消，实例与静态配置保留，可查询、可手动触发、可通过 resumeJob 恢复
+ */
+export type ScheduleJobStatus = 'active' | 'cancelled';
+
+/** 定时任务运行统计指标 */
+export interface ScheduleJobStats {
+  /** 累计执行次数 */
+  totalRuns: number;
+  /** 成功执行次数 */
+  successRuns: number;
+  /** 失败执行次数 */
+  failRuns: number;
+  /** 最近一次执行开始时间戳（毫秒） */
+  lastRunTime: number | null;
+  /** 最近一次执行耗时（毫秒） */
+  lastDuration: number;
+}
+
+/** 定时任务运行状态快照 */
+export interface ScheduleJobSnapshot {
+  /** 任务唯一标识 Key (对应 schedule.<key>) */
+  key: string;
+  /** 任务可读名称 */
+  name: string;
+  /** 当前生效的 Cron 表达式（取消期间仍会同步配置，保持实时准确） */
+  cron: string;
+  /** 配置声明的启用状态 (来源于 schedule.<key>.enable) */
+  enabled: boolean;
+  /** 任务生命周期状态 */
+  status: ScheduleJobStatus;
+  /** 计划是否已被运行时取消 (等价于 status === 'cancelled') */
+  cancelled: boolean;
+  /** 计划被取消的时间戳（毫秒），未取消时为 null */
+  cancelledAt: number | null;
+  /** 是否支持协同中断当前执行 */
+  abortable: boolean;
+  /** 当前是否正在执行中 */
+  isRunning: boolean;
+  /** 当前执行是否已收到中止信号 */
+  isAborted: boolean;
+  /** 下一次计划触发时间 (ISO 字符串)，无计划时为 null */
+  nextInvocation: string | null;
+  /** 运行统计指标 */
+  stats: ScheduleJobStats;
+}
+
+/** 任务快照查询过滤选项 */
+export interface ScheduleJobSnapshotOptions {
+  /** 仅返回指定生命周期状态的任务，为空时按 includeCancelled 规则返回 */
+  status?: ScheduleJobStatus | null;
+  /** 是否包含已取消计划的任务，默认 true */
+  includeCancelled?: boolean;
+}
+
 export type ScheduleJobModule = ScheduleJobConfig;

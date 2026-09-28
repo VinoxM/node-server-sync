@@ -2,7 +2,7 @@ import apiBodyConst from '#constants/apiBodyConst.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
 import { defineRoutes } from '#utils/defineUtil.js';
-import { abortJob, cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, startSchedule } from '#jobs/scheduleDispatcher.js';
+import { abortJob, cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, resumeJob, startSchedule } from '#jobs/scheduleDispatcher.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 
 const { POST, GET } = apiMethodConst;
@@ -32,6 +32,7 @@ export default defineRoutes({
 
     /**
      * 查询所有定时任务运行状态与指标快照
+     * 默认包含「计划已取消」的任务（取消仅停止调度，条目保留便于持续展示与恢复）
      */
     "/getJobSnapshots": {
         method: GET,
@@ -43,7 +44,7 @@ export default defineRoutes({
     },
 
     /**
-     * 停止/取消指定的定时任务并注销
+     * 取消指定任务的计划（停止调度但保留任务条目，可查询、可手动触发、可恢复）
      * 请求体参数：{ jobName: string }
      */
     "/cancelJob": {
@@ -54,6 +55,21 @@ export default defineRoutes({
         callback: (/** @type {ApiRequest} */ req) => {
             const jobName = req.body[JOB_NAME];
             return cancelJob(jobName);
+        }
+    },
+
+    /**
+     * 恢复指定任务被取消的计划（清除取消标记并重新注册定时调度）
+     * 请求体参数：{ jobName: string }
+     */
+    "/resumeJob": {
+        method: POST,
+        needSecret,
+        needAuth,
+        preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
+        callback: (/** @type {ApiRequest} */ req) => {
+            const jobName = req.body[JOB_NAME];
+            return resumeJob(jobName);
         }
     },
 

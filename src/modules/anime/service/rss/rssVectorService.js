@@ -1,3 +1,7 @@
+/**
+ * @deprecated use `rssHybridVectorService.js` instead.
+ */
+
 import { handleCalendar } from "#common/utils/subjectUtil.js";
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { qdrantClient } from "#core/instance/qdrantClient.js";

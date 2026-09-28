@@ -165,6 +165,7 @@ export async function upsertOneCleanedSubject(subject, options = {}) {
 function handleUpdateProperties(updateProperties = []) {
     if (updateProperties.length > 0) {
         updateProperties.includes('update_time') || updateProperties.push('update_time');
+        updateProperties.includes('summary') && updateProperties.push('summary_multi');
     }
     return convertPropertiesToCloumns(updateProperties);
 }

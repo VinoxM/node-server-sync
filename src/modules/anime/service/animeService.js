@@ -76,8 +76,10 @@ export async function getAnimeInformation(id, userInfo) {
             return ep;
         });
     }
+    const { summary, summaryMulti, ...rest } = subjectView;
     return {
-        ...subjectView,
+        ...rest,
+        summary: summaryMulti?.cn || summaryMulti?.jp || summary,
         fin: Boolean(subject.fin),
         results,
         episodes
