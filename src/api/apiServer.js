@@ -4,6 +4,7 @@ import http from 'http';
 import { AsyncExecutor } from '#core/infra/asyncExecutor.js';
 import { getRequestRealIp } from '#utils/requestUtil.js';
 import { Tracer } from '#core/infra/tracer.js';
+import { shutdownHook, SHUTDOWN_PRIORITY } from '#core/infra/shutdownHook.js';
 
 /**
  * @typedef {import('#types/routeTypes.d.ts').ApiRequest} ApiRequest
@@ -25,6 +26,12 @@ class ApiServer {
 
     /** @type {http.Server|null} 承载 WebSocket upgrade 的原生 HTTP Server 实例 */
     #wsServer = null;
+
+    /** @type {http.Server|null} 监听端口返回的 HTTP Server 实例 */
+    #listening = null;
+
+    /** @type {boolean} 是否已进入停机排水状态（此后拒绝新请求） */
+    #draining = false;
 
     /** @type {express.Express|null} 底层 Express 应用实例 */
     #server = null;
@@ -68,6 +75,14 @@ class ApiServer {
      */
     ready() {
         return this.#ready;
+    }
+
+    /**
+     * 是否已进入停机排水状态
+     * @returns {boolean}
+     */
+    draining() {
+        return this.#draining;
     }
 
     /**
@@ -118,6 +133,11 @@ class ApiServer {
     #initApiServer() {
         const server = express();
         this.#serverConf.cors && server.use(cors());
+        // 停机排水期间直接拒绝新请求：避免关闭过程中仍发起新的入库/写操作（其响应可能被进程退出切断）
+        server.use((req, res, next) => {
+            if (!this.#draining) return next();
+            reject({ code: -503, status: 503, msg: 'Server is shutting down.' }, { req, res });
+        });
         const methodSupport = ['get', 'post', 'all'];
         for (const key in this.#apiMapping) {
             const config = this.#apiMapping[key];
@@ -201,12 +221,53 @@ class ApiServer {
         this.#initWebSocket();
         const port = this.#serverConf.port;
         const app = this.#wsServer ?? this.#server;
-        return new Promise(resolve => {
-            app.listen(port, () => {
+        await new Promise(resolve => {
+            this.#listening = app.listen(port, () => {
                 this.#ready = true;
                 __log.info(`[Server] Started on port: ${port}.`);
                 resolve();
             });
+        });
+        // 「停止外部流量接单」属于最先执行的停机动作，与调度/重试的取消同阶段并发执行
+        shutdownHook.add(() => this.stop(), { name: 'HttpServerDrain', priority: SHUTDOWN_PRIORITY.FIRST });
+    }
+
+    /**
+     * 停机排水：停止接收新请求（关闭监听、拒绝新连接；已建立连接的后续请求直接返回 503），
+     * 并在宽限期内等待存量连接结束，超时则强制关闭。
+     * @param {{ graceMs?: number }} [options={}] - 宽限期配置
+     * @returns {Promise<void>}
+     */
+    async stop(options = {}) {
+        const { graceMs = 3000 } = options;
+        if (this.#draining) return;
+        this.#draining = true;
+        this.#ready = false;
+        const server = this.#listening;
+        if (!server) {
+            __log.warn('[Server] No listening instance, skip HTTP drain.');
+            return;
+        }
+        __log.info(`[Server] Draining: stop accepting new requests (grace ${graceMs}ms).`);
+        await new Promise(resolve => {
+            let settled = false;
+            let timer = null;
+            const done = () => {
+                if (settled) return;
+                settled = true;
+                if (timer) clearTimeout(timer);
+                resolve();
+            };
+            timer = setTimeout(() => {
+                __log.warn('[Server] Drain grace period elapsed, force-closing remaining connections.');
+                server.closeAllConnections?.();
+                done();
+            }, graceMs);
+            server.close(() => {
+                __log.info('[Server] All HTTP connections closed.');
+                done();
+            });
+            server.closeIdleConnections?.();
         });
     }
 }

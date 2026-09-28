@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 视频与标签多对多关联关系数据访问仓库

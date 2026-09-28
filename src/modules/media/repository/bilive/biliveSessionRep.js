@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * B站直播录制会话 (Session) 数据访问仓库

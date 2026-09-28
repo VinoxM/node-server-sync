@@ -2,7 +2,6 @@ import { FAVORITES_TARGET_TYPE } from "../constants/favoritesConst.js";
 import { MEDIA_CATEGORY_TYPE, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 媒体收藏 (作者/视频) 数据访问仓库

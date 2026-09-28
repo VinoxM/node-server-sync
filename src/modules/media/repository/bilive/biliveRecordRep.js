@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * B站直播原始 Webhook 事件日志数据访问仓库

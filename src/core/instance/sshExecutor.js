@@ -9,6 +9,12 @@ const TASK_DESCRIPTION_DEFAULT_VALUE = {
 const SSE_LABEL = 'executor';
 
 /**
+ * SSH 任务执行超时（被强杀）时返回的退出码，对齐 shell `timeout` 命令约定
+ * @type {number}
+ */
+export const SSH_EXEC_TIMEOUT_CODE = 124;
+
+/**
  * SSH 执行器 SSE 事件名称常量枚举
  * @readonly
  * @enum {string}
@@ -240,6 +246,7 @@ class SSHExecutor {
      * @param {string} [options.title] - 任务标题
      * @param {string} [options.desc] - 任务描述
      * @param {(data: string) => void} [options.onData] - 实时标准输出回调
+     * @param {number} [options.timeoutMs] - 执行超时 (毫秒)；超时后向远端发送 KILL 信号并关闭通道，返回码为 {@link SSH_EXEC_TIMEOUT_CODE}
      * @returns {Promise<{ code: number, stdout: string, stderr: string }>} 执行退出码与输出内容
      */
     async exec(scriptPath, args = [], options = {}) {
@@ -248,7 +255,7 @@ class SSHExecutor {
         this.#emit(SSE_EVENT.PENDING_UPDATE, this.#tasksDesc);
         this.#logMessage(`[${this.#label}] Task queued. Queue size: ${this.#pendingCount}`);
 
-        this.#queue = this.#queue.then(async () => {
+        const task = this.#queue.then(async () => {
             const taskDesc = this.#peekTaskDesc();
             this.#initTaskSnapshot(taskDesc);
             this.#logMessage(`[${this.#label}] Execution started. Queue depth: ${this.#pendingCount}`);
@@ -265,12 +272,17 @@ class SSHExecutor {
                 this.#logMessage(`[${this.#label}] Execution finished. Remaining: ${this.#pendingCount}`);
                 this.#resetIdleTimer();
             }
-        }).catch(err => {
+        });
+
+        // 内部串行队列必须始终保持 fulfilled：一旦把 rejection 留在链上，
+        // 后续 exec() 的 then 回调会被直接跳过（任务不再执行、pendingCount 只增不减），整条 SSH 通道将永久瘫痪直到进程重启。
+        this.#queue = task.then(() => undefined, () => undefined);
+
+        // 真实结果/异常仍按原语义返回给调用方，错误在此处记录一次
+        return task.catch(err => {
             this.#errorMessage(`[${this.#label}] Execution failed: ${err.message}`);
             throw err;
         });
-
-        return this.#queue;
     }
 
     /**
@@ -291,27 +303,53 @@ class SSHExecutor {
         const safeArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`).join(' ');
         const fullCmd = `${scriptPath} ${safeArgs}`;
         const onData = options.onData ?? (data => __log.print(data));
+        const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 0;
 
         return new Promise((resolve, reject) => {
+            let settled = false;
+            let timeoutTimer = null;
+
             const cleanup = () => {
+                if (timeoutTimer) {
+                    clearTimeout(timeoutTimer);
+                    timeoutTimer = null;
+                }
                 this.#conn.removeListener('close', onConnClose);
+            };
+
+            /** 保证 Promise 只结算一次，并统一清理监听器与定时器 */
+            const settle = (fn, arg) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                fn(arg);
             };
 
             const snapshotStd = (chunk, isError = false) => {
                 this.#taskSnapshot?.std.push({ chunk, isError });
             };
 
-            const onConnClose = () => reject(new Error('Connection lost during execution'));
+            const onConnClose = () => settle(reject, new Error('Connection lost during execution'));
             this.#conn.once('close', onConnClose);
 
             this.#conn.exec(fullCmd, (err, stream) => {
                 if (err) {
-                    cleanup();
-                    return reject(err);
+                    return settle(reject, err);
                 }
 
                 let stdout = '';
                 let stderr = '';
+
+                // 超时强杀：向远端发送 KILL 信号并关闭通道，避免任务无限期占用连接与队列
+                if (timeoutMs > 0) {
+                    timeoutTimer = setTimeout(() => {
+                        this.#errorMessage(`[${this.#label}] Execution timeout after ${timeoutMs}ms, killing remote process: ${fullCmd}`);
+                        try { stream.signal('KILL'); } catch (e) { /* 远端可能已结束 */ }
+                        try { stream.close(); } catch (e) { /* 通道可能已关闭 */ }
+                        settle(resolve, { code: SSH_EXEC_TIMEOUT_CODE, stdout, stderr });
+                    }, timeoutMs);
+                    timeoutTimer.unref?.();
+                }
 
                 stream.on('data', (data) => {
                     const chunk = data.toString();
@@ -330,8 +368,7 @@ class SSHExecutor {
                 });
 
                 stream.on('close', (code) => {
-                    cleanup();
-                    resolve({ code, stdout, stderr });
+                    settle(resolve, { code, stdout, stderr });
                 });
             });
         });

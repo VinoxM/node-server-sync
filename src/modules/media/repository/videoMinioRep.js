@@ -1,7 +1,6 @@
 import { MEDIA_MINIO_STATUS, MEDIA_VIDEO_MINIO_TYPE } from "../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 视频关联 MinIO 对象文件（封面图/视频流/弹幕等）数据访问仓库
@@ -157,6 +156,20 @@ export default {
         }
         const sql = `SELECT id, video_id, type, origin_uri, link, title, status, sort, object_size FROM video_minio WHERE id IN (${minioIds.map(() => '?').join(',')})`;
         return __sqliteDB.selectAll(sql, minioIds, null, dbName);
+    },
+
+    /**
+     * 查询全部处于指定状态的资源（供启动恢复扫描使用）
+     * 注意：status 无索引，属全表扫描，仅应在启动阶段调用一次。
+     * @param {number[]} statuses - 状态列表 (MEDIA_MINIO_STATUS)
+     * @returns {Promise<QueryResult<{ id: number, videoId: number, type: number, originUri: string, link: string, status: number }>>}
+     */
+    selectByStatuses: statuses => {
+        if (__isEmptyArray(statuses)) {
+            return Promise.resolve({ rows: 0, data: [] });
+        }
+        const sql = `SELECT id, video_id, type, origin_uri, link, status FROM video_minio WHERE status IN (${statuses.map(() => '?').join(',')})`;
+        return __sqliteDB.selectAll(sql, statuses, null, dbName);
     },
 
     /**

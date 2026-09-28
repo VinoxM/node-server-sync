@@ -1,91 +1,23 @@
-import aria2Service from "../../download/aria2Service.js";
-import { MEDIA_ARIA2_TASK_STATUS, MEDIA_MINIO_STATUS, MEDIA_TYPE_DESCRIPTION } from "../constants/mediaConst.js";
+import aria2Service from "#modules/download/aria2Service.js";
+import { MEDIA_ARIA2_TASK_STATUS, MEDIA_MINIO_STATUS } from "../constants/mediaConst.js";
 import aria2TaskRep from "../repository/aria2TaskRep.js";
 import videoMinioRep from "../repository/videoMinioRep.js";
 import { pushNotification } from "#api/sockets/notification.js";
-import { removeRemoteFiles } from "../../ssh/sshExecutorService.js";
+import { addTask, pauseOrResumeTask, getTaskInfoAndDownloadStatus, removeTask as removeAria2Task } from "./minio/mediaAria2TaskService.js";
+import { transitionMinioStatus, cancelMinioRetry, MINIO_STATUS_SOURCE } from "./minio/mediaMinioStateService.js";
 
-const MEDIA_ARIA2_SAVE_DIR = "./media";
-
-/**
- * 添加一条媒体离线下载 Aria2 任务并持久化记录
- * @param {string} uri - 下载链接
- * @param {number} minioId - 关联的 video_minio 主键 ID
- * @param {number} type - 资源类型 (MEDIA_VIDEO_MINIO_TYPE)
- * @returns {Promise<void>}
- */
-export async function addTask(uri, minioId, type) {
-    const taskInfo = await aria2Service.addTask(uri, { dir: MEDIA_ARIA2_SAVE_DIR });
-    taskInfo?.gid || __throwMessage(`Add media ${MEDIA_TYPE_DESCRIPTION[type] || ''} aria2 task failed.`);
-    const aria2Task = {
-        minioId,
-        gid: taskInfo.gid,
-        status: MEDIA_ARIA2_TASK_STATUS.PREPARED,
-        filePath: taskInfo.files?.[0]?.path,
-        fileNum: taskInfo.files?.length || 0
-    };
-    await aria2TaskRep.insertOne(aria2Task);
-}
-
-const ARIA2_OPERATOR = { PAUSE: 'pause', RESUME: 'resume' };
-const SUPPORTED_ARIA2_OPERATOR = [ARIA2_OPERATOR.PAUSE, ARIA2_OPERATOR.RESUME];
-
-/**
- * 暂停或恢复指定的 Aria2 任务
- * @param {string} gid - 任务 GID
- * @param {string} operator - 操作指令 ('pause' 或 'resume')
- * @returns {Promise<void>}
- */
-export async function pauseOrResumeTask(gid, operator) {
-    SUPPORTED_ARIA2_OPERATOR.includes(operator) || __throwMessage('Invalid operator');
-    if (ARIA2_OPERATOR.PAUSE === operator) {
-        await aria2Service.pauseTask(gid);
-    } else if (ARIA2_OPERATOR.RESUME === operator) {
-        await aria2Service.resumeTask(gid);
-    }
-}
+// 兼容再导出：aria2 任务原子操作已下沉至 mediaAria2TaskService，保持对外导入路径不变
+export { addTask, pauseOrResumeTask, getTaskInfoAndDownloadStatus };
 
 /**
  * 移除指定的 Aria2 任务并清理本地临时文件
+ * 清理动作导致的 FAILED 不应触发自动重试，因此此处联动取消已排期的重试。
  * @param {number} taskId - aria2_task 主键 ID
  * @returns {Promise<void>}
  */
 export async function removeTask(taskId) {
-    const task = await aria2TaskRep.selectById(taskId);
-    if (!task) return;
-    const { minioId, gid, filePath } = task;
-    await aria2TaskRep.deleteById(taskId);
-    await aria2Service.removeTask(gid);
-    __isNotBlank(filePath) && await removeRemoteFiles([filePath, filePath + '.aria2']);
-    const { exists } = await aria2TaskRep.selectExistsByMinioId(minioId) ?? { exists: 0 };
-    exists || await videoMinioRep.setupFailedByIdWhenNotComplete(minioId);
-}
-
-/**
- * 批量查询 Aria2 任务的实时下载速率与完成进度百分比
- * @param {number[]} ids - aria2_task 主键 ID 列表
- * @returns {Promise<Record<string, { status: number, taskStatus?: string, speed?: string, percent?: number }>>}
- */
-export async function getTaskInfoAndDownloadStatus(ids) {
-    const result = {};
-    const { rows, data } = await aria2TaskRep.selectByIds(ids);
-    if (rows === 0) return result;
-    const gidArr = data.map(o => (result[o.gid] = { status: o.status }, o.gid));
-    const res = await aria2Service.getTaskMultiStatus(gidArr);
-    if (Array.isArray(res) && res.length > 0) {
-        res.forEach(t => {
-            const r = t[0];
-            if (r?.gid) {
-                const { gid, status, downloadSpeed, completedLength, totalLength } = r;
-                const completed = BigInt(completedLength);
-                const total = BigInt(totalLength);
-                result[gid].taskStatus = status;
-                result[gid].speed = downloadSpeed;
-                result[gid].percent = total > 0n ? Number(completed * 10000n / total) / 100 : 0;
-            }
-        });
-    }
-    return result;
+    const minioId = await removeAria2Task(taskId);
+    __isNotBlank(minioId) && cancelMinioRetry(minioId);
 }
 
 const CAN_UPDATE_ARIA2_TASK_STATUS = [
@@ -123,7 +55,7 @@ export async function updateTaskStatus(gid, status) {
 
     if (MEDIA_ARIA2_TASK_STATUS.FAILED === taskStatus) {
         __log.info(`[${gid}] Aria2 task download failed, setup minio status failed.`);
-        await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.FAILED);
+        await transitionMinioStatus(minioId, MEDIA_MINIO_STATUS.FAILED, { source: MINIO_STATUS_SOURCE.ARIA2 });
         return;
     }
 
@@ -144,7 +76,7 @@ export async function updateTaskStatus(gid, status) {
 
     // save video minio uploading
     __log.info(`[${gid}] Aria2 task download complete, setup minio status uploading.`);
-    await videoMinioRep.updateStatusById(minioId, MEDIA_MINIO_STATUS.UPLOADING);
+    await transitionMinioStatus(minioId, MEDIA_MINIO_STATUS.UPLOADING, { source: MINIO_STATUS_SOURCE.ARIA2 });
 
     return {
         file: filePath,

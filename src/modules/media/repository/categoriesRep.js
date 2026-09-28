@@ -2,7 +2,6 @@ import { HybridLRUCache } from "#core/infra/extendMap.js";
 import { MEDIA_CATEGORY_TYPE } from "../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /** @type {HybridLRUCache} 分类名称缓存 (name -> categoryObj) */
 const nameCache = new HybridLRUCache();

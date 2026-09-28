@@ -1,7 +1,6 @@
 import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_STREAM_STATUS } from "../../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 const STREAM_FULL_COLUMNS = [
     "id",

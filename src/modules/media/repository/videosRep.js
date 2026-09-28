@@ -7,7 +7,6 @@ import { HybridLRUCache } from "#core/infra/extendMap.js";
 import { FAVORITES_TARGET_TYPE } from "../constants/favoritesConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /** @type {HybridLRUCache} 视频查重缓存 */
 const existsCache = new HybridLRUCache(1000);

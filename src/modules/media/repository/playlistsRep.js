@@ -1,7 +1,6 @@
 import { MEDIA_CATEGORY_TYPE, MEDIA_VIDEO_STATUS } from "../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 媒体播单 (Playlists) 及播单关联视频数据访问仓库

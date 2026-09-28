@@ -1,7 +1,6 @@
 import { FAVORITES_TARGET_TYPE } from "../constants/favoritesConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /** @type {Map<number, Map<string, number>>} 创作者内存缓存 (categoryId -> (authorName -> authorId)) */
 const authorCache = new Map();

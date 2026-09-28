@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 媒体视频标签 (Tags) 数据访问仓库

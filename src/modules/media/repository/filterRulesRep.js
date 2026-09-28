@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 规则操作表映射表

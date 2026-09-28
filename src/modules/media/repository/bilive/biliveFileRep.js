@@ -1,7 +1,6 @@
 import { MEDIA_BILIVE_RECORD_FILE_STATUS, MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS } from "../../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 const FULL_QUERY_PARAMETERS = `id, session_id, stream_id, title, file_path, file_size, start_time, end_time, file_status, sync_status`;
 

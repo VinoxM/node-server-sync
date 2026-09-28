@@ -8,6 +8,7 @@ import { initializeAuthTokenStore } from './modules/authorization/authorizationS
 import { ipBlocker } from './core/instance/ipBlocker.js';
 import { tokenBucket } from './core/instance/tokenBucket.js';
 import { initializeMinioClient } from './core/instance/minioClient.js';
+import { initializeMinioRetry } from './modules/media/service/minio/mediaMinioRetryStore.js';
 import { doMigrations } from './modules/migrations/migrationsService.js';
 
 const rootPath = join(import.meta.dirname, "../");
@@ -15,6 +16,7 @@ const rootPath = join(import.meta.dirname, "../");
 async function start() {
     await doMigrations();
     initializeAuthTokenStore();
+    await initializeMinioRetry();
     await startServer();
     aria2SocketInitialize();
     ipBlocker.start();

@@ -1,7 +1,6 @@
 import { MEDIA_ARIA2_TASK_STATUS } from "../constants/mediaConst.js";
 
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 媒体 Aria2 下载任务持久化数据访问仓库
@@ -107,6 +106,20 @@ export default {
         }
         const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE minio_id IN (${minioIds.map(() => '?').join(',')})`;
         return __sqliteDB.selectAll(sql, minioIds, null, dbName);
+    },
+
+    /**
+     * 查询全部处于指定状态的任务（供启动恢复对账使用）
+     * 注意：status 无索引，属全表扫描，仅应在启动阶段调用一次。
+     * @param {number[]} statuses - 状态列表 (MEDIA_ARIA2_TASK_STATUS)
+     * @returns {Promise<QueryResult<{ id: number, minioId: number, gid: string, status: number, filePath: string, fileNum: number }>>}
+     */
+    selectByStatuses: statuses => {
+        if (__isEmptyArray(statuses)) {
+            return Promise.resolve({ rows: 0, data: [] });
+        }
+        const sql = `SELECT id, minio_id, gid, status, file_path, file_num FROM aria2_task WHERE status IN (${statuses.map(() => '?').join(',')})`;
+        return __sqliteDB.selectAll(sql, statuses, null, dbName);
     },
 
     /**

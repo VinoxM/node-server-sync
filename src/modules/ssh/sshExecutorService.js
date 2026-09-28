@@ -26,9 +26,9 @@ function getSuitableSshExecutor(opts) {
 /**
  * 执行底层 SSH 脚本命令
  * @param {SshScriptDefinition} executionOpt - 脚本元数据配置
- * @param {SshExecutorOptions} [opts={}] - 执行选项
+ * @param {SshExecutorOptions} [opts={}] - 执行选项（timeoutMs 用于为单次执行设置硬超时并强杀远端进程）
  * @param {...any} sshArgs - 透传给脚本的参数列表
- * @returns {Promise<number>} 执行退出码 (0 表示成功，1 为异常，-2 为执行器未就绪)
+ * @returns {Promise<number>} 执行退出码 (0 表示成功，1 为异常，-2 为执行器未就绪，124 为执行超时被强杀)
  */
 async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
     const executor = getSuitableSshExecutor(opts);
@@ -39,7 +39,7 @@ async function executeSshScript(executionOpt, opts = {}, ...sshArgs) {
     const { script, descGenerator, title } = executionOpt;
     const desc = descGenerator(...sshArgs);
     try {
-        const { code } = await executor.exec(script?.value ?? script, [...sshArgs], { desc, title, onData: opts.onData });
+        const { code } = await executor.exec(script?.value ?? script, [...sshArgs], { desc, title, onData: opts.onData, timeoutMs: opts.timeoutMs });
         return parseInt(code);
     } catch (e) {
         __log.error(`Execute ssh script [${title}] failed.`, e.message ?? e);

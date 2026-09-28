@@ -5,6 +5,8 @@ export interface SshExecutorOptions {
   onData?: (data: string) => void;
   /** 是否使用代理网络 (专用于 downloadFileToMinio 等场景) */
   useProxy?: boolean;
+  /** 单次执行硬超时 (毫秒)；超时后向远端发送 KILL 信号并关闭通道，退出码为 124 */
+  timeoutMs?: number;
 }
 
 export interface ExtractSubtitleItem {

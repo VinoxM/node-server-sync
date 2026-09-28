@@ -1,8 +1,6 @@
 /** @type {string} 迁移记录所存储的数据库名称 */
 export const dbName = 'execution';
 
-const enablePrint = { print: true };
-
 /**
  * 数据库 SQL 迁移版本记录数据访问仓库
  */

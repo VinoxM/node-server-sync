@@ -1,5 +1,4 @@
 const dbName = 'media';
-const enablePrint = { print: true };
 
 /**
  * 媒体模块系统参数配置选项数据访问仓库
