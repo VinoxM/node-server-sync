@@ -8,6 +8,7 @@
         "#agent/*": "./src/modules/agent/*",
         "#utils/*": "./src/common/utils/*",
         "#constants/*": "./src/common/constants/*",
+        "#types/*": "./types/*",
         "#tmp/*": "./temporary/*",
         "#*": "./src/*"
     },

@@ -300,6 +300,8 @@ export default defineRoutes({
     "/storage/multiStatus": {
         method: POST,
         needSecret,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         allowHosts: allowLanHosts,
         preCheck: (/** @type {ApiRequest} */ req) => {
             checkBodyKeyNotBlank(req, 'videoId');
