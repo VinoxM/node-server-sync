@@ -8,19 +8,25 @@ const CATEGORY = 'Hanime1';
 const BASE_URL = 'https://hanimeone.me';
 
 export async function flushHanime1() {
-    const rules = await crawlerBrowser.openURL(BASE_URL + '/search', getCanAdd);
-    const result = await checkVideoFilterRules({ category: CATEGORY, rules });
-    const prepared = [];
-    if (result && Array.isArray(result)) {
-        for (let i = 0; i < result.length; i++) {
-            const { canAdd, downloaded } = result[i];
-            canAdd && !downloaded && prepared.push(rules[i]);
+    const flushURLs = [
+        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%82%B3',
+        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82'
+    ]
+    const prepared = new Map();
+    for (const flushURL of flushURLs) {
+        const rules = await crawlerBrowser.openURL(BASE_URL + flushURL, getCanAdd);
+        const result = await checkVideoFilterRules({ category: CATEGORY, rules });
+        if (result && Array.isArray(result)) {
+            for (let i = 0; i < result.length; i++) {
+                const { canAdd, downloaded } = result[i];
+                canAdd && !downloaded && prepared.set(rules[i].uniqueId, rules[i]);
+            }
         }
     }
-    if (prepared.length === 0) return;
-    __log.info(`[Crawl Hanime1] Get can add videos:`, prepared.length);
+    if (prepared.size === 0) return;
+    __log.info(`[Crawl Hanime1] Get can add videos:`, prepared.size);
     const toSave = new Map();
-    for (const { uniqueId } of prepared) {
+    for (const { uniqueId } of prepared.values()) {
         const info = await crawlerBrowser.openURL(BASE_URL + `/watch?v=${uniqueId}`, getInfo);
         const { urlList, author, playlist } = info;
         for (const { href, id } of urlList) {
