@@ -5,3 +5,5 @@ WORKDIR /app
 COPY package*.json ./
 
 RUN npm config set registry https://mirrors.cloud.tencent.com/npm/ && npm install
+
+RUN PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary/puppeteer npx puppeteer browsers install chrome
