@@ -9,8 +9,8 @@ const BASE_URL = 'https://hanimeone.me';
 
 export async function flushHanime1() {
     const flushURLs = [
-        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%82%B3',
-        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82'
+        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%82%B3', // 最新上傳
+        '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82', // 最新上市
     ]
     const prepared = new Map();
     for (const flushURL of flushURLs) {
@@ -30,7 +30,7 @@ export async function flushHanime1() {
         const info = await crawlerBrowser.openURL(BASE_URL + `/watch?v=${uniqueId}`, getInfo);
         const { urlList, author, playlist } = info;
         for (const { href, id } of urlList) {
-            const canAdd = await checkVideoCanAdd({ category: CATEGORY, author, uniqueId: id });
+            const { canAdd } = await checkVideoCanAdd({ category: CATEGORY, author, uniqueId: id });
             if (!canAdd) continue;
             const downloadUrl = href.replaceAll(/watch/g, 'download')
             const download = await crawlerBrowser.openURL(downloadUrl, getDownload);
