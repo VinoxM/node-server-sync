@@ -3,3 +3,6 @@ log/
 resource/
 models/
 src/
+temporary/
+deprecated/
+db/
