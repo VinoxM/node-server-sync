@@ -15,6 +15,7 @@ export async function flushHanime1() {
     const prepared = new Map();
     for (const flushURL of flushURLs) {
         const rules = await crawlerBrowser.openURL(BASE_URL + flushURL, getCanAdd);
+        if (!rules) continue;
         const result = await checkVideoFilterRules({ category: CATEGORY, rules });
         if (result && Array.isArray(result)) {
             for (let i = 0; i < result.length; i++) {
