@@ -70,6 +70,9 @@ schedule:
   biliveStreamAutoSync:
     enable: true
     cron: 0 0 4 * * *
+  mediaCrawl:
+    enable: true
+    corn: 0 14 0/2 * * *
 rss:
   convertMkvToMp4:
     enable: false
