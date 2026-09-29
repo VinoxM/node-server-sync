@@ -60,7 +60,7 @@ export async function flushHanime1() {
     const created = [];
     for (const videoObj of videos) {
         const flag = await tryCreateVideo(videoObj);
-        flag && created.push({ author: videoObj.author, title: videoObj.title });
+        flag && created.push({ author: videoObj.author, title: videoObj.title, cover: videoObj.cover });
     }
     if (created.length > 0) {
         __log.info(`[Crawl Hanime1] Created videos:`, created.length);
