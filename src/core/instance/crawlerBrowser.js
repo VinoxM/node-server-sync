@@ -10,7 +10,7 @@ const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36';
 
 /** 浏览器启动的基础参数 (容器环境必需) */
-const BASE_LAUNCH_ARGS = ['--no-sandbox', '--disable-setuid-sandbox'];
+const BASE_LAUNCH_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
 
 /**
  * 爬虫浏览器单例管理器
@@ -85,6 +85,7 @@ class CrawlerBrowser {
     async #launch() {
         const config = this.#getConfig();
         const browser = await puppeteer.launch({
+            executablePath: '/usr/bin/chromium',
             headless: config.headless ?? true,
             args: this.#resolveLaunchArgs(config),
         });
