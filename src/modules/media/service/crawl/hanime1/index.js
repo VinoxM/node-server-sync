@@ -69,7 +69,7 @@ export async function flushHanime1() {
 
 async function tryCreateVideo(video) {
     try {
-        const { id } = await createVideo(videoObj);
+        const { id } = await createVideo(video);
         return id;
     } catch (e) {
         __log.error(`[Crawl Hanime1] Try create video[${video.author} - ${video.title}] failed.`, e.message ?? e);
