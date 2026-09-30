@@ -131,6 +131,12 @@ function mixinModule(content, concatPath, sources = []) {
 
     content.rules = [...duplicates.values()];
 
+    // 8. 移除指定排除项
+    const excludeKeys = __env.get('clash.concat.excludeKeys', []);
+    if (Array.isArray(excludeKeys)) {
+        excludeKeys.forEach(k => Reflect.deleteProperty(content, k));
+    }
+
     return content;
 }
 

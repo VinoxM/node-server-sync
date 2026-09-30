@@ -71,8 +71,9 @@ export function setItem(json, key, value) {
  * 深度合并 source 对象的属性到 target 对象中
  * @param {Record<string, any>} target - 目标对象（会被直接修改）
  * @param {Record<string, any>} source - 源对象
+ * @param {{ mergeArray?: boolean, arrayPosition?: 'prefix'|'append'|'replace' }} [options] - 合并选项
  */
-export function mergeObject(target, source) {
+export function mergeObject(target, source, options = {}) {
     if (!source || typeof source !== 'object') return;
     Object.keys(source).forEach(key => {
         const sourceValue = source[key];
@@ -83,14 +84,36 @@ export function mergeObject(target, source) {
             return;
         }
         if (Array.isArray(sourceValue)) {
-            target[key] = [...sourceValue];
+            target[key] = mergeArrayValue(targetValue, sourceValue, options);
             return;
         }
         if (typeof targetValue !== 'object' || targetValue === null || Array.isArray(targetValue)) {
             target[key] = {};
         }
-        mergeObject(target[key], sourceValue);
+        mergeObject(target[key], sourceValue, options);
     });
+}
+
+/**
+ * 根据配置合并数组
+ * @param {any[]} target - 目标数组（会被直接修改）
+ * @param {any[]} source - 源数组
+ * @param {{ mergeArray?: boolean, arrayPosition?: 'prefix'|'append'|'replace' }} options - 合并选项
+ * @returns {any[]} 合并后的数组
+ */
+function mergeArrayValue(target, source, options) {
+    if (!Array.isArray(target) || options.mergeArray !== true) {
+        return [...source];
+    }
+    switch (options.arrayPosition) {
+        case 'prefix':
+            return [...source, ...target];
+        case 'append':
+            return [...target, ...source];
+        case 'replace':
+        default:
+            return [...source];
+    }
 }
 
 /**

@@ -2,6 +2,7 @@ import yaml from 'yaml';
 import fs from 'fs';
 import clashConst from '../constants/clashFileNameConst.js';
 import { concatTailscale } from './clashTailscaleService.js';
+import { mergeObject } from '#utils/objectUtil.js';
 
 /**
  * @typedef {import('#types/clashTypes.d.ts').ClashConfig} ClashConfig
@@ -25,24 +26,20 @@ export function updateLatestConfig(dataObj) {
     const backupPath = clashPathConfig?.backup ?? '@/';
     const deployPath = clashPathConfig?.deployment ?? '@/';
     const backupFileMaxNum = __env.get('clash.backup.fileLimit', 10);
-    const excludeKeys = __env.get('clash.deployment.excludeKeys', []);
-    const mixin = __env.get('clash.deployment.mixin', {});
 
     const saveFile = __join(savePath, latestClashFileName);
     // 1. 备份现有文件
     backupClashYaml(saveFile, savePath, backupPath, backupFileMaxNum);
-    // 2. 移除指定排除项
-    if (Array.isArray(excludeKeys)) {
-        excludeKeys.forEach(k => Reflect.deleteProperty(dataObj, k));
-    }
-    const date = formattedDate();
-    // 3. 持久化主配置
-    savePersistenceYaml(dataObj, saveFile, date);
-    // 4. 保存部署生产环境配置
-    saveDeployClashYaml(dataObj, deployPath, mixin, date);
 
-    // 5. 融合 Tailscale
-    const tailscaleObj = concatTailscale(dataObj);
+    const date = formattedDate();
+    const clashObj = { get value() { return structuredClone(dataObj) } };
+    // 2. 保存部署生产环境配置
+    saveDeployClashYaml(clashObj.value, deployPath, date);
+    // 3. 持久化主配置
+    savePersistenceYaml(clashObj.value, saveFile, date);
+
+    // 4. 融合 Tailscale
+    const tailscaleObj = concatTailscale(clashObj.value);
     const tailscaleFile = __join(savePath, clashConst.TAILSCALE_LATEST_FILE_NAME);
     savePersistenceYaml(tailscaleObj, tailscaleFile, date);
 }
@@ -103,13 +100,14 @@ function savePersistenceYaml(obj, saveFile, date) {
  * 混入运行期自定义属性并写入生产部署文件
  * @param {ClashConfig} obj - 基础配置对象
  * @param {string} deployPath - 部署目录
- * @param {Record<string, any>} mixin - 混入属性
  * @param {string} date - 时间戳字符串
  */
-function saveDeployClashYaml(obj, deployPath, mixin, date) {
+function saveDeployClashYaml(obj, deployPath, date) {
     const deploymentFile = __join(deployPath, deploymentFileName);
+    // 混合简单属性
+    const mixin = __env.get('clash.deployment.mixin', {});
     if (mixin && typeof mixin === 'object') {
-        Object.assign(obj, mixin);
+        mergeObject(obj, mixin, { mergeArray: true, arrayPosition: 'prefix' });
     }
     let objStr = generateUpdateTime(obj, date);
     if (__isBlank(objStr)) return;

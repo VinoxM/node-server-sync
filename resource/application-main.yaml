@@ -126,10 +126,6 @@ clash:
     backup: /mnt/data/.config/clash/backup
     tailscale: /mnt/data/.config/clash/tailscale
   deployment:
-    excludeKeys:
-      - "external-controller"
-      - "external-ui"
-      - "secret"
     mixin:
       external-controller: 0.0.0.0:9900
       external-ui: /shared_media/.config/mihomo/conf/dashboard/public
@@ -152,6 +148,10 @@ clash:
       - "工作室"
     proxyGroupFilters:
       - "🥀Special Traffic - Hanime1 Download"
+    excludeKeys:
+      - "external-controller"
+      - "external-ui"
+      - "secret"
     fallbackUrl: "http://www.gstatic.com/generate_204"
     groupMapping:
       JP: ["日"]
