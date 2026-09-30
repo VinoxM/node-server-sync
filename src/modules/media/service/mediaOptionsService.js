@@ -1,13 +1,101 @@
 import optionsRep from "../repository/optionsRep.js";
 
 let CACHE_INITIALIZED = false;
-/** @type {Map<string, { id: number, label: string, description: string, value: string, updateTime: string }>} 配置项内存缓存 */
+/** @type {Map<string, Option>} 配置项内存缓存 */
 const cache = new Map();
+
+/**
+ * @typedef {Object} Option
+ * @property {number} id
+ * @property {string} label
+ * @property {string} description
+ * @property {string} value
+ * @property {string} valueType
+ * @property {string|null} defaultValue
+ * @property {string|null} validationRule
+ * @property {string} updateTime
+ */
+
+const OPTION_VALUE_TYPES = new Set(['string', 'integer', 'number', 'boolean', 'select', 'textarea', 'password']);
+
+function parseValidationRule(option) {
+    if (__isBlank(option?.validationRule)) return {};
+    try {
+        const rule = JSON.parse(option.validationRule);
+        return rule && typeof rule === 'object' && !Array.isArray(rule) ? rule : {};
+    } catch (error) {
+        __log.warn(`[Media Options] Invalid validation rule for ${option?.label}.`, error);
+        return {};
+    }
+}
+
+function normalizeOptionValue(option, value) {
+    const valueType = OPTION_VALUE_TYPES.has(option?.valueType) ? option.valueType : 'string';
+    const rule = parseValidationRule(option);
+    const normalizedValue = value === null || value === undefined ? '' : String(value).trim();
+
+    if (valueType === 'boolean') {
+        const trueValue = String(rule.trueValue ?? '1');
+        const falseValue = String(rule.falseValue ?? '0');
+        if (normalizedValue !== trueValue && normalizedValue !== falseValue) {
+            __throwMessage(`Invalid value for option ${option.label}: expected ${trueValue} or ${falseValue}.`);
+        }
+        return normalizedValue;
+    }
+
+    if (valueType === 'select') {
+        const allowedValues = Array.isArray(rule.options)
+            ? rule.options.map(item => String(item?.value ?? item)).filter(Boolean)
+            : [];
+        if (allowedValues.length > 0 && !allowedValues.includes(normalizedValue)) {
+            __throwMessage(`Invalid value for option ${option.label}: expected one of ${allowedValues.join(', ')}.`);
+        }
+        return normalizedValue;
+    }
+
+    if (valueType === 'integer') {
+        if (!/^-?\d+$/.test(normalizedValue)) {
+            __throwMessage(`Invalid value for option ${option.label}: expected an integer.`);
+        }
+        const numberValue = Number(normalizedValue);
+        if (Number.isSafeInteger(rule.min) && numberValue < rule.min || Number.isSafeInteger(rule.max) && numberValue > rule.max) {
+            __throwMessage(`Invalid value for option ${option.label}: expected a value between ${rule.min ?? '-∞'} and ${rule.max ?? '∞'}.`);
+        }
+        return String(numberValue);
+    }
+
+    if (valueType === 'number') {
+        const numberValue = Number(normalizedValue);
+        if (normalizedValue === '' || !Number.isFinite(numberValue)) {
+            __throwMessage(`Invalid value for option ${option.label}: expected a number.`);
+        }
+        if (typeof rule.min === 'number' && numberValue < rule.min || typeof rule.max === 'number' && numberValue > rule.max) {
+            __throwMessage(`Invalid value for option ${option.label}: expected a value between ${rule.min ?? '-∞'} and ${rule.max ?? '∞'}.`);
+        }
+        return String(numberValue);
+    }
+
+    if (typeof rule.maxLength === 'number' && normalizedValue.length > rule.maxLength) {
+        __throwMessage(`Invalid value for option ${option.label}: maximum length is ${rule.maxLength}.`);
+    }
+    if (rule.pattern) {
+        let pattern;
+        try {
+            pattern = new RegExp(rule.pattern);
+        } catch (error) {
+            __log.warn(`[Media Options] Invalid validation pattern for ${option.label}.`, error);
+        }
+        if (pattern && !pattern.test(normalizedValue)) {
+            __throwMessage(`Invalid value for option ${option.label}.`);
+        }
+    }
+    return normalizedValue;
+}
 
 /**
  * 根据配置标签获取选项对象
  * @param {string} [label=''] - 配置项标签
- * @returns {Promise<{ id: number, label: string, description: string, value: string, updateTime: string }|null>}
+ * @returns {Promise<Option|null>}
  */
 async function getOption(label = '') {
     if (__isBlank(label)) return null;
@@ -39,7 +127,12 @@ async function getOptionValue(label = '') {
  * @returns {Promise<void>}
  */
 export async function updateOption(id, description, value) {
-    const { rows } = await optionsRep.updateById(id, value, description);
+    const option = await optionsRep.selectById(id);
+    if (!option) {
+        __throwMessage(`Option ${id} does not exist.`);
+    }
+    const normalizedValue = normalizeOptionValue(option, value);
+    const { rows } = await optionsRep.updateById(id, normalizedValue, description);
     if (rows > 0) {
         const option = await optionsRep.selectById(id);
         option && cache.set(option.label, option);
@@ -48,7 +141,7 @@ export async function updateOption(id, description, value) {
 
 /**
  * 获取全部系统配置项列表（自动内存缓存）
- * @returns {Promise<Array<{ id: number, label: string, description: string, value: string, updateTime: string }>>}
+ * @returns {Promise<Option[]>}
  */
 export async function getOptions() {
     if (CACHE_INITIALIZED) {
@@ -173,4 +266,18 @@ const DELETE_AUTHOR_SAFELY_DEFAULT_VALUE = DELETE_AUTHOR_SAFELY.ENABLE;
 export async function getDeleteAuthorSafely() {
     const value = await getOptionValue(DELETE_AUTHOR_SAFELY_LABEL);
     return parseValueIntOr(value, DELETE_AUTHOR_SAFELY_DEFAULT_VALUE) === DELETE_AUTHOR_SAFELY.ENABLE;
+}
+
+/** Crawl push notification with cover */
+const CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL = "CrawlPushNotificationWithCover";
+const CRAWL_PUSH_NOTIFICATION_WITH_COVER = { DISABLE: 0, ENABLE: 1 };
+const CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE = CRAWL_PUSH_NOTIFICATION_WITH_COVER.DISABLE;
+
+/**
+ * 获取是否开启爬虫消息推送附带封面
+ * @returns {Promise<boolean>}
+ */
+export async function getCrawlPushNotificationWithCover() {
+    const value = await getOptionValue(CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL);
+    return parseValueIntOr(value, CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE) === CRAWL_PUSH_NOTIFICATION_WITH_COVER.ENABLE;
 }
