@@ -24,14 +24,16 @@ export function getCanAdd() {
     return Array.from(map.values());
 }
 
-export function getInfo(skipInside = false) {
+export function getInfo(skipInside = false, skipDance = false, current = false) {
     const result = { urlList: [], author: null, playlist: null };
+    let urls = [];
+    // 判断里
+    const artist = document.querySelector("#video-artist-name");
+    const animeType = String(artist?.attributes.getNamedItem("href")?.value) || '';
     const isInside = ['裏番', '泡麵番'].some(o => animeType.endsWith(o));
     if (isInside && skipInside) return result;
-    let urls = []
-    let current = false, skipDance = false
+    // 获取作者
     const fileRenameRegex = /[\\/:"*<>?\\\\|]|(\\uD83D\\uDC95)|(❤\\uFE0F)/g;
-    const artist = document.querySelector("#video-artist-name")
     let author = ("" + artist?.textContent || 'unknown').replaceAll(/\\/g, '').replace(fileRenameRegex, '').trim()
     let authorTrim = author.replace(/\\(.*?\\)/, "").trim()
     let authorDeform = author.replace(/_/g, " ").trim()
@@ -64,8 +66,6 @@ export function getInfo(skipInside = false) {
             urls.push({ href, title, id })
         }
     })
-    // 判断里
-    const animeType = String(artist?.attributes.getNamedItem("href")?.value) || ''
     if (urls.length > 0 && isInside) {
         // 如果是里,去除候补项
         urls = urls.filter(o => !o.title.startsWith('[中字後補]') && !o.title.startsWith('[中文後補]'))
