@@ -18,11 +18,12 @@ const BASE_LAUNCH_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable
  * 每次打开页面都会重置空闲计时器，长时间无请求时自动关闭浏览器，释放内存与进程句柄。
  * 配置读取自 `browser` 节点 (代理缺省回退到 `axios.proxy`)：
  * ```
- * browser:
- *   headless: true                 # 是否无头模式 (默认 true，等价新版无头)
- *   idleTimeout: 300000            # 空闲回收毫秒数，<= 0 表示不自动回收
- *   proxy: http://host:port        # 代理地址，支持字符串或 { protocol, host, port }，传 false 关闭
- *   args: []                      # 追加的浏览器启动参数
+ * crawl:
+ *   browser:
+ *     headless: true                 # 是否无头模式 (默认 true，等价新版无头)
+ *     idleTimeout: 300000            # 空闲回收毫秒数，<= 0 表示不自动回收
+ *     proxy: http://host:port        # 代理地址，支持字符串或 { protocol, host, port }，传 false 关闭
+ *     args: []                      # 追加的浏览器启动参数
  * ```
  */
 class CrawlerBrowser {
@@ -50,7 +51,7 @@ class CrawlerBrowser {
      * @returns {object}
      */
     #getConfig() {
-        return __env?.get?.('browser', {}) ?? {};
+        return __env?.get?.('crawl.browser', {}) ?? {};
     }
 
     /**
@@ -150,6 +151,7 @@ class CrawlerBrowser {
             userAgent = DEFAULT_USER_AGENT,
             waitUntil = 'networkidle2',
             waitSelector = 'body',
+            callbackArgs = []
         } = options;
         let page = null;
         try {
@@ -160,7 +162,7 @@ class CrawlerBrowser {
             __log.debug(`[CrawlerBrowser] Open URL: ${url}`);
             await page.goto(url, { waitUntil });
             if (waitSelector) await page.waitForSelector(waitSelector);
-            return callback ? await page.evaluate(callback) : null;
+            return callback ? await page.evaluate(callback, ...callbackArgs) : null;
         } catch (error) {
             __log.error(`[CrawlerBrowser] Open URL[${url}] and handle failed.`, error?.message ?? error);
             return null;

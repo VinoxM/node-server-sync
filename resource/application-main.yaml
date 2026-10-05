@@ -208,3 +208,9 @@ media:
     ttlSeconds: 90 * 24 * 60 * 60
     maxHistoryLimit: 200
     finishedThreshold: 0.95
+crawl:
+  browser:
+    headless: true
+    idleTimeout: 300000
+    proxy: http://gateway.vinoxm.lan:7890
+    args: []

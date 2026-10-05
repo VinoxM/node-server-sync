@@ -24,12 +24,14 @@ export function getCanAdd() {
     return Array.from(map.values());
 }
 
-export function getInfo() {
+export function getInfo(skipInside = false) {
+    const result = { urlList: [], author: null, playlist: null };
+    const isInside = ['裏番', '泡麵番'].some(o => animeType.endsWith(o));
+    if (isInside && skipInside) return result;
     let urls = []
     let current = false, skipDance = false
     const fileRenameRegex = /[\\/:"*<>?\\\\|]|(\\uD83D\\uDC95)|(❤\\uFE0F)/g;
     const artist = document.querySelector("#video-artist-name")
-    let playlist = null
     let author = ("" + artist?.textContent || 'unknown').replaceAll(/\\/g, '').replace(fileRenameRegex, '').trim()
     let authorTrim = author.replace(/\\(.*?\\)/, "").trim()
     let authorDeform = author.replace(/_/g, " ").trim()
@@ -64,14 +66,14 @@ export function getInfo() {
     })
     // 判断里
     const animeType = String(artist?.attributes.getNamedItem("href")?.value) || ''
-    const isInside = ['裏番', '泡麵番'].some(o => animeType.endsWith(o))
     if (urls.length > 0 && isInside) {
         // 如果是里,去除候补项
         urls = urls.filter(o => !o.title.startsWith('[中字後補]') && !o.title.startsWith('[中文後補]'))
         // 修改保存文件名为里名
-        playlist = (document.querySelector("#playlist-top-block h4 a")?.textContent.replace(fileRenameRegex, '') || urls[0].title.replace(/[0-9]*$/, '')).trim()
+        result.playlist = (document.querySelector("#playlist-top-block h4 a")?.textContent.replace(fileRenameRegex, '') || urls[0].title.replace(/[0-9]*$/, '')).trim()
     }
-    const result = { urlList: urls, author, playlist }
+    result.urlList = urls;
+    result.author = author;
     return result
 }
 
