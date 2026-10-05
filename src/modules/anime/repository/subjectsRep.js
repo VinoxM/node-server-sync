@@ -486,4 +486,3 @@ export default {
         return __sqliteDB.selectAll(sql, [curSeason], null, dbName);
     }
 };
-  - DOMAIN-SUFFIX,hanime1.me
