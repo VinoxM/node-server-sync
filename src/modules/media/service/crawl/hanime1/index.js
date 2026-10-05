@@ -32,6 +32,7 @@ export async function flushHanime1() {
     const skipDance = __env.get('crawl.hanime1.skipDance', false);
     for (const { uniqueId } of prepared.values()) {
         const info = await crawlerBrowser.openURL(BASE_URL + `/watch?v=${uniqueId}`, getInfo, { callbackArgs: [skipInside, skipDance] });
+        if (!info) continue;
         const { urlList, author, playlist } = info;
         for (const { href, id } of urlList) {
             const { canAdd } = await checkVideoCanAdd({ category: CATEGORY, author, uniqueId: id });
