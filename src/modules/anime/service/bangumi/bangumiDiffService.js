@@ -93,6 +93,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     const diffs = [];
     const bgm = bangumiSubject;
     const db = databaseSubject;
+    if (normalizeStr(db.cover) !== normalizeStr(bgm.cover)) diffs.push('cover');
     if (normalizeStr(db.name) !== normalizeStr(bgm.name)) diffs.push('name');
     if (normalizeStr(db.nameCN) !== normalizeStr(bgm.nameCN)) diffs.push('nameCN');
     if (normalizeArray(db.nameAlias) !== normalizeArray(bgm.nameAlias)) diffs.push('nameAlias');
