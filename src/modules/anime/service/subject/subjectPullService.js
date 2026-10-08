@@ -1,4 +1,4 @@
-import { getCurSeason, getNextSeason } from "#utils/dateUtil.js";
+import { dateFormatForDB, getCurSeason, getNextSeason } from "#utils/dateUtil.js";
 import { convertPropertiesToCloumns } from "#modules/anime/entity/subjectResultMap.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
@@ -183,7 +183,7 @@ async function insertSubjectSubscribes(subjects) {
             const { airDate, season, bangumiId, summary } = subject;
             const startTime = __isNotBlank(airDate) ? new Date(airDate) : new Date(season + '-01');
             const vectorStatus = __isBlank(summary) ? RSS_SUBSCRIBE_VECTOR_STATUS.READY : RSS_SUBSCRIBE_VECTOR_STATUS.PREPARED;
-            return { bangumiId, startTime, vectorStatus };
+            return { bangumiId, startTime: dateFormatForDB(startTime), vectorStatus };
         });
     const { rows } = await subscribeRep.insertBatch(subscribes);
     __log.info('[Subscribe insert] Inserted subscribe rows:', rows);
