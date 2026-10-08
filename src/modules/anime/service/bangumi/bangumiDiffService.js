@@ -39,6 +39,10 @@ async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
     const backfillSubject = await backfillOriginURL(subjectView, bangumiId, { useExtractProp: true });
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
+    if (!cleanedSubject) {
+        __log.warn(`[Bangumi Difference] Subject[${id}] [${getName(subjectView.name, subjectView.nameCN)}] fetch subject failed, skipped.`)
+        return false;
+    }
     const cleanedSubjectView = handleSubjectView(cleanedSubject);
     const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
     if (diffs.length === 0) return false;
