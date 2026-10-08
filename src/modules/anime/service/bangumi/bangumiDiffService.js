@@ -4,8 +4,12 @@ import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
-import { generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
+import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
 import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssHybridVectorService.js";
+
+/**
+ * @typedef {import('#types/animeTypes.d.ts').CleanedSubject} CleanedSubject
+ */
 
 /**
  * 差异对比并更新当前季度未完结的动画条目
@@ -51,6 +55,12 @@ async function diffAndUpsertSubject(subject) {
     return true;
 }
 
+/**
+ * 根据收集的图片映射回填为可入库的图片URL
+ * @param {CleanedSubject|undefined} subject - 番剧视图对象
+ * @param {Array<string>} diffs 发生变动的字段名称列表
+ * @returns {CleanedSubject|undefined} 回填后的条目对象
+ */
 function regenerateImageURL(cleanedSubject, diffs) {
     if (cleanedSubject) {
         const { cover, images, characters: subjectCharacters } = cleanedSubject;
@@ -122,7 +132,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     const diffs = [];
     const bgm = bangumiSubject;
     const db = databaseSubject;
-    if (normalizeStr(db.cover) !== normalizeStr(bgm.cover)) diffs.push('cover');
+    if (normalizeStr(db.cover) !== normalizeStr(bgm.cover) || String(db.cover).startsWith('http')) diffs.push('cover');
     if (normalizeStr(db.name) !== normalizeStr(bgm.name)) diffs.push('name');
     if (normalizeStr(db.nameCN) !== normalizeStr(bgm.nameCN)) diffs.push('nameCN');
     if (normalizeArray(db.nameAlias) !== normalizeArray(bgm.nameAlias)) diffs.push('nameAlias');
@@ -132,7 +142,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     if (normalizeEpisodes(db.totalEpisodes) !== normalizeEpisodes(bgm.totalEpisodes)) diffs.push('totalEpisodes');
     if (normalizeArray(db.metaTags) !== normalizeArray(bgm.metaTags)) diffs.push('metaTags');
     if (normalizeStaff(db.staff) !== normalizeStaff(bgm.staff)) diffs.push('staff');
-    if (normalizeCharacters(db.characters) !== normalizeCharacters(bgm.characters)) diffs.push('characters');
+    if (normalizeCharacters(db.characters) !== normalizeCharacters(bgm.characters) || charsHasAnyOriginURL(db.characters)) diffs.push('characters');
     return diffs;
 }
 
@@ -220,4 +230,14 @@ function normalizeCharacters(chars) {
             actors: Array.isArray(c.actors) ? c.actors.map(a => normalizeStr(a.name || a)).sort() : []
         })).sort((a, b) => a.name.localeCompare(b.name))
     );
+}
+
+/**
+ * 检查角色立绘及声优立绘是否有 http 开头的
+ * @param {Array<{ name: string, image: string, relation: string, summary: string, actors: any[] }>} chars
+ * @returns {boolean}
+ */
+function charsHasAnyOriginURL(chars) {
+    if (!Array.isArray(chars)) return false;
+    return chars.some(c => String(c.image).startsWith('http') || (Array.isArray(c.actors) && c.actors.some(a => String(a.image).startsWith('http'))));
 }
