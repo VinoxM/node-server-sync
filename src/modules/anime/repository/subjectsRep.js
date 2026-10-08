@@ -476,10 +476,10 @@ export default {
     /**
      * 查询尚未完结（需执行元数据 Diff 对比同步）的番剧列表
      * @param {string} curSeason - 当前季度 (如 '2026-10')
-     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryMulti: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
+     * @returns {Promise<QueryResult<{ id: number, bangumiId: number, cover: string, name: string, nameCN: string, nameAlias: string, platform: string, airDate: string, summary: string, summaryMulti: string, totalEpisodes: number, metaTags: string, staff: string, characters: string }>>}
      */
     selectNotFinSubjectsForDiff: (curSeason) => {
-        const sql = `SELECT t.id, t.bangumi_id, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.summary_multi AS summaryMulti, t.total_episodes, t.meta_tags, t.staff, t.characters `
+        const sql = `SELECT t.id, t.bangumi_id, t.cover, t.name, t.name_cn AS nameCN, t.name_alias, t.platform, t.air_date, t.summary, t.summary_multi AS summaryMulti, t.total_episodes, t.meta_tags, t.staff, t.characters `
             + `FROM subjects t `
             + `INNER JOIN rss_subscribe rs ON t.bangumi_id = rs.bangumi_id AND rs.fin = ${ SUBSCRIBE_FIN_VALUE.NO } `
             + `WHERE t.season <= ? `;
