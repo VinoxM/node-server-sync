@@ -4,7 +4,7 @@ import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import { fetchAndCleanBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { handleSubjectView } from "#modules/anime/service/subject/subjectService.js";
-import { putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
+import { generateCharacterImageLink, generateSubjectCoverLink, putImageStorageLinkBatch } from "#modules/anime/service/bangumi/bangumiImagesService.js";
 import { resetVectorStatusByBangumiIds } from "#modules/anime/service/rss/rssHybridVectorService.js";
 
 /**
@@ -33,14 +33,15 @@ export async function updateNotFinSubjects() {
  */
 async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
-    const backfillSubject = await backfillOriginUrl(subjectView, bangumiId);
+    const backfillSubject = await backfillOriginURL(subjectView, bangumiId);
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
     const cleanedSubjectView = handleSubjectView(cleanedSubject);
     const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
     if (diffs.length === 0) return false;
     __log.info(`[Bangumi Difference] Subject[${id}] [${getName(subjectView.name, subjectView.nameCN)}] has ${diffs.length} diffs:`, diffs.join(', '));
     diffs.push('updateTime');
-    const { rows } = await subjectsRep.updateOne(cleanedSubject, convertPropertiesToCloumns(diffs));
+    const regeneratedSubject = regenerateImageURL(cleanedSubject, diffs);
+    const { rows } = await subjectsRep.updateOne(regeneratedSubject, convertPropertiesToCloumns(diffs));
     if (diffs.some(s => NEED_TO_RESET_VECTOR_STATUS_COLUMN.includes(s)) && rows > 0) {
         await resetVectorStatusByBangumiIds([bangumiId]);
     }
@@ -48,6 +49,34 @@ async function diffAndUpsertSubject(subject) {
         await putImageStorageLinkBatch(cleanedSubject.images);
     }
     return true;
+}
+
+function regenerateImageURL(cleanedSubject, diffs) {
+    if (cleanedSubject) {
+        const { cover, images, characters: subjectCharacters } = cleanedSubject;
+        if (diffs.includes('cover')) {
+            const coverImage = images.find(img => img.image === cover);
+            __isNotBlank(coverImage?.link) && (cleanedSubject.cover = coverImage.link);
+        }
+        if (diffs.includes('characters')) {
+            const characters = JSON.parse(subjectCharacters || '[]');
+            for (const character of characters) {
+                if (!character) continue;
+                const { image, actors } = character;
+                const charImage = images.find(img => img.image === image);
+                __isNotBlank(charImage?.link) && (character.image = charImage.link);
+                if (__isEmptyArray(actors)) continue;
+                for (const actor of actors) {
+                    if (!actor) continue;
+                    const { image } = actor;
+                    const actorImage = images.find(img => img.image === image);
+                    __isNotBlank(actorImage?.link) && (actor.image = actorImage.link);
+                }
+            }
+            cleanedSubject.characters = JSON.stringify(characters);
+        }
+    }
+    return cleanedSubject;
 }
 
 /**
@@ -58,7 +87,7 @@ async function diffAndUpsertSubject(subject) {
  * @param {boolean} [options.useExtractProp=false] - 是否将原始 URL 赋给独立属性 (originCover / originImage)
  * @returns {Promise<Object>} 回填后的条目对象
  */
-export async function backfillOriginUrl(subject, bangumiId, options = {}) {
+export async function backfillOriginURL(subject, bangumiId, options = {}) {
     const { data } = await bangumiImagesRep.selectByLinkLikely(`/subject/${bangumiId}/`);
     const { characters } = subject;
     const { useExtractProp = false } = options;

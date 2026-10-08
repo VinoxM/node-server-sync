@@ -6,7 +6,7 @@ import {
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";
 import subscribeRep from "#modules/anime/repository/subscribeRep.js";
-import { backfillOriginUrl } from "#modules/anime/service/bangumi/bangumiDiffService.js";
+import { backfillOriginURL } from "#modules/anime/service/bangumi/bangumiDiffService.js";
 import { generateCharacterImageLink } from "#modules/anime/service/bangumi/bangumiImagesService.js";
 import { resetVectorStatusByBangumiIds } from "../rss/rssHybridVectorService.js";
 
@@ -108,7 +108,7 @@ export async function getSubjectForEdit(subjectId) {
     const subject = await subjectsRep.selectOneById(subjectId);
     subject || __throwMessage('Subject not exists.');
     const subjectView = handleSubjectView(subject);
-    const backfilledSubjectView = await backfillOriginUrl(subjectView, subject.bangumiId, { useExtractProp: true });
+    const backfilledSubjectView = await backfillOriginURL(subjectView, subject.bangumiId, { useExtractProp: true });
     return {
         ...backfilledSubjectView,
         nsfw: subject.nsfw,
