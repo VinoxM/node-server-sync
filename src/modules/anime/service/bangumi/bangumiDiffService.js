@@ -37,7 +37,7 @@ export async function updateNotFinSubjects() {
  */
 async function diffAndUpsertSubject(subject) {
     const { id, bangumiId, ...subjectView } = handleSubjectView(subject);
-    const backfillSubject = await backfillOriginURL(subjectView, bangumiId);
+    const backfillSubject = await backfillOriginURL(subjectView, bangumiId, { useExtractProp: true });
     const cleanedSubject = await fetchAndCleanBangumiSubject(bangumiId, { persistenceImage: false, collectImage: true, useOriginImage: true });
     const cleanedSubjectView = handleSubjectView(cleanedSubject);
     const diffs = getSubjectDiffProperties(backfillSubject, cleanedSubjectView);
@@ -132,7 +132,7 @@ function getSubjectDiffProperties(databaseSubject, bangumiSubject) {
     const diffs = [];
     const bgm = bangumiSubject;
     const db = databaseSubject;
-    if (normalizeStr(db.cover) !== normalizeStr(bgm.cover) || String(db.cover).startsWith('http')) diffs.push('cover');
+    if (normalizeStr(db.originCover) !== normalizeStr(bgm.cover) || String(db.cover).startsWith('http')) diffs.push('cover');
     if (normalizeStr(db.name) !== normalizeStr(bgm.name)) diffs.push('name');
     if (normalizeStr(db.nameCN) !== normalizeStr(bgm.nameCN)) diffs.push('nameCN');
     if (normalizeArray(db.nameAlias) !== normalizeArray(bgm.nameAlias)) diffs.push('nameAlias');
@@ -224,7 +224,7 @@ function normalizeCharacters(chars) {
     return JSON.stringify(
         chars.map(c => ({
             name: normalizeStr(c.name),
-            image: normalizeStr(c.image),
+            image: normalizeStr(c.originImage || c.image),
             relation: normalizeStr(c.relation),
             summary: normalizeMultilineStr(c.summary),
             actors: Array.isArray(c.actors) ? c.actors.map(a => normalizeStr(a.name || a)).sort() : []
