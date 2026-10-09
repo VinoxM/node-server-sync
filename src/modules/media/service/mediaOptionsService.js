@@ -269,9 +269,18 @@ export async function getDeleteAuthorSafely() {
 }
 
 /** Crawl push notification with cover */
-const CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL = "CrawlPushNotificationWithCover";
-const CRAWL_PUSH_NOTIFICATION_WITH_COVER = { DISABLE: 0, ENABLE: 1 };
+const CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL = "CrawlPushNotification";
+const CRAWL_PUSH_NOTIFICATION_WITH_COVER = { DISABLE: 0, ENABLE: 1, WITH_COVER: 2 };
 const CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE = CRAWL_PUSH_NOTIFICATION_WITH_COVER.DISABLE;
+
+/**
+ * 获取是否开启爬虫消息推送
+ * @returns {Promise<boolean>}
+ */
+export async function getEnableCrawlPushNotification() {
+    const value = await getOptionValue(CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL);
+    return parseValueIntOr(value, CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE) !== CRAWL_PUSH_NOTIFICATION_WITH_COVER.DISABLE;
+}
 
 /**
  * 获取是否开启爬虫消息推送附带封面
@@ -279,5 +288,5 @@ const CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE = CRAWL_PUSH_NOTIFICATION
  */
 export async function getCrawlPushNotificationWithCover() {
     const value = await getOptionValue(CRAWL_PUSH_NOTIFICATION_WITH_COVER_LABEL);
-    return parseValueIntOr(value, CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE) === CRAWL_PUSH_NOTIFICATION_WITH_COVER.ENABLE;
+    return parseValueIntOr(value, CRAWL_PUSH_NOTIFICATION_WITH_COVER_DEFAULT_VALUE) === CRAWL_PUSH_NOTIFICATION_WITH_COVER.WITH_COVER;
 }

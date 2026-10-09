@@ -1,7 +1,7 @@
 import { pushNotification } from "#api/sockets/notification.js";
 import { crawlerBrowser } from "#core/instance/crawlerBrowser.js";
 import { checkVideoFilterRules } from "#modules/media/service/mediaFilterService.js";
-import { getCrawlPushNotificationWithCover } from "#modules/media/service/mediaOptionsService.js";
+import { getCrawlPushNotificationWithCover, getEnableCrawlPushNotification } from "#modules/media/service/mediaOptionsService.js";
 import { checkVideoCanAdd, createVideo } from "#modules/media/service/mediaVideoService.js";
 import { getCanAdd, getDownload, getInfo, getTags } from "./callback.js";
 
@@ -60,6 +60,7 @@ export async function flushHanime1() {
         __log.info(`[Crawl Hanime1] No need to create videos found.`);
         return;
     }
+    const enablePush = await getEnableCrawlPushNotification();
     const withCover = await getCrawlPushNotificationWithCover();
     const videos = Array.from(toSave.values());
     const created = [];
@@ -71,7 +72,7 @@ export async function flushHanime1() {
             created.push(createdObj);
         }
     }
-    if (created.length > 0) {
+    if (created.length > 0 && enablePush) {
         __log.info(`[Crawl Hanime1] Created videos:`, created.length);
         await pushNotification(JSON.stringify({ event: 'Crawl', data: created }));
     }
