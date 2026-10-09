@@ -67,15 +67,3 @@ steps:
     when:
       ref:
         - refs/tags/v*
-  - name: trigger-argocd-sync
-    image: gitea.vinoxm.art/library/argocd:2.3.0
-    environment:
-      ARGOCD_SERVER: argocd-server.argocd.svc.cluster.local
-      ARGOCD_AUTH_TOKEN:
-        from_secret: argocd_token
-    commands:
-      - argocd app get prod-node-server --refresh --server $ARGOCD_SERVER --plaintext --insecure --auth-token $ARGOCD_AUTH_TOKEN
-      - argocd app wait prod-node-server --server $ARGOCD_SERVER --plaintext --insecure --auth-token $ARGOCD_AUTH_TOKEN
-    when:
-      ref:
-        - refs/tags/v*
