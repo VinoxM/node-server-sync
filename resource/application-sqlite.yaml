@@ -43,7 +43,7 @@ sqlite:
       - tableName: rss_result
         DDL: |
           CREATE TABLE rss_result (
-            `id` integer PRIMARY KEY NOT NULL,
+            `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
             `pid` integer NOT NULL,
             `title` varchar(500) NOT NULL,
             `torrent` varchar(100) NOT NULL,

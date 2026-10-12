@@ -2,16 +2,16 @@ import { dateFormatForDB } from '#utils/dateUtil.js';
 
 const dbName = 'anime';
 
-const INSERT_COLUMNS = ['id', 'pid', 'title', 'torrent', 'pub_date', 'tracker', 'episode', 'sort'];
+const INSERT_COLUMNS = ['pid', 'title', 'torrent', 'pub_date', 'tracker', 'episode', 'sort'];
 const BATCH_INSERT_PARAMS_LIMIT = 500;
 
 async function insertAny(results) {
     if (__isEmptyArray(results)) {
         return { rows: 0 };
     }
-    const valueSql = '(?, ?, ?, ?, ?, ?, ?, ?)';
+    const valueSql = '(?, ?, ?, ?, ?, ?, ?)';
     const sql = `INSERT OR IGNORE INTO rss_result(${INSERT_COLUMNS.join(',')}) VALUES${results.map(_ => valueSql).join(',')}`;
-    const values = results.flatMap(result => ([result.id, result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort]));
+    const values = results.flatMap(result => ([result.pid, result.title, result.torrent, dateFormatForDB(result.pubDate), result.tracker, result.episode, result.sort]));
     return __sqliteDB.insert(sql, values, null, dbName);
 }
 
@@ -20,18 +20,8 @@ async function insertAny(results) {
  */
 export default {
     /**
-     * 获取当前结果表最大主键 ID
-     * @returns {Promise<number>}
-     */
-    selectMaxId: async () => {
-        const sql = "SELECT MAX(id) id FROM rss_result";
-        return __sqliteDB.selectOne(sql, [], null, dbName).then(data => data?.id || 0);
-    },
-
-    /**
      * 插入单条 RSS 抓取条目
      * @param {Object} result - 条目数据
-     * @param {number} result.id - 主键 ID
      * @param {number} result.pid - 订阅 ID
      * @param {string} result.title - 资源标题
      * @param {string} result.torrent - 磁力链或种子 Hash

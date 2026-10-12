@@ -20,8 +20,7 @@ export function getEpisodeMatches() {
 export async function addOneResult(result) {
     const trackers = expandTorrentTracker(result);
     const trackerArr = await saveTrackers(trackers);
-    const rssResultMaxId = await rssResultRep.selectMaxId();
-    handleRssResultProperties(result, { trackerArr, rssResultMaxId });
+    handleRssResultProperties(result, { trackerArr });
     const { rows } = await rssResultRep.insertOne(result);
     rows || __throwMessage('Add rss result failed. Cause: exists.');
 }
@@ -35,10 +34,7 @@ export async function addManyResult(resultArr) {
     if (__isEmptyArray(resultArr)) return 0;
     const trackers = multiExpandTorrentTracker(resultArr);
     const trackerArr = await saveTrackers(trackers);
-    const rssResultMaxId = await rssResultRep.selectMaxId();
-    for (let i = 0; i < resultArr.length; i++) {
-        handleRssResultProperties(resultArr[i], { trackerArr, rssResultMaxId, incr: i });
-    }
+    resultArr.forEach(result => handleRssResultProperties(result, { trackerArr }));
     const { rows } = await rssResultRep.insertMany(resultArr);
     return rows;
 }
@@ -106,29 +102,14 @@ export async function editOneResult(result) {
  * 格式化 RSS 抓取结果条目的属性（生成自增 ID、关联 Tracker ID、提取集数及排序序号）
  * @param {Object} rssResult - 抓取条目
  * @param {Object} options - 选项
- * @param {number} [options.rssResultMaxId=-1] - 当前最大主键 ID
- * @param {number} [options.incr=0] - 增量偏移量
  * @param {Array<{ id: number, host: string }>} [options.trackerArr=null] - Tracker 列表
  */
-function handleRssResultProperties(rssResult, { rssResultMaxId = -1, incr = 0, trackerArr = null }) {
-    if (rssResultMaxId !== -1) {
-        handleRssResultId(rssResult, rssResultMaxId, incr);
-    }
+function handleRssResultProperties(rssResult, { trackerArr = null }) {
     if (trackerArr !== null) {
         handleRssResultTrackers(rssResult, trackerArr);
     }
     handleRssResultEpisode(rssResult);
     handleRssResultSort(rssResult);
-}
-
-/**
- * 为条目赋予连续主键 ID
- * @param {Object} rssResult
- * @param {number} rssResultMaxId
- * @param {number} incr
- */
-function handleRssResultId(rssResult, rssResultMaxId, incr) {
-    rssResult.id = incr + rssResultMaxId + 1;
 }
 
 /**
