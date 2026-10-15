@@ -70,7 +70,7 @@ export async function checkVideoFilterRules(body) {
         const data = await videosRep.selectByUniqueIds(uniqueIds, categoryId).then(({ data }) => data);
         videos.push(...data);
     }
-    if (authorsMap.size() > 0) {
+    if (authorsMap.size > 0) {
         const authors = Array.from(authorsMap.keys());
         const authorsDownloaded = await authorsRep.selectVideosExistsAuthors(authors).then(({ data }) => data);
         authorsDownloaded.forEach(d => d.count > 0 && authorsMap.set(d.name, true));
