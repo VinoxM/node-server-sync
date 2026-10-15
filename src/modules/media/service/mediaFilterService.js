@@ -1,6 +1,7 @@
 import {
     MEDIA_FILTER_TYPE
 } from "../constants/mediaConst.js";
+import authorsRep from "../repository/authorsRep.js";
 import categoriesRep from "../repository/categoriesRep.js";
 import filterRulesRep, { getCacheByCategory, OPERATOR_TABLE } from "../repository/filterRulesRep.js";
 import videosRep from "../repository/videosRep.js";
@@ -39,7 +40,8 @@ export async function checkVideoFilterRulesByCategoryId(categoryId, author, uniq
 export async function checkVideoFilterRules(body) {
     const { category, rules } = body;
     const categoryInfo = await categoriesRep.selectOneByName(category);
-    if (!categoryInfo) return rules.map(() => ({ downloaded: false, blocked: false, allowed: false, canAdd: false }));
+    if (!categoryInfo) return rules.map(() => ({ downloaded: false, blocked: false, allowed: false, canAdd: false, authorExists: false }));
+    const authorsMap = new Map();
     const categoryId = categoryInfo.id;
     const results = [];
     const cache = await getCacheByCategory(categoryId);
@@ -48,7 +50,8 @@ export async function checkVideoFilterRules(body) {
     const defaultAllowed = await getMediaPolicyDefaultAllowed();
     for (const rule of rules) {
         const { author, uniqueId } = rule;
-        const result = { downloaded: null, blocked: false, allowed: false, canAdd: defaultAllowed };
+        __isBlank(author) || authorsMap.has(author) || authorsMap.set(author, false);
+        const result = { downloaded: null, blocked: false, allowed: false, canAdd: defaultAllowed, authorExists: false };
         if ((uniqueId && whitelist?.uniqueId?.has(uniqueId)) || (author && whitelist?.author?.has(author))) {
             result.allowed = true;
         } else if ((uniqueId && blacklist?.uniqueId?.has(uniqueId)) || (author && blacklist?.author?.has(author))) {
@@ -67,10 +70,16 @@ export async function checkVideoFilterRules(body) {
         const data = await videosRep.selectByUniqueIds(uniqueIds, categoryId).then(({ data }) => data);
         videos.push(...data);
     }
+    if (authorsMap.size() > 0) {
+        const authors = Array.from(authorsMap.keys());
+        const authorsDownloaded = await authorsRep.selectVideosExistsAuthors(authors).then(({ data }) => data);
+        authorsDownloaded.forEach(d => d.count > 0 && authorsMap.set(d.name, true));
+    }
     return results.map((r, i) => {
         if (r.downloaded === null) {
-            const { uniqueId } = rules[i];
+            const { uniqueId, author } = rules[i];
             r.downloaded = __isNotBlank(uniqueId) && videos.some(v => v.uniqueId === uniqueId);
+            r.authorExists = __isNotBlank(author) && authorsMap.get(author);
         }
         return r;
     });

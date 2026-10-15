@@ -20,8 +20,8 @@ export async function flushHanime1() {
         const result = await checkVideoFilterRules({ category: CATEGORY, rules });
         if (result && Array.isArray(result)) {
             for (let i = 0; i < result.length; i++) {
-                const { canAdd, downloaded } = result[i];
-                canAdd && !downloaded && prepared.set(rules[i].uniqueId, rules[i]);
+                const { canAdd, downloaded, authorExists } = result[i];
+                canAdd && !downloaded && authorExists && prepared.set(rules[i].uniqueId, rules[i]);
             }
         }
     }

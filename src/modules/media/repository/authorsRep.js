@@ -171,5 +171,22 @@ export default {
             + `AND v.category_id = a.category_id`
             + `)`;
         return (transactionDB || __sqliteDB).selectAll(sql, [categoryId], null, dbName);
+    },
+
+    /**
+     * 查询指定的作者在库中已有的作品数量
+     * @param {Array<string>} authors - 作者名称列表
+     * @returns {Promise<QueryResult<{ id: number, name: string, count: number }>>}
+     */
+    selectVideosExistsAuthors: async (authors) => {
+        if (__isEmptyArray(authors)) {
+            return { rows: 0, data: [] };
+        }
+        const sql = `SELECT ta.id, ta.name, COUNT(tv.id) AS count `
+            + `FROM authors ta `
+            + `LEFT JOIN videos tv ON tv.author_id=ta.id `
+            + `WHERE ta.name IN (${authors.map(_ => '?').join(',')}) `
+            + `GROUP BY ta.id, ta.name `;
+        return __sqliteDB.selectAll(sql, authors, null, dbName);
     }
 };

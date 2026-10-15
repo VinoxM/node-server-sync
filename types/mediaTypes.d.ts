@@ -73,6 +73,8 @@ export interface MediaFilterCheckResult {
   allowed: boolean;
   /** 是否最终允许入库添加 */
   canAdd: boolean;
+  /** 是否作者作品在库中存在 */
+  authorExists: boolean;
 }
 
 /**
