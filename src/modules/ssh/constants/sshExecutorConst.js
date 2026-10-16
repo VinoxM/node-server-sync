@@ -46,5 +46,9 @@ export default {
     MINIO_MOVE_SCRIPT: {
         title: 'Move File To Minio',
         descGenerator: (sourceFile, minioLink) => `Move file to minio, ${sourceFile} ==> ${minioLink}`
+    },
+    WAKE_ON_LAN_SCRIPT: {
+        title: 'Wake on lan',
+        descGenerator: (label, mac) => `Wake server ${label}[${mac}] on lan`
     }
 };

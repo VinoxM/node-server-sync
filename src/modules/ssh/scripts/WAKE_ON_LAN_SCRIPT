@@ -1,0 +1,15 @@
+bash -c '
+set +H;
+broadcast_ip="$1";
+mac_address="$2";
+
+wakeonlan -i "$broadcast_ip" -p 9 "$mac_address"
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+    echo "Wake-on-LAN Success"
+    exit 0
+else
+    echo "Wake-on-LAN Failed with code $exit_code" >&2
+    exit 1
+fi' --

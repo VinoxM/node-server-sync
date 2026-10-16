@@ -167,3 +167,28 @@ export async function extractMkvFonts(mkvFilePath, opts = {}) {
     const code = await executeSshScript(sshExecutorConst.FFMPEG_EXTRACT_MKV_FONTS, { ...opts, onData }, mkvFilePath);
     return { result: result ?? [], code };
 }
+
+/**
+ * @deprecated 暂时弃用
+ * 唤醒远程服务器
+ * @param {string} mkvFilePath - 配置好的远程服务器Label
+ * @param {SshExecutorOptions} [opts={}] - 执行选项
+ * @returns {Promise<number>} 执行退出码
+ */
+async function wakeOnLan(serverLabel, opts = {}) {
+    const broadcast = __env.get('wakeOnLan.broadcast', null);
+    if (__isBlank(broadcast)) {
+        __log.warn(`Wake broadcast ip is blank`);
+        return -102;
+    }
+    const hosts = __env.get('wakeOnLan.hosts', []);
+    const host = __isNotBlank(serverLabel) && __isNotEmptyArray(hosts) ? hosts.find(h => h.label === serverLabel) : null;
+    if (!host) {
+        __log.warn(`No such server:`, serverLabel);
+        return -101;
+    }
+    const mac = host.mac;
+    __log.info(`Ready to wake lan server ${serverLabel}[${mac}]`);
+    const code = await executeSshScript(sshExecutorConst.WAKE_ON_LAN_SCRIPT, opts, broadcast, mac);
+    return code;
+}
