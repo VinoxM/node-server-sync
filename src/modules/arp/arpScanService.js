@@ -1,7 +1,7 @@
 import apiMethod from '#constants/apiMethodConst.js';
 
 const ARP_SCAN_HOST = 'http://192.168.31.90:28088';
-const ARP_SCAN_DEFAULT_HEADERS = { 'Content-Type': 'application/json' };
+const ARP_SCAN_DEFAULT_HEADERS = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${btoa('mAou5820.arp-scan')}` };
 
 const ARP_SCAN_API = {
     SERVERS: {
@@ -11,6 +11,10 @@ const ARP_SCAN_API = {
     WAKE_ON_LAN: {
         method: apiMethod.POST,
         path: '/api/servers/wake'
+    },
+    SHUTDOWN_ON_LAN: {
+        method: apiMethod.POST,
+        path: '/api/servers/shutdown'
     }
 };
 
@@ -72,4 +76,8 @@ export async function getWakeableServers() {
 
 export async function wakeOnLan(serverId) {
     return fetchArpScanService(ARP_SCAN_API.WAKE_ON_LAN, { id: serverId });
+}
+
+export async function shutdownOnLan(serverId) {
+    return fetchArpScanService(ARP_SCAN_API.SHUTDOWN_ON_LAN, { id: serverId });
 }
