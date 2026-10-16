@@ -96,6 +96,8 @@ export default defineRoutes({
         method: GET,
         allowHosts: allowLanHosts,
         needAuth: needAuthSingleClient.MANAGE,
+        ignoreAccessPrint: true,
+        ignoreReturnPrint: true,
         needSecret,
         callback: () => getWakeableServers()
     },
