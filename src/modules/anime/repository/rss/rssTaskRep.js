@@ -3,13 +3,29 @@ import { LRUCache } from "#core/infra/extendMap.js";
 const dbName = 'anime';
 
 const taskCache = new LRUCache(100);
+// 任意写入完成后递增，阻止此前发出的查询回填旧数据。
+let taskCacheVersion = 0;
+
+function invalidateTaskCacheById(id) {
+    taskCacheVersion += 1;
+    taskCache.delete(String(id));
+}
+
+function invalidateTaskCacheByUUID(uuid) {
+    taskCacheVersion += 1;
+    // LRUCache 的迭代值是内部包装，须通过 get 获取实际缓存值。
+    for (const key of taskCache.keys()) {
+        if (taskCache.get(key)?.uuid === uuid) taskCache.delete(key);
+    }
+}
 
 function getFromCache(ids) {
     const excludes = [];
     const results = [];
     Array.from(ids).forEach(id => {
-        if (taskCache.has(id)) {
-            results.push({ id, ...taskCache.get(id) });
+        const cached = taskCache.get(String(id));
+        if (cached) {
+            results.push({ id, ...cached });
         } else {
             excludes.push(id);
         }
@@ -21,7 +37,7 @@ function saveCache(results) {
     const arr = Array.from(results).filter(r => Boolean(r.hash));
     arr.forEach(res => {
         const { id, ...val } = res;
-        taskCache.set(id, val);
+        taskCache.set(String(id), val);
     });
 }
 
@@ -58,7 +74,7 @@ export default {
      * @param {number} rssResultId - 抓取结果 ID
      * @returns {Promise<boolean>}
      */
-    selectExistsByResultId: (rssResultId) => {
+    selectExistsByResultId: async (rssResultId) => {
         const sql = 'SELECT COUNT(id) count FROM rss_torrent_task WHERE rss_result_id=?';
         return __sqliteDB.selectOne(sql, [rssResultId], null, dbName).then(data => (data?.count ?? 0) > 0);
     },
@@ -97,9 +113,11 @@ export default {
      * @param {string} status - 目标状态
      * @returns {Promise<ExecResult>}
      */
-    updateStatusByUUID: (uuid, status) => {
+    updateStatusByUUID: async (uuid, status) => {
         const sql = 'UPDATE rss_torrent_task SET status = ? WHERE torrent_uuid = ?';
-        return __sqliteDB.update(sql, [status, uuid], null, dbName);
+        const result = await __sqliteDB.update(sql, [status, uuid], null, dbName);
+        invalidateTaskCacheByUUID(uuid);
+        return result;
     },
 
     /**
@@ -108,9 +126,11 @@ export default {
      * @param {string} status - 目标状态
      * @returns {Promise<ExecResult>}
      */
-    updateStatusById: (id, status) => {
+    updateStatusById: async (id, status) => {
         const sql = 'UPDATE rss_torrent_task SET status = ? WHERE id = ?';
-        return __sqliteDB.update(sql, [status, id], null, dbName);
+        const result = await __sqliteDB.update(sql, [status, id], null, dbName);
+        invalidateTaskCacheById(id);
+        return result;
     },
 
     /**
@@ -119,23 +139,26 @@ export default {
      * @param {string} hash - 种子 Hash
      * @returns {Promise<ExecResult>}
      */
-    updateTaskHashById: (id, hash) => {
+    updateTaskHashById: async (id, hash) => {
         const sql = 'UPDATE rss_torrent_task SET torrent_hash = ? WHERE id = ?';
-        return __sqliteDB.update(sql, [hash, id], null, dbName);
+        const result = await __sqliteDB.update(sql, [hash, id], null, dbName);
+        invalidateTaskCacheById(id);
+        return result;
     },
 
     /**
-     * 根据 ID 列表批量查询任务信息（带 LRU 缓存）
+    * 根据 ID 列表批量查询任务信息（带 LRU 缓存，写入成功后失效）
      * @param {number[]} ids - 任务 ID 列表
-     * @returns {Promise<Array<{ id: number, hash: string, uuid: string }>>}
+     * @returns {Promise<Array<{ id: number, hash: string, uuid: string, status: string }>>}
      */
     selectByIds: async (ids) => {
         const { results, excludes } = getFromCache(ids);
         if (excludes.length > 0) {
-            const sql = 'SELECT id,torrent_hash AS hash,torrent_uuid AS uuid FROM rss_torrent_task WHERE id IN (' + new Array(excludes.length).fill('?').join(',') + ')';
+            const version = taskCacheVersion;
+            const sql = 'SELECT id,torrent_hash AS hash,torrent_uuid AS uuid, status FROM rss_torrent_task WHERE id IN (' + new Array(excludes.length).fill('?').join(',') + ')';
             const data = await __sqliteDB.selectAll(sql, excludes, null, dbName).then(({ data }) => data);
             if (data.length > 0) {
-                saveCache(data);
+                if (version === taskCacheVersion) saveCache(data);
                 results.push(...data);
             }
         }
@@ -157,8 +180,10 @@ export default {
      * @param {number} id - 任务 ID
      * @returns {Promise<ExecResult>}
      */
-    deleteOneById: id => {
+    deleteOneById: async id => {
         const sql = 'DELETE FROM rss_torrent_task WHERE id=?';
-        return __sqliteDB.delete(sql, [id], null, dbName);
+        const result = await __sqliteDB.delete(sql, [id], null, dbName);
+        invalidateTaskCacheById(id);
+        return result;
     }
 };

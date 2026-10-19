@@ -7,7 +7,7 @@ import {
     resumeTask, updateTaskStatus, addRssTaskFromWebhook,
     deleteTaskBatch
 } from "#modules/anime/service/rss/rssTaskService.js";
-import { NEED_AUTH_CLIENT } from "#common/constants/authorizationConst.js";
+import { NEED_AUTH_CLIENT, needAuthSingleClient } from "#common/constants/authorizationConst.js";
 import { defineRoutes } from "#common/utils/defineUtil.js";
 
 const { POST } = apiMethodConst;
@@ -25,7 +25,7 @@ export default defineRoutes({
      */
     "/addTask": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.ANIME,
+        needAuth: needAuthSingleClient.ANIME,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId', 'rssResultId']),
         callback: req => addRssTaskFromWebhook(req.body.rssSubsId, req.body.rssResultId)
@@ -49,7 +49,7 @@ export default defineRoutes({
      */
     "/taskInfo": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE, NEED_AUTH_CLIENT.ANIME] },
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => queryTaskTorrentInfo(req.body.taskIds)
@@ -61,7 +61,7 @@ export default defineRoutes({
      */
     "/deleteTask": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => deleteTask(req.body.taskId)
@@ -73,7 +73,7 @@ export default defineRoutes({
      */
     "/deleteTaskBatch": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => deleteTaskBatch(req.body.taskIds)
@@ -85,7 +85,7 @@ export default defineRoutes({
      */
     "/pauseTask": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => pauseTask(req.body.taskId)
@@ -97,7 +97,7 @@ export default defineRoutes({
      */
     "/resumeTask": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => resumeTask(req.body.taskId)
@@ -109,7 +109,7 @@ export default defineRoutes({
      */
     "/completeTask": {
         method: POST,
-        needAuth: NEED_AUTH_CLIENT.MANAGE,
+        needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => completeTask(req.body.taskId)

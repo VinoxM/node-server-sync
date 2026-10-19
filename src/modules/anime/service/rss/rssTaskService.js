@@ -438,7 +438,7 @@ export async function queryTaskTorrentInfo(taskIds) {
     const info = await torrentsInfo(toQuery.map(t => t.hash));
     const arr = Array.from(info || []);
     return toQuery.map(t => {
-        const result = { id: t.id };
+        const result = { id: t.id, status: t.status };
         const obj = arr.find(o => o.hash === t.hash);
         if (obj) {
             result.percent = (obj.progress * 100).toFixed(1) + '%';

@@ -106,7 +106,10 @@ async function getRssResultsByRssSubscribeId(rssSubsId, userInfo) {
         const torrent = [item.torrent, trackers.join('&tr=')].join('&tr=');
         result.torrent = 'magnet:?xt=urn:btih:' + torrent;
         const task = tasks.find(t => t.rssResultId === item.id);
-        task && (result.taskId = task.id);
+        if (task) {
+            result.taskId = task.id;
+            result.taskStatus = task.status;
+        }
         results.push(result);
     }
     return results;
