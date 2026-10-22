@@ -183,3 +183,8 @@ export const MEDIA_BILIVE_RECORD_FILE_SYNC_STATUS = {
     /** 已同步完成 (2) */
     SYNCHRONIZED: 2
 };
+
+/**
+ * 自动关闭准备下播状态的时间间隔
+ */
+export const AUTO_CLOSE_READY_TO_END_STREAM_GAP = 2.5 * 60 * 60 * 1000;
