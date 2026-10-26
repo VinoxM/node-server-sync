@@ -5,7 +5,7 @@ import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, che
 import {
     getExistsSeasons, getSubjectForEdit, getSubjectForEditView,
     handleSubjectView, searchSubjects, updateSubjectFin,
-    updateSubjectHide, updateSubjectIsShort, updateSubjectSeason,
+    updateSubjectHide, updateSubjectIsShort, updateSubjectNsfw, updateSubjectSeason,
     updateSubjectSummaryMulti
 } from "#modules/anime/service/subject/subjectService.js";
 import { fetchAndCleanBangumiSubject, pullAnimeSubjects, pullCleanedBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
@@ -183,6 +183,22 @@ export default defineRoutes({
         callback: req => {
             const { id, fin } = req.body;
             return updateSubjectFin(id, fin);
+        }
+    },
+
+    /**
+     * 更新番剧条目限制级
+     * 请求体参数：{ id: number, nsfw: 0|1 }
+     */
+    '/update.nsfw': {
+        method: POST,
+        needAuth,
+        needSecret,
+        allowHosts: allowLanHosts,
+        preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeyMatch(req, 'nsfw', [/[01]/]),
+        callback: req => {
+            const { id, nsfw } = req.body;
+            return updateSubjectNsfw(id, nsfw);
         }
     },
 

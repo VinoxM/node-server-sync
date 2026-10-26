@@ -227,3 +227,10 @@ export async function updateSubjectSummaryMulti(id, summaryMulti) {
     const { rows } = await subjectsRep.updateOne({ bangumiId, summaryMulti: summaryMultiStr }, ['summary_multi']);
     rows && await resetVectorStatusByBangumiIds([bangumiId]);
 }
+
+export async function updateSubjectNsfw(id, nsfw) {
+    const subject = await subjectsRep.selectOneById(id);
+    subject || __throwMessage('Subject not exists.');
+    const { bangumiId } = subject;
+    await subjectsRep.updateOne({ bangumiId, nsfw }, ['nsfw']);
+}
