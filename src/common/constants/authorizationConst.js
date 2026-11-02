@@ -16,7 +16,8 @@ export const NEED_AUTH_CLIENT = {
     ANIME: 'client-anime',
     MANAGE: 'client-manage',
     MEDIA: 'client-media',
-    API_POST: 'client-api-post'
+    API_POST: 'client-api-post',
+    MAGIC_BOOK: 'magic-book-desktop'
 }
 
 function generateSingleNeedAuth(client) {

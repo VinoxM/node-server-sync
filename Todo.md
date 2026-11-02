@@ -233,35 +233,35 @@ node-server/
 任何后续接手的开发会话，请依次按阶段完成下列任务并在方框中标记 `[x]`：
 
 ### Phase 1: 基础设施与数据定义配置
-- [ ] 1.1 在 `resource/application-sqlite.yaml` 中增加 `magic_book` 库与 4 张表的 DDL（`sync_devices`, `sync_profiles`, `sync_documents`, `sync_changelog`）。
-- [ ] 1.2 在 `resource/application-main.yaml` 中的 `auth.allowedClients` 添加客户端配置项（例如 `id: magic-book-desktop`，配置 `maxTokenStore: 10` 等）。
-- [ ] 1.3 启动/重启 `node-server` 服务测试，观察控制台确保 `[Sqlite] Loaded database schema: magic_book` 正常输出，表成功初始化。
+- [x] 1.1 在 `resource/application-sqlite.yaml` 中增加 `magic_book` 库与 4 张表的 DDL（`sync_devices`, `sync_profiles`, `sync_documents`, `sync_changelog`）。
+- [x] 1.2 在 `resource/application-main.yaml` 中的 `auth.allowedClients` 添加客户端配置项（例如 `id: magic-book-desktop`，配置 `maxTokenStore: 10` 等）。
+- [x] 1.3 启动/重启 `node-server` 服务测试，观察控制台确保 `[Sqlite] Loaded database schema: magic_book` 正常输出，表成功初始化。
 
 ### Phase 2: Repository 数据持久层开发
-- [ ] 2.1 创建 `src/modules/magicBook/repository/syncDeviceRep.js`，实现设备的按 uid 查询、更新活动时间与 Upsert。
-- [ ] 2.2 创建 `src/modules/magicBook/repository/syncProfileRep.js`，实现档案的增删改查与软删除。
-- [ ] 2.3 创建 `src/modules/magicBook/repository/syncDocumentRep.js`，实现文档快照查询、基于 `(uid, scope, profile_id, name)` 的 Upsert。
-- [ ] 2.4 创建 `src/modules/magicBook/repository/syncChangelogRep.js`，实现 `SELECT ... WHERE cursor > ?` 范围扫描以及流水追加。
+- [x] 2.1 创建 `src/modules/magicBook/repository/syncDeviceRep.js`，实现设备的按 uid 查询、更新活动时间与 Upsert。
+- [x] 2.2 创建 `src/modules/magicBook/repository/syncProfileRep.js`，实现档案的增删改查与软删除。
+- [x] 2.3 创建 `src/modules/magicBook/repository/syncDocumentRep.js`，实现文档快照查询、基于 `(uid, scope, profile_id, name)` 的 Upsert。
+- [x] 2.4 创建 `src/modules/magicBook/repository/syncChangelogRep.js`，实现 `SELECT ... WHERE cursor > ?` 范围扫描以及流水追加。
 
 ### Phase 3: Service 业务服务层与事务实现
-- [ ] 3.1 创建 `src/modules/magicBook/service/syncDeviceService.js`，实现设备登记与列表获取。
-- [ ] 3.2 创建 `src/modules/magicBook/service/syncProfileService.js`，实现档案创建、重命名、删除及伴随变更流水记录。
-- [ ] 3.3 创建 `src/modules/magicBook/service/syncService.js`：
+- [x] 3.1 创建 `src/modules/magicBook/service/syncDeviceService.js`，实现设备登记与列表获取。
+- [x] 3.2 创建 `src/modules/magicBook/service/syncProfileService.js`，实现档案创建、重命名、删除及伴随变更流水记录。
+- [x] 3.3 创建 `src/modules/magicBook/service/syncService.js`：
   - 实现 `pullChanges(uid, cursor, limit)` 逻辑；
   - 实现 `pushChanges(uid, deviceId, changes)` 逻辑，使用事务保证状态表更新与流水表追加原子性；
   - 实现 `getBaselineSnapshot(uid, profileId)` 全量基线导出；
   - 编写历史增量日志归档修剪定时清理任务（可选定时清理 30 天前旧流水）。
 
 ### Phase 4: API 路由与拦截器接入
-- [ ] 4.1 创建 `src/api/routes/magicBook/deviceApi.js`，配置 `basePath: '/magic-book/device'`，注入鉴权与参数校验。
-- [ ] 4.2 创建 `src/api/routes/magicBook/profileApi.js`，配置 `basePath: '/magic-book/profile'`。
-- [ ] 4.3 创建 `src/api/routes/magicBook/syncApi.js`，配置 `basePath: '/magic-book/sync'`，开放 `pull`, `push`, `snapshot` 接口。
-- [ ] 4.4 检查自动路由扫描机制，确认新增路由已注册并能在 Express 路由表中正常挂载。
+- [x] 4.1 创建 `src/api/routes/magicBook/deviceApi.js`，配置 `basePath: '/magic-book/device'`，注入鉴权与参数校验。
+- [x] 4.2 创建 `src/api/routes/magicBook/profileApi.js`，配置 `basePath: '/magic-book/profile'`。
+- [x] 4.3 创建 `src/api/routes/magicBook/syncApi.js`，配置 `basePath: '/magic-book/sync'`，开放 `pull`, `push`, `snapshot` 接口。
+- [x] 4.4 检查自动路由扫描机制，确认新增路由已注册并能在 Express 路由表中正常挂载。
 
 ### Phase 5: 验证、自动化测试与联调
-- [ ] 5.1 编写单元测试或集成测试脚本，模拟未授权（401）访问拦截。
-- [ ] 5.2 模拟两个客户端设备（Device A 与 Device B）：
+- [x] 5.1 编写单元测试或集成测试脚本，模拟未授权（401）访问拦截。
+- [x] 5.2 模拟两个客户端设备（Device A 与 Device B）：
   - Device A 登录并提交 push 一条变更；
   - Device B 以 cursor=0 拉取 pull，验证能准确拉取该条记录且游标递增；
   - Device B 本地修改并再次 push，验证多设备交替写入时版本号与流水单调递增。
-- [ ] 5.3 检查 ESLint 代码风格并执行构建/重启确认无任何报错。
+- [x] 5.3 检查 ESLint 代码风格并执行构建/重启确认无任何报错。
