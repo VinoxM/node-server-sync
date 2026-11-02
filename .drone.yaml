@@ -45,7 +45,7 @@ steps:
       ref:
         - refs/tags/v*
   - name: update-deployment-yaml
-    image: alpine/git
+    image: gitea.vinoxm.cloud/library/git:latest
     environment:
       SSH_KEY:
         from_secret: argocd_deploy_key
