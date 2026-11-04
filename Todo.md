@@ -265,3 +265,78 @@ node-server/
   - Device B 以 cursor=0 拉取 pull，验证能准确拉取该条记录且游标递增；
   - Device B 本地修改并再次 push，验证多设备交替写入时版本号与流水单调递增。
 - [x] 5.3 检查 ESLint 代码风格并执行构建/重启确认无任何报错。
+
+---
+
+## 👤 六、用户基础资料扩展与头像存储实施方案 (User Profile & Avatar Storage Plan)
+
+### 1. 业务目标与设计准则
+- **业务目标**：在现有认证机制基础上，为 `account` 模块扩展用户资料详情管理（昵称、邮箱、手机号、性别、简介、个性化扩展）及自定义头像上传与储存服务。
+- **核心准则**：
+  - **分表隔离原则**：`auth_user` 表保持纯粹（仅存账号密码认证信息），新增 `user_profile` 承载可公开及易变的用户资料，从根源上杜绝查询用户资料时密码哈希外泄的风险。
+  - **严禁二进制入库**：图片等非结构化文件禁止以 BLOB 或 Base64 存入 SQLite，统一存储至系统既有的 MinIO 对象存储，数据库仅保存相对路径。
+  - **标准规格与极致压缩**：服务端通过 `sharp` 强制归一化转码为 `256×256` 的 `.webp` 格式，质量系数设为 80，体积压至 20~40KB。
+  - **前后端协同体验**：前端提供交互式自由缩放与移动裁切弹窗（如 Cropper 方案）；服务端负责合规性校验、安全防伪与强制规格转码兜底。
+
+### 2. 数据库 DDL 规范 (`resource/application-sqlite.yaml`)
+在 `account` 库中新增 `user_profile` 表配置：
+
+```yaml
+sqlite:
+  db:
+    account:
+      # 新增用户资料详情表 (逻辑弱关联 auth_user.id)
+      - tableName: user_profile
+        DDL: |
+          CREATE TABLE user_profile (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `uid` INTEGER NOT NULL,
+            `nickname` VARCHAR(50) DEFAULT NULL,
+            `avatar` VARCHAR(255) DEFAULT NULL,
+            `email` VARCHAR(100) DEFAULT NULL,
+            `phone` VARCHAR(20) DEFAULT NULL,
+            `gender` INTEGER NOT NULL DEFAULT 0,
+            `bio` VARCHAR(255) DEFAULT '',
+            `extra` TEXT DEFAULT NULL,
+            `update_time` DATETIME NOT NULL,
+            `create_time` DATETIME NOT NULL,
+            CONSTRAINT `idx_user_profile_uid` UNIQUE (`uid`)
+          );
+          CREATE INDEX `idx_user_profile_email` ON user_profile(`email`);
+```
+
+### 3. 头像存储与访问规范 (MinIO 架构)
+- **Bucket 划分**：在 MinIO 中规划 `avatar`（或复用系统默认存储桶并在对象键加前缀）。
+- **对象 Key 命名策略**：`avatar/{uid}/{timestamp}.webp`（携带时间戳作为文件名，天然规避浏览器强缓存导致头像更新不及时的问題）。
+- **生命周期清理**：用户更换头像时，异步调用 `minioClient.deleteObject` 清理用户在 MinIO 中的历史头像，避免孤儿文件长期堆积。
+- **缺省兜底策略**：用户尚未上传头像且已绑定邮箱时，自动回退到 Cravatar / Gravatar 国内加速源 (`https://cravatar.cn/avatar/{md5(email)}?d=identicon`)。
+
+### 4. 图像转码与压缩实现规范 (`sharp`)
+- **技术选型**：使用 `sharp` 库（底层基于 `libvips` C 库，单张头像转码耗时 $\le 15\text{ms}$，自带主流架构预编译二进制）。
+- **转码管道配置**：
+  - 自动校正 EXIF 旋转角度（`.rotate()`）。
+  - 居中安全裁切填充（`.resize(256, 256, { fit: 'cover', position: 'center' })`）。
+  - WebP 编码压缩（`.webp({ quality: 80, alphaQuality: 85, effort: 4 })`）。
+  - 输出 `Buffer` 直接对接现有 `minioClient.putObject`。
+
+### 5. API 接口定义与协议契约
+- **`POST /account/profile/get`** (获取个人详细资料)
+  - 鉴权：`needAuth: true`，提取 `req.userInfo.id` 作为 `uid`。
+  - 返回：`{ uid, uname, nickname, avatar, email, phone, gender, bio, extra }`。
+- **`POST /account/profile/update`** (更新个人基本资料)
+  - 鉴权：`needAuth: true`。
+  - 请求参数：`{ nickname?: string, email?: string, phone?: string, gender?: number, bio?: string, extra?: string|object }`。
+- **`POST /account/avatar/upload`** (上传并设置新头像)
+  - 鉴权：`needAuth: true`。
+  - 请求体格式：`multipart/form-data`（字段名为 `avatar` 或第一附件）。
+  - 校验：大小限制 $\le 5\text{MB}$，MIME 限制为 JPG / PNG / WEBP / GIF。
+  - 响应：`{ avatar: string, size: number }`。
+
+### 6. 实施任务清单 (Milestones & Checklist - Phase 6)
+- [ ] 6.1 安装 `sharp` 依赖并创建 `src/common/utils/imageUtil.js` 图像处理工具函数。
+- [ ] 6.2 在 `resource/application-sqlite.yaml` 中增加 `user_profile` 表 DDL，并于 `resource/execution/` 创建迁移脚本保证平滑热更新。
+- [ ] 6.3 创建 `src/modules/account/repository/userProfileRep.js`，实现用户资料查询、Upsert 与头像路径更新。
+- [ ] 6.4 创建 `src/modules/account/service/userProfileService.js`，实现资料读写、头像裁切压缩、MinIO 上传与旧头像异步清理。
+- [ ] 6.5 创建 `src/api/routes/account/profileApi.js`，开放资料查询、更新及头像上传接口。
+- [ ] 6.6 编写端到端自动化测试脚本，验证鉴权拦截、大图转码为 256×256 WebP、体积压缩达标及 MinIO 存储闭环。
+
