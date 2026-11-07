@@ -154,7 +154,8 @@ export async function autoUpdateSubscribe() {
                 rssSubs.result = limitedData.data.map(obj => ({
                     resultId: obj.id,
                     title: obj.title,
-                    torrent: concatTrackers(obj.torrent, obj.tracker, trackers)
+                    torrent: concatTrackers(obj.torrent, obj.tracker, trackers),
+                    episode: obj.episode
                 }));
                 updatedRssSubs.push(rssSubs);
             }
