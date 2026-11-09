@@ -105,7 +105,17 @@ export async function addRssTask(rssTask) {
     }
     if (TASK_STATUS.DOWNLOADING === taskStatus) {
         const rssResult = await rssResultRep.selectResultTitleById(resultId);
-        pushNotification(`[Task Added] ${rssResult?.title}`);
+        pushNotification({
+            event: 'anime-rss-task',
+            title: '番剧种子任务已添加',
+            message: rssResult?.title || '',
+            extra: {
+                action: 'added',
+                resultId,
+                taskId,
+                title: rssResult?.title
+            }
+        }, 'RssTaskService');
     }
     return { id: taskId, status: taskStatus };
 }
@@ -130,7 +140,16 @@ export async function updateTaskStatus(uuid, status) {
             try {
                 return await singleResolveTaskEpisode(rssTask);
             } catch (error) {
-                pushNotification(`Resolve rss task error. Please handle it manually. Task UUID: ${uuid}`);
+                pushNotification({
+                    event: 'anime-rss-task',
+                    title: '番剧解析异常告警',
+                    message: '剧集解析失败，请手动介入处理',
+                    extra: {
+                        action: 'resolve-failed',
+                        level: 'error',
+                        uuid
+                    }
+                }, 'RssTaskService');
                 throw error;
             }
         case TASK_STATUS.COMPLETE:
@@ -405,7 +424,17 @@ async function taskCompleted(rssTask) {
 
     const rssResultId = rssTask.rssResultId;
     const rssResult = await rssResultRep.selectResultTitleById(rssResultId);
-    pushNotification(`[Torrent Complete] ${rssResult?.title}`);
+    pushNotification({
+        event: 'anime-rss-task',
+        title: '番剧种子下载完成',
+        message: rssResult?.title || '',
+        extra: {
+            action: 'completed',
+            rssResultId,
+            uuid,
+            title: rssResult?.title
+        }
+    }, 'RssTaskService');
 }
 
 /**

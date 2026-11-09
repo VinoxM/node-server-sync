@@ -127,15 +127,24 @@ function getSubscriptionSourcesObj() {
  */
 function pushSubscribedInfoNotification(subInfo, from) {
     if (!subInfo) return;
-    let info = subInfo.split('; ');
-    const message = { event: 'Clash Subscribe' };
+    const info = subInfo.split('; ');
+    const trafficData = {};
     info.forEach(str => {
         const kv = str.split('=');
         if (kv.length === 2) {
-            message[kv[0]] = kv[1];
+            trafficData[kv[0]] = kv[1];
         }
     });
-    pushNotification(JSON.stringify(message), from);
+    pushNotification({
+        event: 'clash-subscribe',
+        title: `Clash 订阅流量提醒 [${from}]`,
+        message: '已同步节点订阅用量状态',
+        extra: {
+            action: 'traffic-report',
+            source: from,
+            ...trafficData
+        }
+    }, from);
 }
 
 export {

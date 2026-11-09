@@ -220,17 +220,39 @@ export async function scheduleMinioRetry(minioId) {
     const now = Date.now();
     const record = await loadRetryRecord(minioId);
     if (record.attempt >= MINIO_RETRY_POLICY.maxAttempts) {
-        const message = `Minio[${minioId}] auto retry reached max attempts(${MINIO_RETRY_POLICY.maxAttempts}), please handle it manually.`;
+        const message = `Minio[${minioId}] 自动重试已达最大限制(${MINIO_RETRY_POLICY.maxAttempts})，请手动介入处理`;
         __log.warn(message);
-        pushNotification(message);
+        pushNotification({
+            event: 'media-minio',
+            title: 'MinIO 重试超限告警',
+            message,
+            extra: {
+                action: 'retry-exceeded',
+                level: 'warn',
+                minioId,
+                attempt: record.attempt,
+                maxAttempts: MINIO_RETRY_POLICY.maxAttempts
+            }
+        }, 'MediaMinioService');
         return;
     }
     // 时间上限：自首次排期起算，与次数上限构成双终止条件（谁先到谁生效）
     const deadline = record.deadline ?? now + MINIO_RETRY_POLICY.maxRetryWindowMs;
     if (now >= deadline) {
-        const message = `Minio[${minioId}] auto retry exceeded max window(${MINIO_RETRY_POLICY.maxRetryWindowMs}ms), please handle it manually.`;
+        const message = `Minio[${minioId}] 自动重试已超最大窗口时间(${MINIO_RETRY_POLICY.maxRetryWindowMs}ms)，请手动介入处理`;
         __log.warn(message);
-        pushNotification(message);
+        pushNotification({
+            event: 'media-minio',
+            title: 'MinIO 重试超时告警',
+            message,
+            extra: {
+                action: 'timeout-exceeded',
+                level: 'warn',
+                minioId,
+                attempt: record.attempt,
+                maxRetryWindowMs: MINIO_RETRY_POLICY.maxRetryWindowMs
+            }
+        }, 'MediaMinioService');
         await retryStore.save(minioId, { attempt: record.attempt, dueAt: null, deadline });
         return;
     }

@@ -141,11 +141,11 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
     const areaNameChild = eventData['AreaNameChild'];
     const timestamp = tryResolveTime(eventTimestamp);
     if (MEDIA_BILIVE_STREAM_EVENT.StreamStarted === event) {
-        await tryNotifyBiliveStreamChanged(hostName, title, timestamp, 1);
+        await tryNotifyBiliveStreamChanged(roomId, hostName, title, timestamp, 1);
         const latestStream = await biliveStreamRep.insertStartStream(roomId, hostName, title, areaNameParent, areaNameChild, timestamp);
         __log.info(`[Bilive Stream Started] Setup latest stream[${latestStream.lastId}] started.`);
     } else if (MEDIA_BILIVE_STREAM_EVENT.StreamEnded === event) {
-        await tryNotifyBiliveStreamChanged(hostName, title, timestamp, 0);
+        await tryNotifyBiliveStreamChanged(roomId, hostName, title, timestamp, 0);
         const latestStream = await biliveStreamRep.selectLatestStreamingByRoomId(roomId);
         if (latestStream) {
             if (latestStream.streaming === MEDIA_BILIVE_STREAM_STATUS.STREAMING) {
@@ -163,10 +163,23 @@ export async function saveBiliveStream(recordId, event, eventTimestamp, eventDat
     }
 }
 
-async function tryNotifyBiliveStreamChanged(hostName, title, timestamp, isStarted) {
+async function tryNotifyBiliveStreamChanged(roomId, hostName, title, timestamp, isStarted) {
     try {
         const f = await getPushNotificationWhenBiliveStreamChanged();
-        f && pushNotification(`[Bilive Stream ${isStarted ? 'Started' : 'Ended'}] [${dateFormat(tryResolveTime(timestamp))}] ${hostName}: ${title}`);
+        const action = isStarted ? 'started' : 'ended';
+        f && pushNotification({
+            event: 'bilive-stream',
+            title: `${hostName} ${isStarted ? '开播啦 🔴' : '已下播 ⚪'}`,
+            message: title,
+            extra: {
+                action,
+                roomId,
+                hostName,
+                title,
+                timestamp,
+                isStarted: Boolean(isStarted)
+            }
+        }, 'BiliveService');
     } catch (ex) {
         __log.error(`Try notify bilive stream changed failed. Cause: `, ex.message);
     }

@@ -82,7 +82,15 @@ export class K8SApplicationContext extends ApplicationContext {
                 await this_.#superLoad();
                 this_.#mergeConfiguration(message.data);
                 this_.refreshContext();
-                pushNotification(`[K3S Configuration Watcher] Configuration changed.`);
+                pushNotification({
+                    event: 'system-config',
+                    title: 'K3S 系统配置热更新',
+                    message: 'K3S ConfigMap 变更已生效并重新加载系统上下文',
+                    extra: {
+                        action: 'reloaded',
+                        component: 'k3s-watcher'
+                    }
+                }, 'K3sWatcher');
             }
         });
     }

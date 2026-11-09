@@ -174,7 +174,16 @@ export async function autoUpdateSubscribe() {
  * @param {Record<string, any>} data - 载荷数据
  */
 function pushToNotification(data) {
-    pushNotification(JSON.stringify({ event: 'RSS Subscribe', ...data }), 'Server');
+    const { effectRows = 0, handledCount = 0 } = data || {};
+    pushNotification({
+        event: 'anime-rss-subscribe',
+        title: '番剧 RSS 订阅更新',
+        message: `检查完成：新增 ${effectRows} 集，处理 ${handledCount} 个订阅`,
+        extra: {
+            action: 'updated',
+            ...data
+        }
+    }, 'RssScheduleService');
 }
 
 /**

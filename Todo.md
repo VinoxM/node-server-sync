@@ -391,3 +391,84 @@ sqlite:
 - [x] 7.4 在 `src/api/routes/magicBook/deviceApi.js` 中新增 `/remove` 路由并补充参数非空校验。
 - [x] 7.5 在 `src/modules/magicBook/service/syncService.js` 的 `pushChanges` 中补充设备存在性校验。
 - [x] 7.6 编写端到端单元测试与集成测试，验证设备移除后其持有的旧 Token 发送请求直接返回 401。
+
+---
+
+## 🔔 八、通知中心（Notification）多事件体系与载荷扩展方案 (Notification Multi-Event & Payload Enhancement Plan)
+
+### 1. 业务目标与设计准则
+- **业务目标**：打破目前通知系统单一字符串传输局限，全面支持结构化多事件（Event）模型，盘活 `extra` 上下文载荷，打通与 `magic-book` 桌面端 Notification Studio 动态模板的无缝联动。
+- **核心准则**：
+  - **精简核心列，拒绝字段臃肿**：仅将高频索引、事件路由必需的 `event` 和通用摘要 `title` 升格为主表列；级别（`level`）、状态（`status`）、动作链接等多样化属性统一收口至 `extra` JSON 载荷中，避免数据库 schema 膨胀。
+  - **盘活并打通 `extra` 传输链路**：修正历史实现中按游标增量查询时剔除 `extra` 的缺陷，打通 `pushNotification` 结构化入参 -> 持久化存储 -> 实时 WebSocket 广播 -> 断线重连历史拉取的全链路数据完整性。
+  - **向下绝对平滑兼容**：保留对原有 `pushNotification(message: string, createBy?: string)` 字符串调用形式的原生兼容，默认将普通文本标记为 `event='message'`，确保已有业务零破坏性平滑升级。
+
+### 2. 数据库 DDL 规范与平滑迁移
+- **表变更定义 (`resource/application-sqlite.yaml`)**：
+  在 `socket.channel_notification` 增加 `event` 与 `title` 字段：
+  ```yaml
+      socket:
+        - tableName: channel_notification
+          DDL: |
+            CREATE TABLE channel_notification (
+              `id` integer PRIMARY KEY NOT NULL,
+              `channel` varchar(50) NOT NULL,
+              `event` varchar(50) NOT NULL DEFAULT 'message',
+              `title` varchar(200) DEFAULT NULL,
+              `message` varchar(5000),
+              `extra` varchar(5000),
+              `create_by` varchar(100) NOT NULL,
+              `create_time` datetime NOT NULL
+            )
+  ```
+- **热迁移增量脚本** (`resource/execution/{timestamp}/notification_alter_channel_notification.sort_1.sql`)：
+  ```sql
+  ALTER TABLE channel_notification ADD COLUMN `event` VARCHAR(50) NOT NULL DEFAULT 'message';
+  ALTER TABLE channel_notification ADD COLUMN `title` VARCHAR(200) DEFAULT NULL;
+  CREATE INDEX IF NOT EXISTS `idx_channel_notification_event` ON channel_notification(`event`);
+  ```
+
+### 3. 持久层与业务服务层改造
+- **仓储层 (`src/modules/notification/repository/notificationRep.js`)**：
+  - `insertNotification({ channel, event, title, message, extra, createBy })`：支持结构化入参写入，`extra` 支持对象自动 `JSON.stringify` 存储。
+  - `selectNotification({ channel, lastId, event }, limit)`：查询字段补齐 `event`, `title`, `extra`，支持可选的 `event` 条件过滤与索引加速。
+- **服务层 (`src/modules/notification/service/notificationService.js`)**：
+  - `storeNotification(data)`：兼容校验字符串消息或结构化事件对象（至少存在 `message` 或 `event` 之一）。
+  - `getNotification(channel, lastId, limit, event)`：向下透传查询条件。
+
+### 4. WebSocket 通道与广播升级 (`src/api/sockets/notification.js`)
+- **`pushNotification(payload, createBy)` 入参重载与广播**：
+  - 允许传入 `string` 或 `{ event?: string, title?: string, message?: string, extra?: Record<string, any> }`。
+  - 广播 Payload 格式：`{ id: lastId, event, title, message, extra, createTime, createBy }`。
+- **`sendNotificationByLastId(client, lastId)` 历史恢复打通**：
+  - 移除对 `extra` 的解构剥离，对 `extra` 进行 JSON 解析（若是字符串）后完整下发，保证断线重连拉取到的历史消息与实时广播具备一致的字段结构。
+
+### 5. 现有业务调用示范重构
+- **定时任务签到 (`kuroSignSchedule.js`)**：
+  不再使用 `JSON.stringify` 塞入 `message`，改用：
+  ```javascript
+  pushNotification({
+      event: 'kuro-game-sign',
+      title: '库洛游戏每日自动签到',
+      message: `签到成功 ${handleCount - errorCount} 个, 失败 ${errorCount} 个`,
+      extra: { level: errorCount > 0 ? 'warn' : 'success', ...data }
+  }, 'Schedule');
+  ```
+- **直播动态变动 (`biliveStreamService.js`)**：
+  ```javascript
+  pushNotification({
+      event: 'bilive-stream',
+      title: `${hostName} ${isStarted ? '开播啦' : '已下播'}`,
+      message: title,
+      extra: { hostName, roomId, isStarted, timestamp }
+  }, 'BiliveService');
+  ```
+
+### 6. 实施任务清单 (Milestones & Checklist - Phase 8)
+- [x] 8.1 在 `resource/application-sqlite.yaml` 中为 `channel_notification` 补充 `event` 和 `title` 字段，并在 `resource/execution/` 下编写标准增量迁移脚本。
+- [x] 8.2 改造 `src/modules/notification/repository/notificationRep.js`，支持新字段读写与 `extra` 序列化。
+- [x] 8.3 改造 `src/modules/notification/service/notificationService.js`，优化入参非空与格式校验。
+- [x] 8.4 升级 `src/api/sockets/notification.js` 的 `pushNotification` 签名与广播，修复 `sendNotificationByLastId` 历史数据剥离 `extra` 的缺陷。
+- [x] 8.5 改造 `kuroSignSchedule.js` 等典型业务调用点，采用新型事件模型进行通知推送。
+- [x] 8.6 编写端到端单元测试，验证断线重连历史拉取与实时广播载荷的完整性。
+

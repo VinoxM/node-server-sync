@@ -18,16 +18,16 @@ export default defineRoutes({
 
     /**
      * 手动触发广播一条普通系统通知消息
-     * 请求体参数：{ message: string }
+     * 请求体参数：{ message?: string, event?: string, title?: string, extra?: any } 或纯文本
      */
     '/pushMessage': {
         disabled: true,
         method: POST,
         needSecret,
-        preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['message']),
+        preCheck: (/** @type {ApiRequest} */ req) => req?.body && (typeof req.body.message === 'string' || typeof req.body.event === 'string'),
         callback: (/** @type {ApiRequest} */ req) => {
             const realIp = getRequestRealIp(req);
-            return pushNotification(req.body.message, realIp);
+            return pushNotification(req.body, realIp);
         }
     },
 

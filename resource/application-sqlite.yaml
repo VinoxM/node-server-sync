@@ -171,6 +171,8 @@ sqlite:
           CREATE TABLE channel_notification (
             `id` integer PRIMARY KEY NOT NULL,
             `channel` varchar(50) NOT NULL,
+            `event` varchar(50) NOT NULL DEFAULT 'message',
+            `title` varchar(200) DEFAULT NULL,
             `message` varchar(5000),
             `extra` varchar(5000),
             `create_by` varchar(100) NOT NULL,

@@ -74,7 +74,17 @@ export async function flushHanime1() {
     }
     if (created.length > 0 && enablePush) {
         __log.info(`[Crawl Hanime1] Created videos:`, created.length);
-        await pushNotification(JSON.stringify({ event: 'Crawl', data: created }));
+        await pushNotification({
+            event: 'media-crawl',
+            title: 'Hanime1 视频抓取入库',
+            message: `成功抓取并入库 ${created.length} 部新视频`,
+            extra: {
+                source: 'hanime1',
+                action: 'created',
+                count: created.length,
+                videos: created
+            }
+        }, 'CrawlService');
     }
 }
 

@@ -13,8 +13,21 @@ function sendNotificationByLastId(client, lastId) {
     getNotification(channel, lastId, 10).then(notifyList => {
         if (Array.isArray(notifyList) && notifyList.length > 0) {
             notifyList.forEach(ntf => {
-                const { extra, ...obj } = ntf;
-                client.send(obj);
+                let parsedExtra = ntf.extra;
+                if (typeof parsedExtra === 'string') {
+                    try {
+                        parsedExtra = JSON.parse(parsedExtra);
+                    } catch {}
+                }
+                client.send({
+                    id: ntf.id,
+                    event: ntf.event || 'message',
+                    title: ntf.title || null,
+                    message: ntf.message || '',
+                    extra: parsedExtra,
+                    createTime: ntf.createTime,
+                    createBy: ntf.createBy
+                });
             });
         }
     });
@@ -22,39 +35,56 @@ function sendNotificationByLastId(client, lastId) {
 
 /**
  * 发布并全员广播一条系统通知
- * @param {string} message - 通知内容
+ * 支持普通字符串或结构化对象参数：
+ * - pushNotification("消息内容", "Sender")
+ * - pushNotification({ event: 'kuro-game-sign', title: '签到', message: '完成', extra: { ... } }, "Sender")
+ *
+ * @param {string|{ event?: string, title?: string, message?: string, extra?: any, createBy?: string }} payload - 通知内容或载荷对象
  * @param {string} [createBy='Server'] - 发送者
- * @returns {Promise<void>}
+ * @returns {Promise<{ lastId: number, createTime: Date }>}
  */
-export function pushNotification(message, createBy) {
-    if (typeof message !== 'string') return Promise.reject();
-    createBy = createBy ?? 'Server';
-    return new Promise((resolve, reject) => {
-        storeNotification({ channel, message, createBy }).then(({ lastId, createTime }) => {
-            getClientsByChannel(channel).forEach(client => client.send({ id: lastId, message, createTime, createBy }));
-            resolve();
-        }).catch(reject);
-    });
-}
+export function pushNotification(payload, createBy) {
+    if (!payload) return Promise.reject({ msg: 'Notification payload cannot be empty.' });
 
-/**
- * 发布并全员广播一条系统通知
- * @param {string} message - 通知内容
- * @param {string} [createBy='Server'] - 发送者
- * @returns {Promise<void>}
- */
-export function pushNotificationWithEvent(event, data, createBy) {
-    const messageType = __isBlankOr(event, 'message');
-    const messagePaylod = {
-        type: messageType,
-        data
-    };
-    const message = JSON.stringify(messagePaylod);
-    createBy = createBy ?? 'Server';
+    let event = 'message';
+    let title = null;
+    let message = '';
+    let extra = null;
+    let finalCreateBy = createBy;
+
+    if (typeof payload === 'string') {
+        message = payload;
+        finalCreateBy = finalCreateBy ?? 'Server';
+    } else if (typeof payload === 'object' && payload !== null) {
+        event = payload.event || 'message';
+        title = payload.title || null;
+        message = payload.message || '';
+        extra = payload.extra !== undefined ? payload.extra : null;
+        finalCreateBy = payload.createBy || finalCreateBy || 'Server';
+    } else {
+        return Promise.reject({ msg: 'Invalid payload type: string or object expected.' });
+    }
+
     return new Promise((resolve, reject) => {
-        storeNotification({ channel, message, createBy }).then(({ lastId, createTime }) => {
-            getClientsByChannel(channel).forEach(client => client.send({ id: lastId, playlod: messagePaylod, theme: messageType, createTime, createBy }));
-            resolve();
+        storeNotification({
+            channel,
+            event,
+            title,
+            message,
+            extra,
+            createBy: finalCreateBy
+        }).then(({ lastId, createTime }) => {
+            const broadcastData = {
+                id: lastId,
+                event,
+                title,
+                message,
+                extra,
+                createTime,
+                createBy: finalCreateBy
+            };
+            getClientsByChannel(channel).forEach(client => client.send(broadcastData));
+            resolve({ lastId, createTime });
         }).catch(reject);
     });
 }

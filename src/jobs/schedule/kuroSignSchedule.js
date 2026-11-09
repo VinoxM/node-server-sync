@@ -13,6 +13,14 @@ export default defineScheduleJob({
     jobCallback: () => kuroGameSignAll().then(data => {
         const { handleCount, errorCount } = data;
         __log.info(`[Kuro MC Sign] 签到成功${handleCount - errorCount}个, 失败${errorCount}个`);
-        pushNotification(JSON.stringify({ event: 'Kuro MC Sign', ...data }), 'Schedule');
+        pushNotification({
+            event: 'kuro-game-sign',
+            title: '库洛游戏每日自动签到',
+            message: `签到成功 ${handleCount - errorCount} 个, 失败 ${errorCount} 个`,
+            extra: {
+                level: errorCount > 0 ? 'warn' : 'success',
+                ...data
+            }
+        }, 'Schedule');
     })
 });

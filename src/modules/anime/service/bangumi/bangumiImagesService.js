@@ -117,12 +117,17 @@ export async function pushImageToStorageSchedule(jobSignal) {
     }
     __log.info(`[Bangumi Images] Push image to storage success. Founded: ${rows}, Complete: ${completeIds.size}, Failed: ${failedIds.size}`);
     if (completeIds.size > 0) {
-        pushNotification(JSON.stringify({
-            event: 'Bangumi Image Sync',
-            complete: completeIds.size,
-            failed: failedIds.size,
-            total: rows
-        }), 'Server');
+        pushNotification({
+            event: 'bangumi-image',
+            title: 'Bangumi 番剧封面同步完成',
+            message: `同步完成：成功 ${completeIds.size} 张，失败 ${failedIds.size} 张，共计 ${rows} 张`,
+            extra: {
+                action: 'sync-complete',
+                complete: completeIds.size,
+                failed: failedIds.size,
+                total: rows
+            }
+        }, 'BangumiImagesService');
     }
 }
 
