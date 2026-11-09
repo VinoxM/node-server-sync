@@ -433,6 +433,7 @@ sqlite:
             `platform` VARCHAR(32) NOT NULL,
             `last_active_time` DATETIME NOT NULL,
             `create_time` DATETIME NOT NULL,
+            `token_hash` VARCHAR(64) DEFAULT NULL,
             CONSTRAINT `idx_sync_devices_uid_device` UNIQUE (`uid`, `device_id`)
           );
           CREATE INDEX `idx_sync_devices_uid` ON sync_devices(`uid`);

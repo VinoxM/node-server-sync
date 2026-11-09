@@ -38,6 +38,28 @@ export function pushNotification(message, createBy) {
 }
 
 /**
+ * 发布并全员广播一条系统通知
+ * @param {string} message - 通知内容
+ * @param {string} [createBy='Server'] - 发送者
+ * @returns {Promise<void>}
+ */
+export function pushNotificationWithEvent(event, data, createBy) {
+    const messageType = __isBlankOr(event, 'message');
+    const messagePaylod = {
+        type: messageType,
+        data
+    };
+    const message = JSON.stringify(messagePaylod);
+    createBy = createBy ?? 'Server';
+    return new Promise((resolve, reject) => {
+        storeNotification({ channel, message, createBy }).then(({ lastId, createTime }) => {
+            getClientsByChannel(channel).forEach(client => client.send({ id: lastId, playlod: messagePaylod, theme: messageType, createTime, createBy }));
+            resolve();
+        }).catch(reject);
+    });
+}
+
+/**
  * 全局系统通知 WebSocket 频道 (`/channel/notification`)
  */
 export default defineSocketChannel({

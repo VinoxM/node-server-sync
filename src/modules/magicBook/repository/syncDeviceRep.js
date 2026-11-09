@@ -29,11 +29,11 @@ export default {
     /**
      * 查询指定用户的所有设备列表
      * @param {number} uid - 用户 ID
-     * @returns {Promise<QueryResult<{ id: number, uid: number, deviceId: string, deviceName: string, platform: string, lastActiveTime: string, createTime: string }>>}
+     * @returns {Promise<QueryResult<{ id: number, uid: number, deviceId: string, deviceName: string, platform: string, lastActiveTime: string, createTime: string, tokenHash?: string }>>}
      */
     selectDevicesByUid: (uid) => {
         const sql = `SELECT id, uid, device_id AS deviceId, device_name AS deviceName, platform, `
-                     + `last_active_time AS lastActiveTime, create_time AS createTime `
+                     + `last_active_time AS lastActiveTime, create_time AS createTime, token_hash AS tokenHash `
                      + `FROM sync_devices WHERE uid = ? ORDER BY last_active_time DESC`;
         return __sqliteDB.selectAll(sql, [uid], null, dbName);
     },
@@ -46,28 +46,41 @@ export default {
      */
     selectDevice: (uid, deviceId, tx) => {
         const sql = `SELECT id, uid, device_id AS deviceId, device_name AS deviceName, platform, `
-                     + `last_active_time AS lastActiveTime, create_time AS createTime `
+                     + `last_active_time AS lastActiveTime, create_time AS createTime, token_hash AS tokenHash `
                      + `FROM sync_devices WHERE uid = ? AND device_id = ?`;
         return getExecutor(tx).selectOne(sql, [uid, deviceId]);
     },
 
     /**
      * 设备登记或更新（Upsert）
-     * @param {{ uid: number, deviceId: string, deviceName: string, platform: string, lastActiveTime?: string, createTime?: string }} device
+     * @param {{ uid: number, deviceId: string, deviceName: string, platform: string, lastActiveTime?: string, createTime?: string, tokenHash?: string }} device
      * @param {any} [tx] - 可选事务句柄
      * @returns {Promise<ExecResult>}
      */
-    upsertDevice: ({ uid, deviceId, deviceName, platform, lastActiveTime, createTime }, tx) => {
+    upsertDevice: ({ uid, deviceId, deviceName, platform, lastActiveTime, createTime, tokenHash = null }, tx) => {
         const now = new Date().toISOString();
         const activeTime = lastActiveTime || now;
         const cTime = createTime || now;
-        const sql = `INSERT INTO sync_devices (uid, device_id, device_name, platform, last_active_time, create_time) `
-            + `VALUES (?, ?, ?, ?, ?, ?) `
+        const sql = `INSERT INTO sync_devices (uid, device_id, device_name, platform, last_active_time, create_time, token_hash) `
+            + `VALUES (?, ?, ?, ?, ?, ?, ?) `
             + `ON CONFLICT(uid, device_id) DO UPDATE SET `
             + `device_name = excluded.device_name, `
             + `platform = excluded.platform, `
-            + `last_active_time = excluded.last_active_time `;
-        return getExecutor(tx).insert(sql, [uid, deviceId, deviceName, platform, activeTime, cTime]);
+            + `last_active_time = excluded.last_active_time, `
+            + `token_hash = COALESCE(excluded.token_hash, sync_devices.token_hash) `;
+        return getExecutor(tx).insert(sql, [uid, deviceId, deviceName, platform, activeTime, cTime, tokenHash]);
+    },
+
+    /**
+     * 移除指定设备记录
+     * @param {number} uid - 用户 ID
+     * @param {string} deviceId - 设备标识
+     * @param {any} [tx] - 可选事务句柄
+     * @returns {Promise<ExecResult>}
+     */
+    deleteDevice: (uid, deviceId, tx) => {
+        const sql = `DELETE FROM sync_devices WHERE uid = ? AND device_id = ?`;
+        return getExecutor(tx).delete(sql, [uid, deviceId]);
     },
 
     /**

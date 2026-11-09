@@ -1,0 +1,1 @@
+ALTER TABLE sync_devices ADD COLUMN `token_hash` VARCHAR(64) DEFAULT NULL;

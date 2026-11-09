@@ -18,7 +18,9 @@ async function lookupExecutable() {
             const fullPath = path.join(folder, file);
             if (fs.lstatSync(fullPath).isFile() && path.extname(fullPath) === '.sql') {
                 const basename = path.basename(file);
-                const dbName = basename.split("_")[0];
+                const knownDbs = Object.keys(__env.get('sqlite.db', {}));
+                const matchedDb = knownDbs.find(d => basename.startsWith(d + '_'));
+                const dbName = matchedDb || basename.split("_")[0];
                 const sort = parseInt(basename.substring(0, basename.length - 4).split('.').pop()?.replace('sort_', '') ?? '');
                 if (Number.isNaN(sort)) {
                     __log.warn(`[Migrations] The SQL script file ${file} is invalid. Please use dbName_xxxx.sort_N.sql instead.`);

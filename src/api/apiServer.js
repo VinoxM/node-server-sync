@@ -58,13 +58,15 @@ class ApiServer {
 
     /**
      * 初始化服务器配置（读取环境配置中的端口、跨域及禁用 API 规则）
+     * @param {{ port?: number }} [options={}]
      */
-    initialize() {
+    initialize(options = {}) {
         if (this.#server || this.#ready) return;
         const server = __env.get('server', {});
         this.#serverConf = {
             ...this.#serverConf,
-            ...server
+            ...server,
+            ...(options?.port ? { port: options.port } : {})
         };
         this.#apiDisabled = __env.get("api.apiDisabled", []).map(r => new RegExp(r));
     }

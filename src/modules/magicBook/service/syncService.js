@@ -51,6 +51,12 @@ export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAU
 export const pushChanges = async (uid, deviceId, changes = []) => {
     __isBlank(deviceId) && __throwMessage('Device id is required.', -1, 400);
 
+    // 校验设备合法性：若设备不存在或已被吊销，阻断写入
+    const device = await syncDeviceRep.selectDevice(uid, deviceId);
+    if (!device) {
+        __throwMessage('Device authorization has been revoked.', -401, 401);
+    }
+
     if (!Array.isArray(changes) || changes.length === 0) {
         const currentCursor = await syncChangelogRep.selectLatestCursor(uid);
         return {
