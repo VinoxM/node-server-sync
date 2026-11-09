@@ -385,9 +385,9 @@ sqlite:
   - 查询 `syncDeviceRep.selectDevice(uid, deviceId)`，若设备不存在或已被吊销，立即抛出 `__throwMessage('Device authorization has been revoked.', -401, 401)`，阻断写入。
 
 ### 6. 实施任务清单 (Milestones & Checklist - Phase 7)
-- [ ] 7.1 在 `resource/application-sqlite.yaml` 的 `sync_devices` 表中添加 `token_hash` 字段并在 `resource/execution/` 补充迁移文件。
-- [ ] 7.2 在 `src/modules/magicBook/repository/syncDeviceRep.js` 中实现 `deleteDevice(uid, deviceId)` 方法，并在 `upsertDevice` 中支持 `token_hash`。
-- [ ] 7.3 在 `src/modules/magicBook/service/syncDeviceService.js` 中扩展 `registerDevice` 绑定 `tokenHash`，并实现 `removeDevice(uid, deviceId)` 级联销毁 Token。
-- [ ] 7.4 在 `src/api/routes/magicBook/deviceApi.js` 中新增 `/remove` 路由并补充参数非空校验。
-- [ ] 7.5 在 `src/modules/magicBook/service/syncService.js` 的 `pushChanges` 中补充设备存在性校验。
-- [ ] 7.6 编写端到端单元测试与集成测试，验证设备移除后其持有的旧 Token 发送请求直接返回 401。
+- [x] 7.1 在 `resource/application-sqlite.yaml` 的 `sync_devices` 表中添加 `token_hash` 字段并在 `resource/execution/` 补充迁移文件。
+- [x] 7.2 在 `src/modules/magicBook/repository/syncDeviceRep.js` 中实现 `deleteDevice(uid, deviceId)` 方法，并在 `upsertDevice` 中支持 `token_hash`。
+- [x] 7.3 在 `src/modules/magicBook/service/syncDeviceService.js` 中扩展 `registerDevice` 绑定 `tokenHash`，并实现 `removeDevice(uid, deviceId)` 级联销毁 Token。
+- [x] 7.4 在 `src/api/routes/magicBook/deviceApi.js` 中新增 `/remove` 路由并补充参数非空校验。
+- [x] 7.5 在 `src/modules/magicBook/service/syncService.js` 的 `pushChanges` 中补充设备存在性校验。
+- [x] 7.6 编写端到端单元测试与集成测试，验证设备移除后其持有的旧 Token 发送请求直接返回 401。

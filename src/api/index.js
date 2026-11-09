@@ -42,7 +42,7 @@ async function getSocketChannels() {
 export async function startServer(options = {}) {
     const instance = apiServer;
     if (instance.ready()) return Promise.resolve();
-    instance.initialize();
+    instance.initialize(options);
     const apiFilters = await getApiFilters();
     instance.addApiFilters(apiFilters);
     if (__isNotEmptyArray(options.apiFilters)) {
