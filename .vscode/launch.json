@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Node Server",
+      "request": "launch",
+      "type": "node",
+      "console": "integratedTerminal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "dev"
+      ],
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "killBehavior": "polite"
+    },
+    {
+      "name": "Node Server: Temporary",
+      "request": "launch",
+      "type": "node",
+      "console": "integratedTerminal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "temp"
+      ],
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "killBehavior": "polite"
+    }
+  ]
+}

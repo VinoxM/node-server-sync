@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "[Node Server] Release",
+      "type": "shell",
+      "command": "./scripts/release.sh",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true,
+        "close": true
+      }
+    }
+  ]
+}
