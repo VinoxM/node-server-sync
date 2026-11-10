@@ -78,6 +78,6 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth: true,
-        callback: (/** @type {ApiRequest} */ req) => decodeAuthorization(req).then(userInfo => userInfo?.uname)
+        callback: (/** @type {ApiRequest} */ req) => decodeAuthorization(req).then(userInfo => ({uid: userInfo?.id, uname: userInfo?.uname}))
     }
 });
