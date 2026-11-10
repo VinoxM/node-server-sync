@@ -45,7 +45,7 @@ export default {
         }
 
         if (options.profileId !== undefined && options.profileId !== null) {
-            sql += ` AND (profile_id = ? OR scope = 'global')`;
+            sql += ` AND (profile_id = ? OR scope = 'user')`;
             params.push(options.profileId);
         }
 

@@ -15,6 +15,7 @@ export const SYNC_ENTITY_TYPE = {
  */
 export const SYNC_SCOPE = {
     GLOBAL: 'global',
+    USER: 'user',
     PROFILE: 'profile'
 };
 
