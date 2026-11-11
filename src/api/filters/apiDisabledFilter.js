@@ -13,6 +13,7 @@ const apiDisabledRegex = new GetterContextSubscribe('apiDisabled', () => __env.g
 export default defineFilter({
     order: API_FILTER_ORDER.API_DISABLED,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
+        const url = req.path;
         if (apiDisabledRegex.getValue().some(r => r.test(url))) {
             reject({ code: -404, status: 404 });
         } else {
