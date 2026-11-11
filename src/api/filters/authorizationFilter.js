@@ -1,3 +1,4 @@
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 import { decodeAuthorization } from "#modules/authorization/authorizationService.js";
 import { defineFilter } from "#utils/defineUtil.js";
 
@@ -7,7 +8,7 @@ import { defineFilter } from "#utils/defineUtil.js";
  * 作用: 当路由配置了 needAuth 或匹配全局 needAuth 正则时，解析 Header 中的 Bearer Token 并注入 `req.userInfo`
  */
 export default defineFilter({
-    order: -79,
+    order: API_FILTER_ORDER.AUTHORIZATION,
     doFilter: async (resolve, reject, complete, { req, res, config }) => {
         const { needAuth } = config;
         if (needAuth !== undefined && needAuth !== null) {

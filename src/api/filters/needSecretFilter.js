@@ -1,6 +1,7 @@
 import apiHeaderConst, { defaultSecret } from "#constants/apiHeaderConst.js";
 import { checkHeaderKeyValue } from "#utils/preCheckUtil.js";
 import { defineFilter } from "#utils/defineUtil.js";
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 
 /**
  * 获取全局默认的通信签名 Secret
@@ -16,7 +17,7 @@ function getDefaultSecret() {
  * 作用: 校验请求头中的 Secret 签名（Base64 编码）是否与路由配置或系统默认密钥匹配
  */
 export default defineFilter({
-    order: -80,
+    order: API_FILTER_ORDER.NEED_SECRET,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const { ignoreSecret, needSecret = getDefaultSecret } = config;
         try {

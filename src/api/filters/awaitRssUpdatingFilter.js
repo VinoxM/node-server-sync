@@ -1,3 +1,4 @@
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 import { GetterContextSubscribe } from "#core/context/subscribe.js";
 import { isRssUpdating } from "#modules/anime/service/rss/rssScheduleService.js";
 import { defineFilter } from "#utils/defineUtil.js";
@@ -11,7 +12,7 @@ const rssUpdatingApiRegex = new GetterContextSubscribe('RssUpdatingApi', () => _
  * 作用: 当后台正在执行 RSS 更新任务时，拦截并拒绝指定接口的访问，防止并发数据冲突
  */
 export default defineFilter({
-    order: -70,
+    order: API_FILTER_ORDER.AWAIT_RSS_UPDATING,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const url = req.path;
         if (isRssUpdating() && rssUpdatingApiRegex.getValue().some(r => r.test(url))) {

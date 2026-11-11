@@ -114,7 +114,7 @@ class ApiServer {
         if (this.#server || !mapping) return;
         let basePath = mapping.basePath ?? '';
         Object.keys(mapping).forEach(key => {
-            if (key !== 'basePath' && key.startsWith("/") && this.#apiDisabled.every(d => !d.test(basePath + key))) {
+            if (key !== 'basePath' && key.startsWith("/")) {
                 this.#apiMapping[basePath + key] = mapping[key];
             }
         });
@@ -151,6 +151,10 @@ class ApiServer {
             if (!methodSupport.includes(method)) {
                 continue;
             }
+            if (this.#apiDisabled.some(r => r.test(key))) {
+                __log.warn(`[Server] [X] Request mapping ignore: [${methodFormat(method)}] ${key}`);
+                continue;
+            }
             const mappingKey = pathRegex ? new RegExp(key) : key;
             server[method](mappingKey, (req, res) => {
                 const doRequest = () => {
@@ -177,13 +181,13 @@ class ApiServer {
                     }
                 }
             });
-            __log.info(`[Server] Request Mapping: [${methodFormat(method)}] ${key}`);
+            __log.info(`[Server] Request mapping registered: [${methodFormat(method)}] ${key}`);
         }
         server.use((req, res) => {
             __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
             reject({ code: -404, status: 404 }, { req, res });
         });
-        __log.info(`[Server] Request Mapping: [ALL ] * -> 404 Not Found.`);
+        __log.info(`[Server] Request mapping registered: [ALL ] * -> 404 Not Found.`);
         this.#server = server;
     }
 

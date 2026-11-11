@@ -6,6 +6,7 @@ import { GetterContextSubscribe } from '#core/context/subscribe.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import apiContentTypeConst from '#constants/apiContentTypeConst.js';
 import { defineFilter } from '#utils/defineUtil.js';
+import { API_FILTER_ORDER } from '#constants/filterOrderConst.js';
 
 const { POST } = apiMethodConst;
 const { TYPE_JSON, TYPE_FORM, TYPE_TEXT, TYPE_MULTIPART } = apiContentTypeConst;
@@ -34,7 +35,7 @@ const requestBodyLimit = new GetterContextSubscribe('RequestBodyLimit', () => __
  * 作用: 拦截 POST 请求流数据，根据 Content-Type 解析为 JSON / Form / Text / Multipart，并挂载到 `req.body` 与 `req.files`
  */
 export default defineFilter({
-    order: -60,
+    order: API_FILTER_ORDER.REQUEST_BODY,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         if (req.method !== POST) return resolve({ req, res, config });
         const contentType = contentTypeParse(req.headers['content-type']);

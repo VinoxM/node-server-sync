@@ -1,3 +1,4 @@
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 import { defineFilter } from "#utils/defineUtil.js";
 
 /**
@@ -6,7 +7,7 @@ import { defineFilter } from "#utils/defineUtil.js";
  * 作用: 执行路由配置项中的 preHandle 预处理函数（如请求体特定字段的密文自动解密）
  */
 export default defineFilter({
-    order: -49,
+    order: API_FILTER_ORDER.PRE_HANDLE,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const { preHandle } = config;
         try {

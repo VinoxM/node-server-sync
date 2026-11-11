@@ -1,3 +1,4 @@
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 import { defineFilter } from "#utils/defineUtil.js";
 
 /**
@@ -6,7 +7,7 @@ import { defineFilter } from "#utils/defineUtil.js";
  * 作用: 执行路由配置项中的 preCheck 校验函数（如参数非空、正则等校验）
  */
 export default defineFilter({
-    order: -50,
+    order: API_FILTER_ORDER.PRE_CHECK,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const { preCheck } = config;
         try {

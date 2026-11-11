@@ -1,5 +1,6 @@
 import { defineFilter } from "#utils/defineUtil.js";
 import { getRequestRealIp, getRequestHost } from "#utils/requestUtil.js";
+import { API_FILTER_ORDER } from "#constants/filterOrderConst.js";
 import ipaddr from 'ipaddr.js';
 import pm from 'picomatch';
 
@@ -62,7 +63,7 @@ function urlMatch(url, reg) {
  * 作用: 校验客户端 Host 域名与来源 IP (CIDR) 是否在允许的白名单范围内
  */
 export default defineFilter({
-    order: -120,
+    order: API_FILTER_ORDER.ALLOW_HOSTS,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
         const realIp = getRequestRealIp(req);
         const host = getRequestHost(req);
