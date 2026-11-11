@@ -472,3 +472,145 @@ sqlite:
 - [x] 8.5 改造 `kuroSignSchedule.js` 等典型业务调用点，采用新型事件模型进行通知推送。
 - [x] 8.6 编写端到端单元测试，验证断线重连历史拉取与实时广播载荷的完整性。
 
+
+
+---
+
+## 🎯 待实施架构演进：Phase 9 (泛型二维作用域模型改造与多维配置同步升级 / Generic Scope Model & Multi-dimensional Sync Protocol)
+
+> **背景与设计驱动力 (Background & Motivation)**：  
+> 1. **消除服务端 Schema 频繁变更痛点**：当前云端配置文档快照表 `sync_documents` 与流水表 `sync_changelog` 固化了 `(uid, scope, profile_id, name)` 字段，当桌面端客户端演进增加新维度（如 `user` 账号级偏好、`org` 企业组织域、`device` 设备硬件域、`team` 团队协作域）时，服务端每次都需要修改表结构、增加列、执行 DDL 迁移并重构 Repository/Service。
+> 2. **泛型二维作用域主键收敛**：通过将存储与协议统一升级为泛型二维主键 `(scope_type, scope_id, name)`，服务端彻底解耦具体的业务维度细节。无论未来客户端增加多少个配置作用域，服务端的表结构、SQL 仓储层与同步数据流转代码均可实现**终身零修改、零 DDL 迁移**。
+
+### 1. 数据库 DDL 规范与平滑迁移 (`resource/application-sqlite.yaml`)
+
+#### 1.1 `sync_documents` (配置文档快照表) 重构
+将特定业务列 `scope` + `profile_id` 替换为通用的 `scope_type` + `scope_id`：
+```yaml
+      # 3. 配置文档最新态快照表 (泛型二维模型)
+      - tableName: sync_documents
+        DDL: |
+          CREATE TABLE sync_documents (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `uid` INTEGER NOT NULL,
+            `scope_type` VARCHAR(32) NOT NULL,
+            `scope_id` VARCHAR(128) NOT NULL,
+            `name` VARCHAR(64) NOT NULL,
+            `value` TEXT NOT NULL,
+            `version` INTEGER NOT NULL DEFAULT 1,
+            `last_device_id` VARCHAR(64) DEFAULT NULL,
+            `is_deleted` INTEGER NOT NULL DEFAULT 0,
+            `update_time` DATETIME NOT NULL,
+            CONSTRAINT `idx_sync_docs_unique` UNIQUE (`uid`, `scope_type`, `scope_id`, `name`)
+          );
+          CREATE INDEX `idx_sync_docs_lookup` ON sync_documents(`uid`, `scope_type`, `scope_id`, `name`);
+```
+
+#### 1.2 `sync_changelog` (增量变更流水表) 重构
+```yaml
+      # 4. 单调递增变更流水表 (泛型流水模型)
+      - tableName: sync_changelog
+        DDL: |
+          CREATE TABLE sync_changelog (
+            `cursor` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `uid` INTEGER NOT NULL,
+            `device_id` VARCHAR(64) NOT NULL,
+            `entity_type` VARCHAR(20) NOT NULL,
+            `scope_type` VARCHAR(32) DEFAULT NULL,
+            `scope_id` VARCHAR(128) DEFAULT NULL,
+            `name` VARCHAR(64) DEFAULT NULL,
+            `value` TEXT DEFAULT NULL,
+            `is_deleted` INTEGER NOT NULL DEFAULT 0,
+            `client_timestamp` BIGINT NOT NULL,
+            `create_time` DATETIME NOT NULL
+          );
+          CREATE INDEX `idx_sync_changelog_scan` ON sync_changelog(`uid`, `cursor` ASC);
+          CREATE INDEX `idx_sync_changelog_clean` ON sync_changelog(`create_time`);
+```
+
+#### 1.3 数据库平滑热迁移脚本 (`resource/execution/{timestamp}/magic_book_generic_scopes.sql`)
+```sql
+-- 1. 历史数据无损格式转换
+-- 若存在旧列 scope, profile_id，转换规则：
+--   若 scope = 'user' -> scope_type = 'user', scope_id = CAST(uid AS TEXT)
+--   若 scope = 'profile' -> scope_type = 'profile', scope_id = uid || ':' || profile_id
+--   若 scope = 'global' -> scope_type = 'global', scope_id = 'global'
+```
+
+### 2. API 协议契约升级 (`/magic-book/sync/*`)
+
+#### 2.1 `POST /magic-book/sync/pull` (增量拉取)
+- **响应载荷升级**：
+  ```json
+  {
+    "has_more": false,
+    "next_cursor": 1045,
+    "changes": [
+      {
+        "cursor": 1043,
+        "entity_type": "document",
+        "scope_type": "profile",
+        "scope_id": "1:work",
+        "name": "pendantPreferences",
+        "value": "{\"scale\":1.2}",
+        "is_deleted": 0
+      },
+      {
+        "cursor": 1044,
+        "entity_type": "document",
+        "scope_type": "user",
+        "scope_id": "1",
+        "name": "shortcuts",
+        "value": "{\"bindings\":{}}",
+        "is_deleted": 0
+      }
+    ]
+  }
+  ```
+  *(注：保持向下兼容垫片，当检测到老客户端未传泛型字段时，服务端网关自动派生旧版 `scope` 与 `profile_id`)*
+
+#### 2.2 `POST /magic-book/sync/push` (变更提交)
+- **请求载荷升级**：
+  ```json
+  {
+    "device_id": "c1f7b8e2-4b2a-4c28-98e3-0d5b4a92c011",
+    "changes": [
+      {
+        "entity_type": "document",
+        "scope_type": "profile",
+        "scope_id": "1:work",
+        "name": "pendantPreferences",
+        "value": "{\"scale\":1.2}",
+        "is_deleted": 0,
+        "client_timestamp": 1730518800000
+      }
+    ]
+  }
+  ```
+
+#### 2.3 `POST /magic-book/sync/snapshot` (全量快照获取)
+- **请求参数**：支持可选的 `{ scope_type?: string, scope_id?: string }` 进行细粒度快照拉取。
+- **返回数据**：基于泛型 `(scope_type, scope_id, name)` 聚合最新快照文档。
+
+### 3. 持久层与服务层改造
+
+#### 3.1 仓储层 (`src/modules/magicBook/repository/`)
+- **`syncDocumentRep.js`**：
+  - `selectDocuments(uid, { scopeType, scopeId, includeDeleted }, tx)`：更新查询字段与过滤条件；
+  - `selectDocument(uid, scopeType, scopeId, name, tx)`：单项点查；
+  - `upsertDocument({ uid, scopeType, scopeId, name, value, lastDeviceId, isDeleted }, tx)`：执行 UPSERT 写入。
+- **`syncChangelogRep.js`**：
+  - `insertChangelog` / `insertBatchChangelog`：记录写入 `scope_type`, `scope_id`。
+  - `selectChangesAfterCursor`：返回标准化泛型实体流水。
+
+#### 3.2 业务层 (`src/modules/magicBook/service/syncService.js`)
+- 事务内批量处理 `changes`，更新快照并写入流水；
+- 剥离所有对特定业务 `profile_id` 的专有代码分支，纯粹按泛型键值流转。
+
+### 4. 实施任务清单 (Milestones & Checklist - Phase 9)
+- [x] 9.1 更新 `resource/application-sqlite.yaml` 中 `sync_documents` 与 `sync_changelog` 表定义，编写增量热迁移 SQL。
+- [x] 9.2 重构 `src/modules/magicBook/repository/syncDocumentRep.js`，将入参与字段升级为 `scopeType` 与 `scopeId`。
+- [x] 9.3 重构 `src/modules/magicBook/repository/syncChangelogRep.js`，支持泛型流水字段读写。
+- [x] 9.4 改造 `src/modules/magicBook/service/syncService.js`，适配新型 `pull`, `push`, `snapshot` 载荷与事务逻辑。
+- [x] 9.5 在 `src/api/routes/magicBook/syncApi.js` 适配接口参数校验，并增加向下兼容性兜底垫片。
+- [x] 9.6 编写端到端同步测试，验证新旧字段兼容、多作用域并发写入与流水游标推进一致性。

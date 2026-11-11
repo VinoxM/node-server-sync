@@ -20,7 +20,7 @@ const getExecutor = (tx) => {
 };
 
 /**
- * 变更流水单调递增日志数据访问仓库 (增量同步核心引擎)
+ * 变更流水单调递增日志数据访问仓库 (增量同步核心引擎 / 泛型流水模型)
  */
 export default {
     /**
@@ -29,11 +29,11 @@ export default {
      * @param {number} cursor - 当前本地游标（返回 cursor > 该值的记录）
      * @param {number} limit - 最大拉取条数
      * @param {any} [tx] - 可选事务句柄
-     * @returns {Promise<QueryResult<{ cursor: number, deviceId: string, entityType: string, scope: string, profileId: string, name: string, value: string, isDeleted: number, clientTimestamp: number, createTime: string }>>}
+     * @returns {Promise<QueryResult<{ cursor: number, deviceId: string, entityType: string, scopeType: string, scopeId: string, name: string, value: string, isDeleted: number, clientTimestamp: number, createTime: string }>>}
      */
     selectChangesAfterCursor: (uid, cursor = 0, limit = 100, tx) => {
-        const sql = `SELECT cursor, device_id AS deviceId, entity_type AS entityType, scope, `
-            + `profile_id AS profileId, name, value, is_deleted AS isDeleted, `
+        const sql = `SELECT cursor, device_id AS deviceId, entity_type AS entityType, `
+            + `scope_type AS scopeType, scope_id AS scopeId, name, value, is_deleted AS isDeleted, `
             + `client_timestamp AS clientTimestamp, create_time AS createTime `
             + `FROM sync_changelog `
             + `WHERE uid = ? AND cursor > ? `
@@ -56,21 +56,21 @@ export default {
 
     /**
      * 追加单条变更流水记录
-     * @param {{ uid: number, deviceId: string, entityType: string, scope?: string, profileId?: string, name?: string, value?: string, isDeleted?: number|boolean, clientTimestamp?: number }} item
+     * @param {{ uid: number, deviceId: string, entityType: string, scopeType?: string, scopeId?: string, name?: string, value?: string, isDeleted?: number|boolean, clientTimestamp?: number }} item
      * @param {any} [tx] - 可选事务句柄
      * @returns {Promise<ExecResult>} 包含新增的 lastId (即自增 cursor)
      */
-    insertChangelog: ({ uid, deviceId, entityType, scope = null, profileId = '', name = null, value = null, isDeleted = 0, clientTimestamp = Date.now() }, tx) => {
+    insertChangelog: ({ uid, deviceId, entityType, scopeType = null, scopeId = null, name = null, value = null, isDeleted = 0, clientTimestamp = Date.now() }, tx) => {
         const now = new Date().toISOString();
         const deletedFlag = isDeleted ? 1 : 0;
-        const sql = `INSERT INTO sync_changelog (uid, device_id, entity_type, scope, profile_id, name, value, is_deleted, client_timestamp, create_time) `
+        const sql = `INSERT INTO sync_changelog (uid, device_id, entity_type, scope_type, scope_id, name, value, is_deleted, client_timestamp, create_time) `
             + `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         return getExecutor(tx).insert(sql, [
             uid,
             deviceId,
             entityType,
-            scope,
-            profileId || '',
+            scopeType,
+            scopeId,
             name,
             value,
             deletedFlag,
@@ -90,4 +90,3 @@ export default {
         return getExecutor(tx).delete(sql, [expireTime]);
     }
 };
-

@@ -1,5 +1,12 @@
 {
     "js/ts.preferences.importModuleSpecifier": "non-relative",
     "js/ts.preferences.importModuleSpecifierEnding": "js",
-    "js/ts.updateImportsOnFileMove.enabled": "always"
+    "js/ts.updateImportsOnFileMove.enabled": "always",
+    "cSpell.words": [
+        "AUTOINCREMENT",
+        "bangumi",
+        "bilive",
+        "kuro",
+        "varchar"
+    ]
 }

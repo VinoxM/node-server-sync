@@ -7,7 +7,7 @@ import { SYNC_ENTITY_TYPE, SYNC_PULL_LIMIT } from '../constants/magicBookConst.j
 const dbName = 'magic_book';
 
 /**
- * 增量拉取变更列表
+ * 增量拉取变更列表 (支持泛型二维作用域模型与旧版向下兼容)
  * @param {number} uid - 用户 ID
  * @param {number} [cursor=0] - 客户端本地保存的最大游标
  * @param {number} [limit=100] - 单次最大条数
@@ -24,16 +24,34 @@ export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAU
     const items = hasMore ? rawList.slice(0, validLimit) : rawList;
     const nextCursor = items.length > 0 ? items[items.length - 1].cursor : validCursor;
 
-    const changes = items.map(item => ({
-        cursor: item.cursor,
-        entity_type: item.entityType,
-        scope: item.scope,
-        profile_id: item.profileId,
-        name: item.name,
-        value: item.value,
-        is_deleted: Number(item.isDeleted),
-        client_timestamp: Number(item.clientTimestamp)
-    }));
+    const changes = items.map(item => {
+        const scopeType = item.scopeType || null;
+        const scopeId = item.scopeId || null;
+
+        // 向下兼容衍生字段：提取纯净 profile_id
+        let legacyProfileId = '';
+        if (scopeType === 'profile' && scopeId) {
+            legacyProfileId = scopeId.includes(':') ? scopeId.split(':').slice(1).join(':') : scopeId;
+        } else if (scopeType === 'user') {
+            legacyProfileId = '';
+        } else {
+            legacyProfileId = scopeId || '';
+        }
+
+        return {
+            cursor: item.cursor,
+            entity_type: item.entityType,
+            scope_type: scopeType,
+            scope_id: scopeId,
+            name: item.name,
+            value: item.value,
+            is_deleted: Number(item.isDeleted),
+            client_timestamp: Number(item.clientTimestamp),
+            // 向下兼容旧客户端字段
+            scope: scopeType,
+            profile_id: legacyProfileId
+        };
+    });
 
     return {
         has_more: hasMore,
@@ -43,7 +61,7 @@ export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAU
 };
 
 /**
- * 提交增量变更集合（事务执行快照更新与流水追加）
+ * 提交增量变更集合（事务执行快照更新与流水追加，自动兼容泛型与旧版格式）
  * @param {number} uid - 用户 ID
  * @param {string} deviceId - 设备标识
  * @param {Array<object>} changes - 变更集合
@@ -70,46 +88,59 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
             const entityType = change.entity_type || change.entityType || SYNC_ENTITY_TYPE.DOCUMENT;
             const isDeleted = change.is_deleted ? 1 : 0;
             const clientTimestamp = Number(change.client_timestamp || change.clientTimestamp) || Date.now();
-            const profileId = change.profile_id || change.profileId || '';
-            const scope = change.scope || 'profile';
             const name = change.name || null;
             const rawValue = change.value;
             const valueStr = typeof rawValue === 'object' && rawValue !== null ? JSON.stringify(rawValue) : (rawValue ?? null);
+
+            // 统一解析与归一化 scopeType 和 scopeId（向下兼容旧客户端）
+            let scopeType = change.scope_type || change.scopeType || change.scope || 'profile';
+            let scopeId = change.scope_id ?? change.scopeId;
+            if (scopeId === undefined || scopeId === null) {
+                if (scopeType === 'user') {
+                    scopeId = String(uid);
+                } else if (scopeType === 'global') {
+                    scopeId = 'global';
+                } else {
+                    const pid = change.profile_id || change.profileId || '';
+                    scopeId = pid ? `${uid}:${pid}` : '';
+                }
+            }
 
             if (entityType === SYNC_ENTITY_TYPE.DOCUMENT) {
                 if (__isBlank(name)) {
                     continue;
                 }
-                // 1. 更新文档最新快照
+                // 1. 更新文档最新快照 (按泛型主键 UPSERT)
                 await syncDocumentRep.upsertDocument({
                     uid,
-                    scope,
-                    profileId,
+                    scopeType,
+                    scopeId: String(scopeId),
                     name,
                     value: valueStr ?? '',
                     lastDeviceId: deviceId,
                     isDeleted
                 }, tx);
 
-                // 2. 追加变更流水
+                // 2. 追加变更流水 (泛型)
                 await syncChangelogRep.insertChangelog({
                     uid,
                     deviceId,
                     entityType: SYNC_ENTITY_TYPE.DOCUMENT,
-                    scope,
-                    profileId,
+                    scopeType,
+                    scopeId: String(scopeId),
                     name,
                     value: valueStr,
                     isDeleted,
                     clientTimestamp
                 }, tx);
             } else if (entityType === SYNC_ENTITY_TYPE.PROFILE) {
-                if (__isBlank(profileId)) {
+                const pureProfileId = change.profile_id || change.profileId || (String(scopeId).includes(':') ? String(scopeId).split(':').slice(1).join(':') : String(scopeId)) || '';
+                if (__isBlank(pureProfileId)) {
                     continue;
                 }
                 // 1. 更新 Profile 状态
                 if (isDeleted) {
-                    await syncProfileRep.softDeleteProfile(uid, profileId, tx);
+                    await syncProfileRep.softDeleteProfile(uid, pureProfileId, tx);
                 } else {
                     let parsedData = {};
                     try {
@@ -118,7 +149,7 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
 
                     await syncProfileRep.insertProfile({
                         uid,
-                        profileId,
+                        profileId: pureProfileId,
                         label: parsedData.label || change.label || '',
                         isDefault: parsedData.is_default || change.is_default ? 1 : 0
                     }, tx);
@@ -129,8 +160,8 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
                     uid,
                     deviceId,
                     entityType: SYNC_ENTITY_TYPE.PROFILE,
-                    scope: null,
-                    profileId,
+                    scopeType: 'profile',
+                    scopeId: `${uid}:${pureProfileId}`,
                     name: null,
                     value: valueStr,
                     isDeleted,
@@ -153,27 +184,52 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
 };
 
 /**
- * 获取全量基准快照数据
+ * 获取全量基准快照数据 (支持按泛型 scopeType, scopeId 或传统 profileId 筛选)
  * @param {number} uid - 用户 ID
- * @param {string} [profileId] - 可选档案过滤
+ * @param {string|object} [profileIdOrOptions] - 可选档案过滤标识或参数选项对象
  */
-export const getBaselineSnapshot = async (uid, profileId) => {
+export const getBaselineSnapshot = async (uid, profileIdOrOptions) => {
+    const filter = typeof profileIdOrOptions === 'string' ? { profileId: profileIdOrOptions } : (profileIdOrOptions || {});
+    let targetScopeId = filter.scopeId || filter.scope_id;
+    if (!targetScopeId && filter.profileId) {
+        targetScopeId = `${uid}:${filter.profileId}`;
+    }
+
     const docRes = await syncDocumentRep.selectDocuments(uid, {
-        profileId,
+        scopeType: filter.scopeType || filter.scope_type,
+        scopeId: targetScopeId,
+        profileId: filter.profileId,
         includeDeleted: false
     });
 
     const serverCursor = await syncChangelogRep.selectLatestCursor(uid);
 
-    const documents = docRes.data.map(doc => ({
-        scope: doc.scope,
-        profile_id: doc.profileId,
-        name: doc.name,
-        value: doc.value,
-        version: doc.version,
-        last_device_id: doc.lastDeviceId,
-        update_time: doc.updateTime
-    }));
+    const documents = docRes.data.map(doc => {
+        const scopeType = doc.scopeType;
+        const scopeId = doc.scopeId;
+
+        let legacyProfileId = '';
+        if (scopeType === 'profile' && scopeId) {
+            legacyProfileId = scopeId.includes(':') ? scopeId.split(':').slice(1).join(':') : scopeId;
+        } else if (scopeType === 'user') {
+            legacyProfileId = '';
+        } else {
+            legacyProfileId = scopeId || '';
+        }
+
+        return {
+            scope_type: scopeType,
+            scope_id: scopeId,
+            name: doc.name,
+            value: doc.value,
+            version: doc.version,
+            last_device_id: doc.lastDeviceId,
+            update_time: doc.updateTime,
+            // 向下兼容旧客户端字段
+            scope: scopeType,
+            profile_id: legacyProfileId
+        };
+    });
 
     return {
         server_cursor: serverCursor,
@@ -190,4 +246,3 @@ export const cleanExpiredChangelog = async (retentionDays = 30) => {
     const res = await syncChangelogRep.deleteChangelogBefore(expireDate);
     return { cleanedRows: res.rows };
 };
-

@@ -9,7 +9,20 @@ export const SYNC_ENTITY_TYPE = {
 };
 
 /**
- * Magic Book 配置作用域常量
+ * Magic Book 配置作用域类型常量 (泛型二维作用域模型)
+ * @readonly
+ * @enum {string}
+ */
+export const SYNC_SCOPE_TYPE = {
+    GLOBAL: 'global',
+    USER: 'user',
+    PROFILE: 'profile',
+    ORG: 'org',
+    DEVICE: 'device'
+};
+
+/**
+ * Magic Book 配置作用域常量 (兼容历史旧引用)
  * @readonly
  * @enum {string}
  */
@@ -26,4 +39,3 @@ export const SYNC_PULL_LIMIT = {
     DEFAULT: 100,
     MAX: 500
 };
-

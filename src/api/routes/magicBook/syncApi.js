@@ -30,7 +30,7 @@ export default defineRoutes({
     },
 
     /**
-     * 增量变更提交
+     * 增量变更提交 (支持泛型 scope_type, scope_id 与旧版 scope, profile_id)
      * 请求体参数：{ device_id: string, changes: Array<object> }
      */
     '/push': {
@@ -46,8 +46,8 @@ export default defineRoutes({
     },
 
     /**
-     * 获取基准全量快照
-     * 请求体参数：{ profile_id?: string }
+     * 获取基准全量快照 (支持泛型作用域或指定档案过滤)
+     * 请求体参数：{ profile_id?: string, scope_type?: string, scope_id?: string }
      */
     '/snapshot': {
         method: POST,
@@ -55,8 +55,8 @@ export default defineRoutes({
         needSecret,
         callback: async (/** @type {ApiRequest} */ req) => {
             const uid = req.userInfo?.id;
-            const { profile_id } = req.body;
-            return getBaselineSnapshot(uid, profile_id);
+            const { profile_id, scope_type, scope_id } = req.body;
+            return getBaselineSnapshot(uid, { profileId: profile_id, scopeType: scope_type, scopeId: scope_id });
         }
     }
 });
