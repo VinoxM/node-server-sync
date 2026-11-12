@@ -33,6 +33,7 @@ api:
       - /common/*
       - /media/*
       - /anime/*
+      - /magic-book/*
       - /schedule/getJobSnapshots
 sse:
   disabled:
