@@ -104,7 +104,7 @@ class Aria2Socket extends ContextSubscribe {
         const instanceId = generateUUID();
         client.on('open', () => this.#onOpen(instanceId));
         client.on('message', data => this.#onMessage(data));
-        client.on('error', e => this.#onError(e, client));
+        client.on('error', e => this.#onError(e));
         client.on('close', () => this.#onClose(client, instanceId));
         this.#client = client;
     }
@@ -158,11 +158,10 @@ class Aria2Socket extends ContextSubscribe {
     /**
      * 错误处理回调
      * @param {Error} e - 异常
-     * @param {WebSocket} client - 当前 client
      */
-    #onError(e, client) {
+    #onError(e) {
         __log.error('[Aria2Socket] Aria2 error.', e);
-        this.close(client);
+        this.close();
     }
 
     /**
