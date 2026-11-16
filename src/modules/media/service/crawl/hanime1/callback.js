@@ -3,7 +3,7 @@ export function getCanAdd() {
     const checkRules = items => {
         if (items.length === 0) return;
         for (const elem of items) {
-            const fileRenameRegex = /[\\/:"*<>?\\\\|]|[\p{Extended_Pictographic}\p{So}\p{Sk}]/gu;
+            const fileRenameRegex = /[\/:"*<>?\\|]|[\p{Extended_Pictographic}\uFE0F\u200D]/gu;
             const nextElem = elem.nextElementSibling;
             let author = '';
             if (nextElem && nextElem.classList.contains('subtitle')) {
@@ -33,7 +33,7 @@ export function getInfo(skipInside = false, skipDance = false, current = false) 
     const isInside = ['裏番', '泡麵番'].some(o => animeType.endsWith(o));
     if (isInside && skipInside) return result;
     // 获取作者
-    const fileRenameRegex = /[\\/:"*<>?\\\\|]|[\p{Extended_Pictographic}\p{So}\p{Sk}]/gu;
+    const fileRenameRegex = /[\/:"*<>?\\|]|[\p{Extended_Pictographic}\uFE0F\u200D]/gu;
     let author = ("" + artist?.textContent || 'unknown').replaceAll(/\\/g, '').replace(fileRenameRegex, '').trim()
     let authorTrim = author.replace(/\\(.*?\\)/, "").trim()
     let authorDeform = author.replace(/_/g, " ").trim()
