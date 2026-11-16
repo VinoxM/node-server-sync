@@ -43,7 +43,11 @@ class CrawlerBrowser {
     #idleTimeout;
 
     constructor() {
-        this.#idleTimeout = this.#getConfig().idleTimeout ?? DEFAULT_IDLE_TIMEOUT;
+    }
+
+    #getIdleTimeout() {        
+        this.#idleTimeout ??= this.#getConfig().idleTimeout ?? DEFAULT_IDLE_TIMEOUT;
+        return this.#idleTimeout;
     }
 
     /**
@@ -86,7 +90,7 @@ class CrawlerBrowser {
     async #launch() {
         const config = this.#getConfig();
         const browser = await puppeteer.launch({
-            executablePath: '/usr/bin/chromium',
+            // executablePath: '/usr/bin/chromium',
             headless: config.headless ?? true,
             args: this.#resolveLaunchArgs(config),
         });
@@ -119,11 +123,12 @@ class CrawlerBrowser {
      */
     #resetIdleTimer() {
         this.#clearIdleTimer();
-        if (!(this.#idleTimeout > 0)) return;
+        const idleTimeout = this.#getIdleTimeout();
+        if (!(idleTimeout > 0)) return;
         this.#idleTimer = setTimeout(() => {
             __log.info('[CrawlerBrowser] Idle timeout reached, closing browser.');
             this.close();
-        }, this.#idleTimeout);
+        }, idleTimeout);
         this.#idleTimer.unref?.();
     }
 
