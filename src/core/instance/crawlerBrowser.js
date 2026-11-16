@@ -89,11 +89,14 @@ class CrawlerBrowser {
      */
     async #launch() {
         const config = this.#getConfig();
-        const browser = await puppeteer.launch({
-            // executablePath: '/usr/bin/chromium',
+        const options = {
             headless: config.headless ?? true,
             args: this.#resolveLaunchArgs(config),
-        });
+        };
+        if (!__env.isDev()) {
+            options.executablePath = '/usr/bin/chromium';
+        }
+        const browser = await puppeteer.launch(options);
         browser.on('disconnected', () => {
             if (this.#browser === browser) this.#browser = null;
             this.#clearIdleTimer();
