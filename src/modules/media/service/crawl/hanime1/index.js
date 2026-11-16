@@ -13,6 +13,7 @@ export async function flushHanime1() {
         '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%82%B3', // 最新上傳
         '/search?sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82', // 最新上市
     ]
+    const ignoreAuthorExists = __env.get('crawl.hanime1.ignoreAuthorExists', false);
     const prepared = new Map();
     for (const flushURL of flushURLs) {
         const rules = await crawlerBrowser.openURL(BASE_URL + flushURL, getCanAdd);
@@ -21,7 +22,7 @@ export async function flushHanime1() {
         if (result && Array.isArray(result)) {
             for (let i = 0; i < result.length; i++) {
                 const { canAdd, downloaded, authorExists } = result[i];
-                canAdd && !downloaded && authorExists && prepared.set(rules[i].uniqueId, rules[i]);
+                canAdd && !downloaded && (ignoreAuthorExists || authorExists) && prepared.set(rules[i].uniqueId, rules[i]);
             }
         }
     }
