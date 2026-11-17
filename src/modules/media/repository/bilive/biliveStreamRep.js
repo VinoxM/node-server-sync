@@ -300,5 +300,17 @@ export default {
     selectStreamByFileId: (fileId) => {
         const sql = `SELECT brs.id, brs.streaming FROM bilive_record_files bf INNER JOIN bilive_record_stream brs ON bf.stream_id=brs.id WHERE bf.id=?`;
         return __sqliteDB.selectOne(sql, [fileId], null, dbName);
+    },
+
+    /**
+     * 删除所有符合条件的空直播流记录（未生成视频、未关联切片文件、已关播且超过指定时间间隔）
+     * @returns {Promise<ExecResult>}
+     */
+    deleteEmptyStream: () => {
+        const sql = `DELETE FROM bilive_record_stream WHERE video_id IS NULL `
+            + `AND streaming IN (${MEDIA_BILIVE_STREAM_STATUS.NOT_LIVE}, ${MEDIA_BILIVE_STREAM_STATUS.READY_TO_ENDED}) `
+            + `AND end_time IS NOT NULL AND end_time < ? `
+            + `AND id NOT IN (SELECT DISTINCT stream_id FROM bilive_record_files)`;
+        return __sqliteDB.delete(sql, [Date.now() - AUTO_CLOSE_READY_TO_END_STREAM_GAP], null, dbName);
     }
 };

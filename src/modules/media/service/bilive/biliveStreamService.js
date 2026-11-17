@@ -293,6 +293,8 @@ export async function autoSyncStreams() {
     for (const stream of streams) {
         await syncStreamToMediaStorage(stream.id);
     }
+    const { rows: emptyRows } = await biliveStreamRep.deleteEmptyStream();
+    printAndPushNotificationWarnMessage(`[Bilive Stream] ${emptyRows} empty live stream record has been deleted.`)
 }
 
 /**
