@@ -153,7 +153,6 @@ class ApiServer {
             }
             if (this.#apiDisabled.some(r => r.test(key))) {
                 __log.warn(`[Server] [X] Request mapping ignore: [${methodFormat(method)}] ${key}`);
-                continue;
             }
             const mappingKey = pathRegex ? new RegExp(key) : key;
             server[method](mappingKey, (req, res) => {
