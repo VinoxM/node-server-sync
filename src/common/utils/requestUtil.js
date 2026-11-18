@@ -16,20 +16,37 @@ function cleanIpAddress(ip) {
 }
 
 /**
- * 获取客户端真实 IP 地址（优先解析 x-forwarded-for 反向代理头，回退到 Socket 远程地址）
+ * 获取客户端真实 IP 地址（优先解析 x-real-ip，其次 x-forwarded-for 反向代理头，最后回退到 Socket 远程地址）
  * @param {import('express').Request} req - Express 请求对象
  * @returns {string} 客户端真实 IP 地址（若无法获取则返回 'Unknown'）
  */
 export function getRequestRealIp(req) {
     if (!req) return 'Unknown'
+    const realIpKey = 'x-real-ip'
+    let realIp = req.get?.(realIpKey) || req.headers?.[realIpKey] || ''
+    if (!realIp) {
+        realIp = req.get?.('X-Real-IP') || req.headers?.['X-Real-IP'] || ''
+    }
+    if (Array.isArray(realIp)) {
+        realIp = realIp[0] || ''
+    }
+    if (realIp && realIp !== '') {
+        const cleanedRealIp = cleanIpAddress(realIp)
+        if (cleanedRealIp) return cleanedRealIp
+    }
+
     const forwardKey = 'x-forwarded-for'
     let forwards = req.get?.(forwardKey) || req.headers?.[forwardKey] || ''
     if (!forwards) {
         forwards = req.get?.('X-Forwarded-For') || req.headers?.['X-Forwarded-For'] || ''
     }
+    if (Array.isArray(forwards)) {
+        forwards = forwards[0] || ''
+    }
     if (forwards && forwards !== '') {
         const firstIp = forwards.split(',')[0].trim()
-        return cleanIpAddress(firstIp) || 'Unknown'
+        const cleanedForwardIp = cleanIpAddress(firstIp)
+        if (cleanedForwardIp) return cleanedForwardIp
     }
     const remoteAddr = req.socket?.remoteAddress || req.connection?.remoteAddress || ''
     return cleanIpAddress(remoteAddr) || 'Unknown'
