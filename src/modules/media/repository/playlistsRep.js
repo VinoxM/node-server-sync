@@ -36,6 +36,7 @@ export default {
             + `FROM playlists p `
             + `INNER JOIN categories tc ON tc.id=p.category_id AND tc.type=${isInside ? MEDIA_CATEGORY_TYPE.INSIDE : MEDIA_CATEGORY_TYPE.NORMAL} `
             + whereSql
+            + `ORDER BY p.id DESC `
             + limitOffset;
         return __sqliteDB.selectAll(sql, params, null, dbName);
     },

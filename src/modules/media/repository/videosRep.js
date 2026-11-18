@@ -254,7 +254,7 @@ export default {
             sqlConcat.push(' tv.title LIKE ?');
             params.push('%' + title + '%');
         }
-        if (status) {
+        if (__notNull(status)) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
         }
@@ -353,7 +353,7 @@ export default {
             sqlConcat.push(' tv.author_id = ?');
             params.push(authorId);
         }
-        if (status) {
+        if (__notNull(status)) {
             sqlConcat.push(' tv.status = ?');
             params.push(status);
         }
