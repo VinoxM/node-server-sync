@@ -46,7 +46,9 @@ export async function searchVideos(body, isInside, userId) {
         needTotalSize,
         orderBy = {}
     } = body;
-    const videoStatus = Object.values(MEDIA_VIDEO_STATUS).includes(Number(status)) ? Number(status) : undefined;
+    const videoStatus = __isNotBlank(status) && typeof status !== 'boolean' && Object.values(MEDIA_VIDEO_STATUS).includes(Number(status))
+        ? Number(status)
+        : undefined;
     const record = await videosRep.selectForSearch(isInside, title, categoryId, authorId, tags, videoStatus, pageNum, pageSize, needTotalSize, userId, orderBy).then(({ data }) => data);
     const total = await videosRep.countForSearch(isInside, title, categoryId, authorId, tags, videoStatus);
     return { record, total, pageNum, pageSize };
