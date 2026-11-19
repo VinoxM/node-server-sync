@@ -201,7 +201,7 @@ statistics:
     expire: 1000 * 60 * 60 * 24 * 30
 qdrant:
   client:
-    host: qdrant.vinoxm.art
+    host: qdrant.vinoxm.top
     port: 443
 media:
   progress:

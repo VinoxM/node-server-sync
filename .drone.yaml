@@ -10,8 +10,8 @@ steps:
   - name: build-and-push-base
     image: plugins/docker
     settings:
-      registry: gitea.vinoxm.art
-      repo: gitea.vinoxm.art/vinoxm/node-server-base
+      registry: gitea.vinoxm.top
+      repo: gitea.vinoxm.top/vinoxm/node-server-base
       insecure: true
       dockerfile: Dockerfile.base
       username:
@@ -31,8 +31,8 @@ steps:
   - name: publish-image
     image: plugins/docker
     settings:
-      registry: gitea.vinoxm.art
-      repo: gitea.vinoxm.art/vinoxm/node-server
+      registry: gitea.vinoxm.top
+      repo: gitea.vinoxm.top/vinoxm/node-server
       insecure: true
       username:
         from_secret: GITEA_USERNAME
@@ -45,7 +45,7 @@ steps:
       ref:
         - refs/tags/v*
   - name: update-deployment-yaml
-    image: gitea.vinoxm.cloud/library/git:latest
+    image: gitea.vinoxm.top/library/git:latest
     environment:
       SSH_KEY:
         from_secret: argocd_deploy_key
@@ -57,9 +57,9 @@ steps:
       - git clone ssh://git@memory.vinoxm.lan:32222/VinoxM/k3s-deployments.git
       - cd k3s-deployments
       - |
-        sed -i "s|image: .*node-server:.*|image: gitea.vinoxm.art/vinoxm/node-server:${DRONE_TAG}|g" node-server/deployment.yaml
+        sed -i "s|image: .*node-server:.*|image: gitea.vinoxm.top/vinoxm/node-server:${DRONE_TAG}|g" node-server/deployment.yaml
       - git config user.name "Drone CI"
-      - git config user.email "drone@vinoxm.cloud"
+      - git config user.email "drone@vinoxm.top"
       - git add node-server/deployment.yaml
       - |
         git commit -m "chore: update node-server image to ${DRONE_TAG} [skip ci]"

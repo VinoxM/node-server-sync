@@ -308,5 +308,5 @@ export function generateMinioSourceSafely(minioLink) {
             }
         }
     }
-    return `https://minio-api-media.vinoxm.art${minioLink}`;
+    return `https://minio-api-media.vinoxm.top${minioLink}`;
 }

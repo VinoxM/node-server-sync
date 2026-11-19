@@ -1,4 +1,4 @@
-FROM gitea.vinoxm.art/vinoxm/node-server-base:latest
+FROM gitea.vinoxm.top/vinoxm/node-server-base:latest
 
 WORKDIR /app
 

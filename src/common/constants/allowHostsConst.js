@@ -3,8 +3,8 @@
  * @type {string[]}
  */
 export const allowLanHosts = [
-    'server.vinoxm.art',
-    '*-coder.vinoxm.cloud'
+    'server.vinoxm.top',
+    '*-coder.vinoxm.top'
 ];
 
 /**
