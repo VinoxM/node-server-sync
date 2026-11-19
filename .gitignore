@@ -6,3 +6,4 @@ src/
 temporary/
 deprecated/
 db/
+test/
