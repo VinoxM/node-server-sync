@@ -12,7 +12,7 @@ const { POST, GET } = apiMethodConst;
 const { SECRET } = apiHeaderConst;
 
 /** 获取 Clash 路由通信秘钥 */
-const needSecret = () => "mAou5820.clash";
+const needSecret = () => "mAou5820@clash";
 
 const clashFileName = 'config.yml';
 
