@@ -8,12 +8,17 @@ import apiContentTypeConst from '#constants/apiContentTypeConst.js';
 import { defineFilter } from '#utils/defineUtil.js';
 import { API_FILTER_ORDER } from '#constants/filterOrderConst.js';
 
-const { POST } = apiMethodConst;
+const { POST, PUT } = apiMethodConst;
 const { TYPE_JSON, TYPE_FORM, TYPE_TEXT, TYPE_MULTIPART } = apiContentTypeConst;
 
 /** 请求体解析策略映射 */
 const PARSE_STRATEGIES = {
-    [TYPE_JSON]: (buffer, charset) => JSON.parse(iconv.decode(buffer, charset || 'utf8')),
+    [TYPE_JSON]: (buffer, charset) => {
+        if (!buffer || buffer.length === 0) return {};
+        const text = iconv.decode(buffer, charset || 'utf8').trim();
+        if (!text) return {};
+        return JSON.parse(text);
+    },
     [TYPE_FORM]: (buffer, charset) => queryStringParse(iconv.decode(buffer, charset || 'utf8')),
     [TYPE_TEXT]: (buffer, charset) => iconv.decode(buffer, charset || 'utf8'),
     [TYPE_MULTIPART]: (buffer, charset, req) => {
@@ -32,12 +37,12 @@ const requestBodyLimit = new GetterContextSubscribe('RequestBodyLimit', () => __
 /**
  * 请求体解析过滤器
  * 优先级: -60
- * 作用: 拦截 POST 请求流数据，根据 Content-Type 解析为 JSON / Form / Text / Multipart，并挂载到 `req.body` 与 `req.files`
+ * 作用: 拦截 POST / PUT 请求流数据，根据 Content-Type 解析为 JSON / Form / Text / Multipart，并挂载到 `req.body` 与 `req.files`
  */
 export default defineFilter({
     order: API_FILTER_ORDER.REQUEST_BODY,
     doFilter: (resolve, reject, complete, { req, res, config }) => {
-        if (req.method !== POST) return resolve({ req, res, config });
+        if (req.method !== POST && req.method !== PUT) return resolve({ req, res, config });
         const contentType = contentTypeParse(req.headers['content-type']);
         const strategy = PARSE_STRATEGIES[contentType.type];
         if (!strategy) {
