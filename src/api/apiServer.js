@@ -115,7 +115,11 @@ class ApiServer {
         let basePath = mapping.basePath ?? '';
         Object.keys(mapping).forEach(key => {
             if (key !== 'basePath' && key.startsWith("/")) {
-                this.#apiMapping[basePath + key] = mapping[key];
+                const config = mapping[key];
+                const method = ("" + (config?.method || 'all')).toLocaleLowerCase();
+                const routePath = config?.path ? (basePath + config.path) : (basePath + key);
+                const uniqueKey = `${method}:${routePath}`;
+                this.#apiMapping[uniqueKey] = { ...config, routePath };
             }
         });
     }
@@ -140,10 +144,10 @@ class ApiServer {
             if (!this.#draining) return next();
             reject({ code: -503, status: 503, msg: 'Server is shutting down.' }, { req, res });
         });
-        const methodSupport = ['get', 'post', 'all'];
-        for (const key in this.#apiMapping) {
-            const config = this.#apiMapping[key];
-            const { method: m, callback, disabled, ignoreAccessPrint = false, pathRegex = false } = config;
+        const methodSupport = ['get', 'post', 'put', 'delete', 'all'];
+        for (const uniqueKey in this.#apiMapping) {
+            const config = this.#apiMapping[uniqueKey];
+            const { method: m, callback, disabled, ignoreAccessPrint = false, pathRegex = false, routePath } = config;
             if (disabled) {
                 continue;
             }
@@ -151,10 +155,10 @@ class ApiServer {
             if (!methodSupport.includes(method)) {
                 continue;
             }
-            if (this.#apiDisabled.some(r => r.test(key))) {
-                __log.warn(`[Server] [X] Request mapping ignore: [${methodFormat(method)}] ${key}`);
+            if (this.#apiDisabled.some(r => r.test(routePath))) {
+                __log.warn(`[Server] [X] Request mapping ignore: [${methodFormat(method)}] ${routePath}`);
             }
-            const mappingKey = pathRegex ? new RegExp(key) : key;
+            const mappingKey = pathRegex ? new RegExp(routePath) : routePath;
             server[method](mappingKey, (req, res) => {
                 const doRequest = () => {
                     ignoreAccessPrint || __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
@@ -171,7 +175,7 @@ class ApiServer {
                 if (config?.ignoreTrace) {
                     doRequest();
                 } else {
-                    const tracePrefix = generateRequestTracePrefix(method, req.url || key);
+                    const tracePrefix = generateRequestTracePrefix(method, req.url || routePath);
                     const traceId = Tracer.generateTraceId(tracePrefix);
                     if (config?.maybeStream) {
                         Tracer.run({ traceId, response: res }, doRequest);
@@ -180,7 +184,7 @@ class ApiServer {
                     }
                 }
             });
-            __log.info(`[Server] Request mapping registered: [${methodFormat(method)}] ${key}`);
+            __log.info(`[Server] Request mapping registered: [${methodFormat(method)}] ${routePath}`);
         }
         server.use((req, res) => {
             __log.info(`[Request Access] [${methodFormat(req.method)}] ${req.url} From ${getRequestRealIp(req)}`);
@@ -316,9 +320,12 @@ function reject(ex, { req, res }) {
     Tracer.clearStreamHeartbeat();
     if (__isError(ex)) __log.error(`[Request Error] Message: ${ex.msg || ex.message} ${ex.error ? `Cause: ${ex.error.message}` : ''}`, ex);
     const resultObj = {
-        code: ex?.code < 0 ? ex.code : -1,
+        code: ex?.code !== undefined ? ex.code : -1,
         message: [-2, -3, -404].includes(ex?.code) ? "Bad Request." : (ex?.msg || "Server Error.")
     };
+    if (ex && typeof ex === 'object' && ex.data !== undefined) {
+        resultObj.data = ex.data;
+    }
     let status = 200;
     if (ex && typeof ex === 'object' && 'status' in ex) {
         status = ex.status;

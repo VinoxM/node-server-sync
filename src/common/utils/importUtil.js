@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 
 /**
  * 遍历指定目录并获取所有 JavaScript 脚本文件路径与模块名
@@ -30,7 +31,7 @@ function getFolderScripts(folder, recursive = false) {
  * @returns {Promise<any|null>} 导入的模块对象，若文件不存在则返回 null
  */
 async function importScript(file) {
-    return fs.existsSync(file) && fs.lstatSync(file).isFile() ? import(file) : Promise.resolve(null)
+    return fs.existsSync(file) && fs.lstatSync(file).isFile() ? import(pathToFileURL(file).href) : Promise.resolve(null)
 }
 
 /**

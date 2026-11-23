@@ -266,8 +266,20 @@ declare global {
 
     /**
      * 抛出包含 msg、code、status 的结构化业务错误对象
+     * @param message 业务错误提示消息
+     * @param code 业务错误码（支持数字或语义字符串，默认为 -1）
+     * @param status HTTP 状态码（默认为 200）
      */
-    function __throwMessage(message: string, code?: number, status?: number): never;
+    function __throwMessage(message: string, code?: number | string, status?: number): never;
+
+    /**
+     * 抛出包含 msg、code、status 及附加数据 data 的结构化业务错误对象
+     * @param message 业务错误提示消息
+     * @param code 业务错误码（支持数字或语义字符串，默认为 -1）
+     * @param status HTTP 状态码（默认为 200）
+     * @param data 附带的业务数据结构
+     */
+    function __throwWithData<T = any>(message: string, code?: number | string, status?: number, data?: T): never;
 
     /**
      * 校验目标值是否为函数 (函数类型守卫)

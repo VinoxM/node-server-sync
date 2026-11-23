@@ -62,6 +62,11 @@ const globalUtils = {
         throw { msg: message, code, status };
     },
 
+    /** 抛出包含消息、状态码、HTTP 状态及附加数据的结构化业务异常对象 */
+    __throwWithData: (message, code = -1, status = 200, data = {}) => {
+        throw { msg: message, code, status, data };
+    },
+
     /** 校验目标是否为函数 */
     __isFunction: func => func && typeof func === 'function',
 

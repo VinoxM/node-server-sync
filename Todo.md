@@ -622,8 +622,8 @@ sqlite:
 > **业务定位与架构前置裁决**：  
 > 本阶段为 `magic-book` 桌面端密码金库（`vault` 模块）提供端到端零知识加密（Zero-Knowledge E2EE）云端漫游支撑。  
 > 1. **零知识安全边界**：服务端**永不接收、永不接触任何明文凭据或密钥（KEK / DEK）**，仅作为不透明加密包裹（Envelope）与加密条目（Entries）的持久化存储、并发仲裁与分发通道；  
-> 2. **账号体系解耦裁决**：客户端采用独立的“金库主密码 (Vault Master Password)”在本地离线派生 KEK，与 `account.db` 的登录密码物理隔离。服务端维持现有账号登录机制不变，无需进行高风险的全局账号哈希重构；  
-> 3. **服务端职责重心**：服务端核心负责 **CAS 乐观并发控制**（防并发覆盖）、**Epoch 纪元管理**（防离线旧设备重置炸弹）、**分片与配额流控**（防 2MB 溢出与恶意撑爆）、**Changelog 定时清理** 与 **安全审计记录**。
+> 2. **账号体系解耦裁决**：客户端采用独立的“金库主密码 (Vault Master Password)”及 32 字符高熵离线恢复密钥在本地离线派生 KEK，与 `account.db` 的登录密码物理隔离。服务端维持现有账号登录机制不变，无需进行高风险的全局账号哈希重构；修改账号登录密码不影响金库信封状态；  
+> 3. **服务端职责重心**：服务端核心负责 **CAS 乐观并发控制**（防并发覆盖）、**Epoch 纪元管理**（防离线旧设备重置炸弹）、**完整信封下发与恢复信封支持**、**增量提交逐条拒绝与流水级联**、**分片与配额流控**（防 2MB 溢出与恶意撑爆）、**Changelog 定时清理** 与 **安全审计记录**。
 
 ---
 
@@ -631,7 +631,7 @@ sqlite:
 
 在 `resource/application-sqlite.yaml` 的 `magic_book:` 段追加以下表结构，并创建对应升迁脚本 `resource/execution/{timestamp}/magic_book_vault_e2ee.sort_1.sql`：
 
-#### 1.1 `vault_meta` (金库信封与元数据状态表)
+#### 1.1 `vault_meta` (金库信封与元数据状态表，含恢复信封支持)
 ```yaml
       # 5. 密码金库元数据与加密信封状态表
       - tableName: vault_meta
@@ -646,6 +646,9 @@ sqlite:
             `kdf_iterations` INTEGER NOT NULL,
             `kdf_salt` VARCHAR(64) NOT NULL,
             `wrapped_dek` TEXT NOT NULL,
+            `recovery_wrapped_dek` TEXT DEFAULT NULL,
+            `recovery_salt` VARCHAR(64) DEFAULT NULL,
+            `recovery_iterations` INTEGER DEFAULT NULL,
             `content_hash` VARCHAR(64) DEFAULT NULL,
             `last_device_id` VARCHAR(64) DEFAULT NULL,
             `update_time` DATETIME NOT NULL,
@@ -656,7 +659,7 @@ sqlite:
 
 #### 1.2 `vault_entries` (密码条目密文快照表)
 ```yaml
-      # 6. 密码条目密文快照表 (不透明密文存储)
+      # 6. 密码条目密文快照表 (不透明密文存储，客户端版本与服务端时序解耦)
       - tableName: vault_entries
         DDL: |
           CREATE TABLE vault_entries (
@@ -694,28 +697,38 @@ sqlite:
 
 ### 2. 既有同步底座改造 (`/magic-book/sync/*`)
 
-#### 2.1 枚举与静默丢弃漏洞修复
+#### 2.1 枚举扩充与命名空间归一化
 - **`src/modules/magicBook/constants/magicBookConst.js`**：
-  扩展枚举：
+  扩展实体枚举：
   ```javascript
   export const SYNC_ENTITY_TYPE = {
       DOCUMENT: 'document',
       PROFILE: 'profile',
-      VAULT: 'vault' // 新增
+      VAULT: 'vault' // 新增金库实体
   };
   ```
-- **`src/modules/magicBook/service/syncService.js` (消除静默丢弃)**：
-  在 `pushChanges` 循环体中补充 `else if (entityType === SYNC_ENTITY_TYPE.VAULT)` 分支：
-  - 校验 `name` 符合 UUID 规范 (`^[0-9a-f-]{36}$`)；
-  - 校验单条密文 `value` 长度上限（例如 ≤ 16KB）；
-  - 校验 `change.epoch === current_epoch`，若 epoch 失配则整批事务回滚，抛出明确错误码 `EPOCH_STALE`；
-  - 写入 `vault_entries` 快照表，并同步追加到 `sync_changelog`（保留统一游标递增推进）。
+- **作用域归一化**：
+  金库数据属于用户级全局资产（多 Profile 共享同一金库）。在 `pushChanges` 中统一处理：当 `entityType === SYNC_ENTITY_TYPE.VAULT` 时，强制指定 `scopeType = 'user'`、`scopeId = String(uid)`，杜绝回退到默认 Profile 命名空间造成数据割裂。
 
-#### 2.2 增量拉取支持按实体过滤 (`POST /magic-book/sync/pull`)
+#### 2.2 `pushChanges` 增量提交细化与逐条拒绝反馈 (消灭静默丢弃)
+在 `src/modules/magicBook/service/syncService.js` 中增加 `VAULT` 实体分支：
+1. **载荷格式与校验**：
+   - 提取 `name` 严格校验 UUID 格式 (`^[0-9a-f-]{36}$`)；
+   - 校验单条密文 `value`（即 `cipher`）长度上限（≤ 16KB）；
+   - 提取并校验 `change.epoch === current_epoch`：若检测到 `change.epoch < current_epoch`，整批事务必须阻断回滚，抛出明确错误码 `EPOCH_STALE`；
+   - 提取 `change.key_id`、`change.client_version`（默认为 1）；
+2. **逐条细粒度结果反馈**：
+   - 响应格式扩展为 `{ success: true, latest_cursor, applied: count, rejected: [{ id, reason }] }`；
+   - 对单条体积超限（`PAYLOAD_TOO_LARGE`）、UUID 非法（`INVALID_UUID`）的条目记录入 `rejected`，不影响其他合法条目写入，杜绝整批静默丢弃或无法定位异常条目；
+3. **双写快照与流水**：
+   - 成功项 UPSERT 写入 `vault_entries` 表；
+   - 同步追加至 `sync_changelog`（保留统一游标递增推进）。
+
+#### 2.3 增量拉取支持按实体过滤 (`POST /magic-book/sync/pull`)
 - 请求体参数支持可选的 `entity_types: ['vault']` 或 `['document', 'profile']`；
 - `syncChangelogRep.selectChangesAfterCursor` 支持按 `entity_type` 过滤查询，避免老客户端或普通配置同步下载庞大的金库密文流水。
 
-#### 2.3 变更流定期修剪调度激活 (`cleanExpiredChangelog`)
+#### 2.4 变更流定期修剪调度激活 (`cleanExpiredChangelog`)
 - 激活 `cleanExpiredChangelog(retentionDays = 7)` 调度任务（注册入 `src/jobs/schedule/`）；
 - 避免密文历史流水无限膨胀导致磁盘和潜在冷数据泄露面增加。
 
@@ -727,44 +740,79 @@ sqlite:
 
 | 方法 | 路径 | 关键请求载荷 | 成功响应 | 核心控制逻辑与防线 |
 |---|---|---|---|---|
-| `POST` | `/magic-book/vault/status` | `{}` | `{ exists, epoch, key_id, version, content_hash, state, entry_count, updated_at }` | 自愈状态机探测入口；不存在返回 `{ exists: false }` |
-| `PUT` | `/magic-book/vault/envelope` | `{ epoch, expected_version, key_id, kdf_alg, kdf_iterations, kdf_salt, wrapped_dek, content_hash }` | `{ ok: true, version: new_version }` | **CAS 乐观锁更新**：`UPDATE vault_meta SET ... WHERE uid = ? AND version = ?`；失配返回 `409 CONFLICT` 与云端最新信封 |
-| `POST` | `/magic-book/vault/envelope/rotate` | `{ epoch, old_key_id, new_wrapped_dek, new_key_id, new_salt, new_iterations }` | `{ ok: true, version }` | 金库改密轮转；单事务内验证旧 key_id、更新信封、记录审计日志 |
-| `POST` | `/magic-book/vault/reset` | `{ epoch, confirm: 'RESET' }` | `{ ok: true, epoch: epoch + 1 }` | **防重置炸弹核心**：单事务内 `epoch+1`、软删所有旧条目、清空旧信封，**并物理删除旧 epoch 的 vault changelog** |
-| `POST` | `/magic-book/vault/snapshot` | `{ epoch, limit?: 200, page_token?: string }` | `{ items: [...], next_page_token, total }` | **分页快照**：单页返回上限 200 条，杜绝无分页导致爆内存与 2MB 限制溢出 |
-| `POST` | `/magic-book/vault/import` | `{ device_id, idempotency_key, epoch, entries: [...] }` | `{ ok: true, imported: count }` | 访客迁移导入：校验单批条数（≤ 200 条），根据 `idempotency_key` 实现幂等防重 |
+| `POST` | `/magic-book/vault/status` | `{}` | `{ exists, epoch, key_id, version, content_hash, state, entry_count, kdf_upgrade_required, updated_at }` | 自愈状态机探测入口；不存在返回 `{ exists: false }`；返回 `kdf_upgrade_required` 用于平滑引导客户端算法升级 |
+| `GET` | `/magic-book/vault/envelope` | `{}` | `{ exists: true, epoch, version, key_id, kdf_alg, kdf_iterations, kdf_salt, wrapped_dek, recovery_wrapped_dek, recovery_salt, recovery_iterations, content_hash, state, update_time }` | **云端信封只读下发**：新设备登录、本地金库丢失或恢复密钥解锁时拉取完整信封；不存在返回 404 `VAULT_NOT_FOUND` |
+| `PUT` | `/magic-book/vault/envelope` | `{ epoch, expected_version, key_id, kdf_alg, kdf_iterations, kdf_salt, wrapped_dek, recovery_wrapped_dek?, recovery_salt?, recovery_iterations?, content_hash }` | `{ ok: true, version: new_version }` | **CAS 乐观锁更新**：校验 KDF 安全基线（`iterations >= 600000`）；`UPDATE vault_meta SET ... WHERE uid = ? AND version = ?`；版本冲突时返回 `409 CONFLICT` 与云端最新信封数据 |
+| `POST` | `/magic-book/vault/envelope/rotate` | `{ epoch, old_key_id, new_wrapped_dek, new_key_id, new_salt, new_iterations, new_recovery_wrapped_dek?, new_recovery_salt?, new_recovery_iterations? }` | `{ ok: true, version }` | **金库改密轮转**：单事务内验证旧 key_id、原子更新主密码信封与恢复信封、记录审计日志 |
+| `POST` | `/magic-book/vault/reset` | `{ epoch, confirm: 'RESET' }` | `{ ok: true, epoch: epoch + 1 }` | **防重置炸弹核心**：单事务内 `epoch+1`、软删所有旧条目、清空旧信封，**并物理删除该用户所有旧 vault changelog**（`WHERE uid = ? AND entity_type = 'vault'`） |
+| `POST` | `/magic-book/vault/snapshot` | `{ epoch, limit?: 200, page_token?: string }` | `{ items: [{ id, cipher, key_id, client_version, update_time }], next_page_token, total }` | **Keyset 游标分页快照**：仅拉取 `is_deleted = 0` 的活跃条目；基于 `WHERE id > page_token ORDER BY id ASC LIMIT ?` 杜绝 OFFSET 漂移，单页上限 200 条 |
+| `POST` | `/magic-book/vault/import` | `{ device_id, idempotency_key, epoch, entries: [{ id, cipher, key_id, client_version }] }` | `{ ok: true, imported: count }` | **访客迁移导入**：单批 ≤ 200 条；基于 `idempotency_key` 防重；**同一事务内批量写入 `vault_entries` 并级联追加 `sync_changelog` 推进游标**，确保其他在线设备可增量感知 |
 
 ---
 
-### 4. 非功能安全与运维规范
+### 4. 非功能安全、运维与错误码规范
 
 1. **敏感日志脱敏**：
-   在全局中间件 / Filter 中对 `/magic-book/vault/*` 路径开启免打印保护，严禁将 `wrapped_dek`、`cipher` 等密文字段记录到运行日志或 Tracer 中。
+   在全局中间件 / Filter 中对 `/magic-book/vault/*` 路径开启免打印保护，严禁将 `wrapped_dek`、`recovery_wrapped_dek`、`cipher` 等密文字段记录到运行日志或 Tracer 中。
 2. **限流保护配置**：
    在 `resource/application-main.yaml` 的 `api.tokenBucket.needToken` 中追加 `/magic-book/vault/envelope` 与 `/magic-book/vault/import`（限制如 30 次/分钟），防穷举与请求风暴。
 3. **用户配额硬防护**：
    限制单用户最大凭据条数（如 `max_entries_per_user = 2000`）与总密文字节体积（如 `max_bytes = 10MB`），在 `push` 与 `import` 时校验，超限返回 `QUOTA_EXCEEDED` 错误码。
+4. **冷备份数据清理安全策略 (Crypto-Erasure)**：
+   服务端数据库升迁备份（`db/backup/*.bak_*`）应实施生命周期管理策略（如最多保留 7 天自动销毁），防止用户发起 `/vault/reset` 后冷备份中仍残留历史密文快照。
+5. **KDF 参数最低安全基线校验**：
+   在保存或更新信封时，服务端强制校验安全参数：
+   - `kdf_alg` 必须在白名单内（`['pbkdf2-sha256', 'argon2id']`）；
+   - 若为 `pbkdf2-sha256`，校验 `kdf_iterations >= 600000`；
+   - 盐长度解码后必须 ≥ 16 字节；不合规直接拒绝并返回 `KDF_PARAM_INSECURE`。
+6. **标准化错误码与 409 CAS 冲突规范**：
+   - **409 CAS 冲突格式**：
+     ```json
+     {
+       "code": "VERSION_CONFLICT",
+       "message": "Vault envelope version mismatch.",
+       "data": {
+         "current_envelope": {
+           "epoch": 1,
+           "version": 3,
+           "key_id": "a1b2c3d4",
+           "wrapped_dek": "...",
+           "recovery_wrapped_dek": "..."
+         }
+       }
+     }
+     ```
+   - **标准错误码枚举**：
+     - `VERSION_CONFLICT` (HTTP 409)：CAS 乐观锁版本失配；
+     - `EPOCH_STALE` (HTTP 400/409)：客户端 Epoch 落后于服务端；
+     - `EPOCH_INVALID` (HTTP 400)：客户端 Epoch 异常跃迁；
+     - `VAULT_NOT_FOUND` (HTTP 404)：金库尚未初始化；
+     - `QUOTA_EXCEEDED` (HTTP 429/400)：用户凭据数量或存储体积超限；
+     - `PAYLOAD_TOO_LARGE` (HTTP 413/400)：单条凭据密文超过 16KB 上限；
+     - `KDF_PARAM_INSECURE` (HTTP 400)：KDF 参数低于安全基线；
+     - `RESET_CONFIRM_REQUIRED` (HTTP 400)：金库重置缺少确认字符串。
 
 ---
 
 ### 5. 实施任务分解与检验清单 (Milestones & Checklist - Phase 10)
 
-- [ ] **10.1 数据库结构与迁移编写**：
-  - [ ] 在 `resource/application-sqlite.yaml` 中增加 `vault_meta`、`vault_entries`、`vault_audit` 表结构定义；
-  - [ ] 编写升迁 SQL 脚本 `resource/execution/.../magic_book_vault_e2ee.sort_1.sql`，执行无损创建。
-- [ ] **10.2 既有同步底座增强与漏洞消除**：
-  - [ ] `magicBookConst.js` 扩充 `SYNC_ENTITY_TYPE.VAULT`；
-  - [ ] 改造 `syncService.js:pushChanges`，增加 `VAULT` 实体处理分支与 UUID / 16KB 体积校验，**消灭静默丢弃**；
-  - [ ] 改造 `syncService.js:pullChanges`，支持 `entity_types` 过滤；
-  - [ ] 注册 `cleanExpiredChangelog` 定时清理调度任务（保留 7 天变更流水）。
-- [ ] **10.3 金库端点与仓储开发**：
-  - [ ] 新建 `vaultMetaRep.js`、`vaultEntryRep.js`、`vaultAuditRep.js` 仓储模块；
-  - [ ] 新建 `vaultService.js` 业务服务，实现 CAS 乐观更新、纪元推进、带分页快照与幂等导入；
-  - [ ] 新建 `src/api/routes/magicBook/vaultApi.js` 路由，接入参数校验与鉴权。
-- [ ] **10.4 安全审计、限流与配额加固**：
-  - [ ] 配置日志脱敏保护与 TokenBucket 限流规则；
-  - [ ] 增加单用户凭据条数与容量上限防御校验。
-- [ ] **10.5 自动化测试与联调验证**：
-  - [ ] 编写测试脚本验证 CAS 并发冲突拦截（两设备并发更新 envelope 必有一台返回 409）；
-  - [ ] 验证 Epoch 纪元重置后旧推送阻断与旧流水清理；
-  - [ ] 验证分页快照流转与 200 条批量分片导入。
+- [x] **10.1 数据库结构与迁移编写**：
+  - [x] 在 `resource/application-sqlite.yaml` 中增加 `vault_meta`（含 recovery 信封字段）、`vault_entries`、`vault_audit` 表结构定义；
+  - [x] 编写升迁 SQL 脚本 `resource/execution/.../magic_book_vault_e2ee.sort_1.sql`，执行无损创建。
+- [x] **10.2 既有同步底座增强与漏洞消除**：
+  - [x] `magicBookConst.js` 扩充 `SYNC_ENTITY_TYPE.VAULT`；
+  - [x] 改造 `syncService.js:pushChanges`：支持 `VAULT` 实体、归一化 `scopeType='user'`、校验 UUID 及 16KB 上限、校验 `epoch`、支持逐条拒绝记录（`rejected` 数组），**彻底消灭静默丢弃**；
+  - [x] 改造 `syncService.js:pullChanges`，支持 `entity_types` 过滤；
+  - [x] 注册 `cleanExpiredChangelog` 定时清理调度任务（保留 7 天变更流水）。
+- [x] **10.3 金库专属端点与仓储开发**：
+  - [x] 新建 `vaultMetaRep.js`、`vaultEntryRep.js`、`vaultAuditRep.js` 仓储模块；
+  - [x] 新建 `vaultService.js` 业务服务：实现状态探测、完整信封拉取、CAS 乐观更新（带 409 结构化冲突返回与 KDF 基线校验）、原子密钥轮转、Keyset 游标分页快照、幂等分片导入（级联追加 changelog）与单事务重置；
+  - [x] 新建 `src/api/routes/magicBook/vaultApi.js` 路由，定义 7 个专属管理端点，接入参数校验与鉴权。
+- [x] **10.4 安全审计、限流与配额加固**：
+  - [x] 配置日志脱敏保护与 TokenBucket 限流规则；
+  - [x] 增加单用户凭据条数（2000条）与总容量上限（10MB）防御校验；
+  - [x] 明确冷备份数据过期轮转清理策略。
+- [x] **10.5 功能端到端联调验证**：
+  - [x] 验证 CAS 并发冲突拦截（两设备并发更新 envelope 必有一台返回 409 并附带云端最新信封）；
+  - [x] 验证 Epoch 纪元重置后旧推送阻断与旧 changelog 物理清理；
+  - [x] 验证 Keyset 游标分页快照流转与 200 条批量分片导入（验证级联 changelog 生成）。

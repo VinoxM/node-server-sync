@@ -23,8 +23,10 @@ interface ApiNeedAuthConfig {
 }
 
 export interface ApiRouteConfig {
-  /** HTTP 请求方法，如 GET / POST / ALL */
-  method: 'get' | 'post' | 'all';
+  /** HTTP 请求方法，如 GET / POST / PUT / DELETE / ALL */
+  method: 'get' | 'post' | 'put' | 'delete' | 'all';
+  /** 显式绑定的路由相对路径（用于支持同一路径挂载不同 HTTP 方法，例如 path: '/envelope'） */
+  path?: string;
   /** 接口前置参数/条件校验 */
   preCheck?: (req: ApiRequest) => any;
   /** 接口前置数据解密/预处理 */

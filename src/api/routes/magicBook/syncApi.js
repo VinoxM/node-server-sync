@@ -15,8 +15,8 @@ export default defineRoutes({
     basePath: '/magic-book/sync',
 
     /**
-     * 增量变更拉取
-     * 请求体参数：{ cursor?: number, limit?: number }
+     * 增量变更拉取 (支持按 entity_types 实体过滤)
+     * 请求体参数：{ cursor?: number, limit?: number, entity_types?: Array<string> }
      */
     '/pull': {
         method: POST,
@@ -24,8 +24,8 @@ export default defineRoutes({
         needSecret,
         callback: async (/** @type {ApiRequest} */ req) => {
             const uid = req.userInfo?.id;
-            const { cursor, limit } = req.body;
-            return pullChanges(uid, cursor, limit);
+            const { cursor, limit, entity_types, entityTypes } = req.body;
+            return pullChanges(uid, cursor, limit, { entityTypes: entity_types || entityTypes });
         }
     },
 

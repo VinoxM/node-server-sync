@@ -2,22 +2,32 @@ import syncChangelogRep from '../repository/syncChangelogRep.js';
 import syncDocumentRep from '../repository/syncDocumentRep.js';
 import syncDeviceRep from '../repository/syncDeviceRep.js';
 import syncProfileRep from '../repository/syncProfileRep.js';
-import { SYNC_ENTITY_TYPE, SYNC_PULL_LIMIT } from '../constants/magicBookConst.js';
+import vaultMetaRep from '../repository/vaultMetaRep.js';
+import vaultEntryRep from '../repository/vaultEntryRep.js';
+import { SYNC_ENTITY_TYPE, SYNC_PULL_LIMIT, VAULT_CONFIG, VAULT_ERROR_CODE } from '../constants/magicBookConst.js';
 
 const dbName = 'magic_book';
 
 /**
- * 增量拉取变更列表 (支持泛型二维作用域模型与旧版向下兼容)
+ * 增量拉取变更列表 (支持泛型二维作用域模型、旧版向下兼容及 entity_types 实体过滤)
  * @param {number} uid - 用户 ID
  * @param {number} [cursor=0] - 客户端本地保存的最大游标
  * @param {number} [limit=100] - 单次最大条数
+ * @param {Array<string>|object} [optionsOrEntityTypes=null] - 可选的实体类型过滤选项
  */
-export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAULT) => {
+export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAULT, optionsOrEntityTypes = null) => {
     const validLimit = Math.min(Math.max(1, Number(limit) || SYNC_PULL_LIMIT.DEFAULT), SYNC_PULL_LIMIT.MAX);
     const validCursor = Math.max(0, Number(cursor) || 0);
 
+    let entityTypes = null;
+    if (Array.isArray(optionsOrEntityTypes)) {
+        entityTypes = optionsOrEntityTypes;
+    } else if (optionsOrEntityTypes && typeof optionsOrEntityTypes === 'object') {
+        entityTypes = optionsOrEntityTypes.entity_types || optionsOrEntityTypes.entityTypes || null;
+    }
+
     // 查询 validLimit + 1 条以判断是否有更多数据
-    const queryRes = await syncChangelogRep.selectChangesAfterCursor(uid, validCursor, validLimit + 1);
+    const queryRes = await syncChangelogRep.selectChangesAfterCursor(uid, validCursor, validLimit + 1, entityTypes);
     const rawList = queryRes.data || [];
 
     const hasMore = rawList.length > validLimit;
@@ -61,7 +71,7 @@ export const pullChanges = async (uid, cursor = 0, limit = SYNC_PULL_LIMIT.DEFAU
 };
 
 /**
- * 提交增量变更集合（事务执行快照更新与流水追加，自动兼容泛型与旧版格式）
+ * 提交增量变更集合（事务执行快照更新与流水追加，自动兼容泛型与旧版格式，支持 VAULT 实体与逐条拒绝反馈）
  * @param {number} uid - 用户 ID
  * @param {string} deviceId - 设备标识
  * @param {Array<object>} changes - 变更集合
@@ -79,11 +89,18 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
         const currentCursor = await syncChangelogRep.selectLatestCursor(uid);
         return {
             success: true,
-            latest_cursor: currentCursor
+            latest_cursor: currentCursor,
+            applied: 0,
+            rejected: []
         };
     }
 
     return __sqliteDB.getTransactionDB(async (tx) => {
+        let appliedCount = 0;
+        const rejectedList = [];
+        let cachedVaultMeta;
+        let cachedActiveCount;
+
         for (const change of changes) {
             const entityType = change.entity_type || change.entityType || SYNC_ENTITY_TYPE.DOCUMENT;
             const isDeleted = change.is_deleted ? 1 : 0;
@@ -133,6 +150,7 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
                     isDeleted,
                     clientTimestamp
                 }, tx);
+                appliedCount++;
             } else if (entityType === SYNC_ENTITY_TYPE.PROFILE) {
                 const pureProfileId = change.profile_id || change.profileId || (String(scopeId).includes(':') ? String(scopeId).split(':').slice(1).join(':') : String(scopeId)) || '';
                 if (__isBlank(pureProfileId)) {
@@ -167,6 +185,84 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
                     isDeleted,
                     clientTimestamp
                 }, tx);
+                appliedCount++;
+            } else if (entityType === SYNC_ENTITY_TYPE.VAULT) {
+                scopeType = 'user';
+                scopeId = String(uid);
+
+                // 1. 校验条目 UUID 格式
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (!name || !uuidRegex.test(name)) {
+                    rejectedList.push({ id: name || 'unknown', reason: VAULT_ERROR_CODE.INVALID_UUID });
+                    continue;
+                }
+
+                // 2. 校验单条密文体积上限 (≤ 16KB)
+                if (valueStr && valueStr.length > VAULT_CONFIG.MAX_CIPHER_LENGTH) {
+                    rejectedList.push({ id: name, reason: VAULT_ERROR_CODE.PAYLOAD_TOO_LARGE });
+                    continue;
+                }
+
+                // 3. 校验 Epoch 纪元防重置炸弹 (拦截整批旧数据)
+                if (cachedVaultMeta === undefined) {
+                    cachedVaultMeta = await vaultMetaRep.selectMeta(uid, tx);
+                }
+                const currentEpoch = cachedVaultMeta ? Number(cachedVaultMeta.epoch) : 1;
+                const changeEpoch = change.epoch !== undefined ? Number(change.epoch) : currentEpoch;
+
+                if (changeEpoch < currentEpoch) {
+                    __throwWithData(
+                        'Epoch stale. Vault has been reset on remote.',
+                        VAULT_ERROR_CODE.EPOCH_STALE,
+                        409,
+                        { current_epoch: currentEpoch, current_envelope: cachedVaultMeta }
+                    );
+                }
+
+                // 4. 用户配额硬防护 (针对活跃条目)
+                if (!isDeleted) {
+                    if (cachedActiveCount === undefined) {
+                        cachedActiveCount = await vaultEntryRep.countActiveEntries(uid, currentEpoch, tx);
+                    }
+                    if (cachedActiveCount >= VAULT_CONFIG.MAX_ENTRIES_PER_USER) {
+                        const existing = await vaultEntryRep.selectEntry(uid, name, tx);
+                        if (!existing || existing.isDeleted) {
+                            rejectedList.push({ id: name, reason: VAULT_ERROR_CODE.QUOTA_EXCEEDED });
+                            continue;
+                        }
+                    }
+                }
+
+                // 5. 写入 vault_entries 快照表
+                const clientVersion = Number(change.client_version || change.clientVersion || 1);
+                const keyId = change.key_id || change.keyId || cachedVaultMeta?.keyId || '';
+                await vaultEntryRep.upsertEntry({
+                    id: name,
+                    uid,
+                    epoch: changeEpoch,
+                    cipher: valueStr || '',
+                    clientVersion,
+                    keyId,
+                    isDeleted
+                }, tx);
+
+                if (!isDeleted && cachedActiveCount !== undefined) {
+                    cachedActiveCount++;
+                }
+
+                // 6. 追加增量流水 sync_changelog
+                await syncChangelogRep.insertChangelog({
+                    uid,
+                    deviceId,
+                    entityType: SYNC_ENTITY_TYPE.VAULT,
+                    scopeType: 'user',
+                    scopeId: String(uid),
+                    name,
+                    value: valueStr,
+                    isDeleted,
+                    clientTimestamp
+                }, tx);
+                appliedCount++;
             }
         }
 
@@ -178,7 +274,9 @@ export const pushChanges = async (uid, deviceId, changes = []) => {
 
         return {
             success: true,
-            latest_cursor: latestCursor
+            latest_cursor: latestCursor,
+            applied: appliedCount,
+            rejected: rejectedList
         };
     }, null, dbName);
 };

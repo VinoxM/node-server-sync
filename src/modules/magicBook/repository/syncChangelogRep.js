@@ -24,22 +24,32 @@ const getExecutor = (tx) => {
  */
 export default {
     /**
-     * 根据起始游标范围扫描增量变更记录
+     * 根据起始游标范围扫描增量变更记录 (支持按 entity_types 过滤)
      * @param {number} uid - 用户 ID
      * @param {number} cursor - 当前本地游标（返回 cursor > 该值的记录）
      * @param {number} limit - 最大拉取条数
+     * @param {Array<string>|null} [entityTypes=null] - 可选的实体过滤列表
      * @param {any} [tx] - 可选事务句柄
      * @returns {Promise<QueryResult<{ cursor: number, deviceId: string, entityType: string, scopeType: string, scopeId: string, name: string, value: string, isDeleted: number, clientTimestamp: number, createTime: string }>>}
      */
-    selectChangesAfterCursor: (uid, cursor = 0, limit = 100, tx) => {
-        const sql = `SELECT cursor, device_id AS deviceId, entity_type AS entityType, `
+    selectChangesAfterCursor: (uid, cursor = 0, limit = 100, entityTypes = null, tx = null) => {
+        let sql = `SELECT cursor, device_id AS deviceId, entity_type AS entityType, `
             + `scope_type AS scopeType, scope_id AS scopeId, name, value, is_deleted AS isDeleted, `
             + `client_timestamp AS clientTimestamp, create_time AS createTime `
             + `FROM sync_changelog `
-            + `WHERE uid = ? AND cursor > ? `
-            + `ORDER BY cursor ASC `
-            + `LIMIT ?`;
-        return getExecutor(tx).selectAll(sql, [uid, cursor, limit]);
+            + `WHERE uid = ? AND cursor > ? `;
+        const params = [uid, cursor];
+
+        if (Array.isArray(entityTypes) && entityTypes.length > 0) {
+            const placeholders = entityTypes.map(() => '?').join(', ');
+            sql += `AND entity_type IN (${placeholders}) `;
+            params.push(...entityTypes);
+        }
+
+        sql += `ORDER BY cursor ASC LIMIT ?`;
+        params.push(limit);
+
+        return getExecutor(tx).selectAll(sql, params);
     },
 
     /**
@@ -88,5 +98,17 @@ export default {
     deleteChangelogBefore: (expireTime, tx) => {
         const sql = `DELETE FROM sync_changelog WHERE create_time < ?`;
         return getExecutor(tx).delete(sql, [expireTime]);
+    },
+
+    /**
+     * 按用户和实体类型物理删除流水记录 (用于金库重置等生命周期断代场景)
+     * @param {number} uid - 用户 ID
+     * @param {string} entityType - 实体类型 (如 'vault')
+     * @param {any} [tx] - 可选事务句柄
+     * @returns {Promise<ExecResult>}
+     */
+    deleteChangelogByEntityType: (uid, entityType, tx) => {
+        const sql = `DELETE FROM sync_changelog WHERE uid = ? AND entity_type = ?`;
+        return getExecutor(tx).delete(sql, [uid, entityType]);
     }
 };
