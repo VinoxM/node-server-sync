@@ -8,6 +8,10 @@ const ARP_SCAN_API = {
         method: apiMethod.GET,
         path: '/api/servers'
     },
+    RELOAD_SERVERS: {
+        method: apiMethod.POST,
+        path: '/api/servers/reload'
+    },
     WAKE_ON_LAN: {
         method: apiMethod.POST,
         path: '/api/servers/wake'
@@ -72,6 +76,10 @@ async function fetchArpScanService(apiOptions, data) {
 
 export async function getWakeableServers() {
     return fetchArpScanService(ARP_SCAN_API.SERVERS);
+}
+
+export async function reloadServers() {
+    return fetchArpScanService(ARP_SCAN_API.RELOAD_SERVERS);
 }
 
 export async function wakeOnLan(serverId) {

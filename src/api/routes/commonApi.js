@@ -5,9 +5,6 @@ import { getRequestRealIp } from "#utils/requestUtil.js";
 import { ipBlocker } from "#core/instance/ipBlocker.js";
 import { tokenBucket } from "#core/instance/tokenBucket.js";
 import { reloadApplicationContext } from "../../support.js";
-import { needAuthSingleClient } from '#constants/authorizationConst.js';
-import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
-import { getWakeableServers, shutdownOnLan, wakeOnLan } from '#modules/arp/arpScanService.js';
 
 const { POST, GET } = apiMethodConst;
 
@@ -91,43 +88,6 @@ export default defineRoutes({
             const opts = __env.get('ssh', {});
             return Array.from(Object.keys(opts));
         }
-    },
-
-    /**
-     * 获取可唤醒的主机服务器
-     */
-    "/getWakeableServers": {
-        method: GET,
-        allowCIDR,
-        needAuth: needAuthSingleClient.MANAGE,
-        ignoreAccessPrint: true,
-        ignoreReturnPrint: true,
-        needSecret,
-        callback: () => getWakeableServers()
-    },
-
-    /**
-     * 唤醒主机服务器
-     */
-    "/wakeOnLan": {
-        method: POST,
-        allowCIDR,
-        needAuth: needAuthSingleClient.MANAGE,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'server'),
-        callback: req => wakeOnLan(req.body.server)
-    },
-
-    /**
-     * 唤醒主机服务器
-     */
-    "/shutdownOnLan": {
-        method: POST,
-        allowCIDR,
-        needAuth: needAuthSingleClient.MANAGE,
-        needSecret,
-        preCheck: req => checkBodyKeyNotBlank(req, 'server'),
-        callback: req => shutdownOnLan(req.body.server)
     },
 
     /**
