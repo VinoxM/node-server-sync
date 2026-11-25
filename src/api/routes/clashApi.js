@@ -7,6 +7,7 @@ import clashFileNameConst from "#modules/clash/constants/clashFileNameConst.js";
 import { concatClashYaml } from "#modules/clash/service/clashConcatService.js";
 import { getClashFileContent } from "#modules/clash/service/clashService.js";
 import { subscribeSources } from "#modules/clash/service/clashSubscribeService.js";
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 
 const { POST, GET } = apiMethodConst;
 const { SECRET } = apiHeaderConst;
@@ -58,6 +59,7 @@ export default defineRoutes({
      */
     "/subscribe": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: (/** @type {ApiRequest} */ req) => {
             const realIp = getRequestRealIp(req);
@@ -70,6 +72,7 @@ export default defineRoutes({
      */
     "/concat": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => concatClashYaml()
     }

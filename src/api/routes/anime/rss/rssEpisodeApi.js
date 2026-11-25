@@ -6,7 +6,7 @@ import {
     deleteOneEpisode, deleteOneFailedEpisode,
     retryFailedEpisode, updateEpisodeStatus, updateFailedEpisode
 } from '#modules/anime/service/rss/rssEpisodeService.js';
-import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { defineRoutes } from '#common/utils/defineUtil.js';
 
@@ -26,7 +26,7 @@ export default defineRoutes({
      */
     '/updateEpisodeStatus': {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: req => updateEpisodeStatus(req.body.id, req.body.status)
@@ -39,6 +39,7 @@ export default defineRoutes({
     "/deleteEpisode": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'episodeId'),
         callback: req => deleteOneEpisode(req.body.episodeId)
@@ -51,6 +52,7 @@ export default defineRoutes({
     "/deleteEpisodeBatch": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'episodeIds'),
         callback: req => deleteEpisodeBatch(req.body.episodeIds)
@@ -63,6 +65,7 @@ export default defineRoutes({
     '/retryFailedEpisode': {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         maybeStream: true,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
@@ -76,6 +79,7 @@ export default defineRoutes({
     '/updateFailedEpisode': {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'rootPath', 'fileName']) && checkBodyKeysExists(req, ['episode', 'link']),
         callback: req => updateFailedEpisode(req.body)
@@ -88,6 +92,7 @@ export default defineRoutes({
     '/deleteFailedEpisode': {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'failedEpisodeId'),
         callback: req => deleteOneFailedEpisode(req.body.failedEpisodeId)
@@ -100,6 +105,7 @@ export default defineRoutes({
     '/deleteFailedEpisodeBatch': {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'failedEpisodeIds'),
         callback: req => deleteFailedEpisodeBatch(req.body.failedEpisodeIds)

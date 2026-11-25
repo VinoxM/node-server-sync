@@ -2,6 +2,7 @@ import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank, checkBodyKeysNotBlank, checkBodyKeysExists } from '#utils/preCheckUtil.js';
 import { kuroGameSign, kuroTokenLogin, kuroLogout, kuroGameSignAll, kuroSignGameUpdate, kuroSDKLogin } from '#modules/kuro/service/kuroService.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 
 const { POST } = apiMethodConst;
 
@@ -72,6 +73,7 @@ export default defineRoutes({
      */
     '/gameSign': {
         method: POST,
+        allowCIDR,
         needSecret,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['uid', 'gameId']),
         callback: (/** @type {ApiRequest} */ req) => {
@@ -84,6 +86,7 @@ export default defineRoutes({
      */
     '/gameSignAll': {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => {
             return kuroGameSignAll();

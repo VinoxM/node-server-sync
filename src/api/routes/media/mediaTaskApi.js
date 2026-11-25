@@ -1,5 +1,5 @@
 import { defineRoutes } from '#utils/defineUtil.js';
-import { allowLanCIDR, allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import { MEDIA_ARIA2_TASK_STATUS } from "#modules/media/constants/mediaConst.js";
@@ -26,7 +26,7 @@ export default defineRoutes({
     "/onDownloadStart": {
         method: POST,
         needSecret,
-        allowCIDR: allowLanCIDR,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['gid']),
         callback: (/** @type {ApiRequest} */ req) => updateTaskStatus(req.body['gid'], MEDIA_ARIA2_TASK_STATUS.DOWNLOADING)
     },
@@ -38,7 +38,7 @@ export default defineRoutes({
     "/onDownloadComplete": {
         method: POST,
         needSecret,
-        allowCIDR: allowLanCIDR,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['gid', 'status']),
         callback: (/** @type {ApiRequest} */ req) => updateTaskStatus(req.body['gid'], req.body['status'])
     },
@@ -50,7 +50,7 @@ export default defineRoutes({
     "/updateStorageStatus": {
         method: POST,
         needSecret,
-        allowCIDR: allowLanCIDR,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['id', 'status']),
         callback: (/** @type {ApiRequest} */ req) => updateMinioStatus(req.body['id'], req.body['status'])
     },
@@ -63,7 +63,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['gid', 'operator']),
         callback: (/** @type {ApiRequest} */ req) => pauseOrResumeTask(req.body['gid'], req.body['operator'])
     }

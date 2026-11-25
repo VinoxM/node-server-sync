@@ -1,5 +1,5 @@
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
-import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from '#common/utils/preCheckUtil.js';
 import rssFontsRep from '#modules/anime/repository/rss/rssFontsRep.js';
@@ -19,7 +19,7 @@ export default defineRoutes({
      */
     '/getAll': {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         callback: () => rssFontsRep.selectAll()
     },
@@ -30,7 +30,7 @@ export default defineRoutes({
      */
     '/getFonts': {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'fonts'),
         callback: req => rssFontsRep.selectByTitles(req.body['fonts'])
@@ -43,6 +43,7 @@ export default defineRoutes({
     '/addOne': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['title', 'minioLink']),
         callback: req => rssFontsRep.insertOne(req.body['title'], req.body['minioLink'])
@@ -55,6 +56,7 @@ export default defineRoutes({
     '/updateOne': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'title', 'minioLink']),
         callback: req => rssFontsRep.updateOne(req.body['id'], req.body['title'], req.body['minioLink'])
@@ -67,6 +69,7 @@ export default defineRoutes({
     '/delOne': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => rssFontsRep.deleteOne(req.body['id'])

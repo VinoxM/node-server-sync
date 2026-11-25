@@ -1,4 +1,4 @@
-import { getCurSeason } from "#common/utils/dateUtil.js";
+import { getCurSeason } from "#utils/dateUtil.js";
 import { convertPropertiesToCloumns, NEED_TO_RESET_VECTOR_STATUS_COLUMN } from "#modules/anime/entity/subjectResultMap.js";
 import bangumiImagesRep from "#modules/anime/repository/bangumiImagesRep.js";
 import subjectsRep from "#modules/anime/repository/subjectsRep.js";

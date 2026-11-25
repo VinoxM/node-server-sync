@@ -1,4 +1,4 @@
-import { isCurSeason } from "#common/utils/dateUtil.js";
+import { isCurSeason } from "#utils/dateUtil.js";
 import { RSS_SUBTITLE_STATUS } from "#modules/anime/constants/rssSubtitleStatusConst.js";
 import { EPISODE_FAILED_REASON } from "#modules/anime/constants/rssTaskStatusConst.js";
 import { SUBJECT_HIDE_VALUE, SUBJECT_NSFW_VALUE, SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE, SUBSCRIBE_GOON_VALUE, SUBSCRIBE_RESULT_HIDE_VALUE } from "#modules/anime/constants/subjectConstant.js";

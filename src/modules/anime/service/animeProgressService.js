@@ -1,4 +1,4 @@
-import { NEED_AUTH_CLIENT } from "#common/constants/authorizationConst.js";
+import { NEED_AUTH_CLIENT } from "#constants/authorizationConst.js";
 import {
     batchGetMediaProgress,
     clearMediaProgress,

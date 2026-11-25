@@ -2,7 +2,7 @@ import { defineRoutes } from '#utils/defineUtil.js';
 import { getLatestStorageSummary, storageSummaryDimensions } from "#modules/statistics/service/storageSummaryService.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { getMinioClientMatchersSafely } from "#modules/media/service/mediaMinioService.js";
-import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST, GET } = apiMethodConst;
@@ -21,7 +21,7 @@ export default defineRoutes({
      */
     "/storage/doSummary": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE] },
         callback: () => storageSummaryDimensions()
@@ -33,7 +33,7 @@ export default defineRoutes({
      */
     '/storage/getLatestDimensions': {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         ignoreAccessPrint: true,
         ignoreReturnPrint: true,
         needSecret,

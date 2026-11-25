@@ -2,9 +2,9 @@ import apiMethodConst from "#constants/apiMethodConst.js";
 import apiBodyConst from "#constants/apiBodyConst.js";
 import { checkBodyKeyNotBlank } from "#utils/preCheckUtil.js";
 import { addRssRegex, getRssRegex } from "#modules/anime/service/rss/rssRegexHistoryService.js";
-import { needAuthSingleClient } from "#common/constants/authorizationConst.js";
-import { allowLanHosts } from "#common/constants/allowHostsConst.js";
-import { defineRoutes } from "#common/utils/defineUtil.js";
+import { needAuthSingleClient } from "#constants/authorizationConst.js";
+import { allowLanCIDR  as allowCIDR } from "#constants/allowHostsConst.js";
+import { defineRoutes } from "#utils/defineUtil.js";
 
 const { REGEX } = apiBodyConst;
 const { GET, POST } = apiMethodConst;
@@ -25,7 +25,7 @@ export default defineRoutes({
         method: GET,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         callback: () => {
             return getRssRegex();
         }
@@ -39,7 +39,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (req) => checkBodyKeyNotBlank(req, REGEX),
         callback: async (req) => {
             const regex = req.body[REGEX];

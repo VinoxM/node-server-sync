@@ -2,8 +2,9 @@ import apiMethodConst from "#constants/apiMethodConst.js";
 import apiBodyConst from "#constants/apiBodyConst.js";
 import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import { addOneResult, deleteAllSubscribeResults, deleteOneResult, editOneResult, getResultsBySubsId, hideOneResult } from "#modules/anime/service/rss/rssResultService.js";
-import { needAuthSingleClient } from "#common/constants/authorizationConst.js";
-import { defineRoutes } from "#common/utils/defineUtil.js";
+import { needAuthSingleClient } from "#constants/authorizationConst.js";
+import { defineRoutes } from "#utils/defineUtil.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 
 const { POST } = apiMethodConst;
 const { ID, PID, TORRENT, TITLE, PUB_DATE, HIDE } = apiBodyConst;
@@ -23,6 +24,7 @@ export default defineRoutes({
     "/getResults": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, 'subsId'),
         callback: async (req) => getResultsBySubsId(req.body.subsId)
@@ -35,6 +37,7 @@ export default defineRoutes({
     "/delOne": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, ID),
         callback: async (req) => deleteOneResult(req.body[ID])
@@ -47,6 +50,7 @@ export default defineRoutes({
     "/delMany": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, PID),
         callback: async (req) => deleteAllSubscribeResults(req.body[PID])
@@ -59,6 +63,7 @@ export default defineRoutes({
     "/hideOne": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, ID) && checkBodyKeyMatch(req, HIDE, [/[01]/]),
         callback: async (req) => hideOneResult(req.body[ID], req.body[HIDE])
@@ -71,6 +76,7 @@ export default defineRoutes({
     "/addOne": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeysNotBlank(req, [PID, TITLE, TORRENT]) && checkBodyKeysExists(req, [PUB_DATE]),
         callback: async (req) => addOneResult(req.body)
@@ -83,6 +89,7 @@ export default defineRoutes({
     "/editOne": {
         method: POST,
         needAuth,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeysNotBlank(req, [ID, TITLE, TORRENT]) && checkBodyKeysExists(req, [PUB_DATE]),
         callback: async (req) => editOneResult(req.body)

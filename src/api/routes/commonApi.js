@@ -1,5 +1,5 @@
 import { defineRoutes } from '#utils/defineUtil.js';
-import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { getRequestRealIp } from "#utils/requestUtil.js";
 import { ipBlocker } from "#core/instance/ipBlocker.js";
@@ -25,6 +25,7 @@ export default defineRoutes({
      */
     "/reloadApplicationConfig": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => {
             return reloadApplicationContext();
@@ -36,6 +37,7 @@ export default defineRoutes({
      */
     "/resetTokenBucket": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => {
             return tokenBucket.start();
@@ -47,6 +49,7 @@ export default defineRoutes({
      */
     "/resetIpBlocker": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => {
             return ipBlocker.start();
@@ -58,6 +61,7 @@ export default defineRoutes({
      */
     "/cleanIpBlocker": {
         method: POST,
+        allowCIDR,
         needSecret,
         callback: () => {
             return ipBlocker.clean();
@@ -81,7 +85,7 @@ export default defineRoutes({
      */
     "/getSupportedSshExecutors": {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         callback: () => {
             const opts = __env.get('ssh', {});
@@ -94,7 +98,7 @@ export default defineRoutes({
      */
     "/getWakeableServers": {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth: needAuthSingleClient.MANAGE,
         ignoreAccessPrint: true,
         ignoreReturnPrint: true,
@@ -107,7 +111,7 @@ export default defineRoutes({
      */
     "/wakeOnLan": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'server'),
@@ -119,7 +123,7 @@ export default defineRoutes({
      */
     "/shutdownOnLan": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'server'),
@@ -131,7 +135,7 @@ export default defineRoutes({
      */
     "/doNothing": {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret: () => 'mAou5820.doNothing',
         callback: () => "Ok"
     }

@@ -9,7 +9,7 @@ import {
 } from '#modules/media/service/bilive/biliveStreamService.js';
 import { deleteFile, getFilesByStreamId, removeFileByFileId, uploadFileToMediaByFileId } from '#modules/media/service/bilive/biliveFileService.js';
 import { biliveRecordApi } from '#modules/media/service/bilive/biliveApiService.js';
-import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 import { NEED_AUTH_CLIENT } from '#common/constants/authorizationConst.js';
 
 const { POST } = apiMethodConst;
@@ -30,6 +30,7 @@ export default defineRoutes({
     "/record/webhook": {
         method: POST,
         ignoreSecret: true,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['EventType', 'EventId', 'EventTimestamp']),
         callback: (/** @type {ApiRequest} */ req) => saveWebhookEvent(req.body)
     },
@@ -40,7 +41,7 @@ export default defineRoutes({
     "/record/api/room": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         ignoreAccessPrint: true,
         ignoreReturnPrint: true,
         callback: () => biliveRecordApi.getAllRooms()
@@ -53,7 +54,7 @@ export default defineRoutes({
     "/record/api/file": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['filePath']),
         callback: (/** @type {ApiRequest} */ req) => biliveRecordApi.getFilesInfo(req.body['filePath'])
     },
@@ -65,7 +66,7 @@ export default defineRoutes({
     "/record/searchStream": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['pageSize', 'pageNum']),
         callback: (/** @type {ApiRequest} */ req) => searchStream(req.body['roomId'], req.body['hostName'], req.body['pageSize'], req.body['pageNum'])
     },
@@ -77,7 +78,7 @@ export default defineRoutes({
     "/record/getStreamEndedEventData": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => getStreamEndedRecordEventData(req.body['streamId'])
     },
@@ -88,7 +89,7 @@ export default defineRoutes({
     "/record/getBiliveRecordTags": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         callback: () => getBiliveRecordTags()
     },
 
@@ -100,7 +101,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => initStreamVideo(req.body['streamId'], req.body['tags'])
     },
@@ -113,7 +114,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => deleteStream(req.body['streamId'])
     },
@@ -125,7 +126,7 @@ export default defineRoutes({
     "/record/getStreamFiles": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => getFilesByStreamId(req.body['streamId'])
     },
@@ -138,7 +139,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
         callback: (/** @type {ApiRequest} */ req) => uploadFileToMediaByFileId(req.body['fileId'])
@@ -152,7 +153,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
         callback: (/** @type {ApiRequest} */ req) => removeFileByFileId(req.body['fileId'], true)
     },
@@ -165,7 +166,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['fileId']),
         callback: (/** @type {ApiRequest} */ req) => deleteFile(req.body['fileId'], true)
     },
@@ -178,7 +179,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => closeReadyToEndStream(req.body['streamId'])
     },
@@ -191,7 +192,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         maybeStream: true,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => syncStreamToMediaStorage(req.body['streamId'])
@@ -205,7 +206,7 @@ export default defineRoutes({
         method: POST,
         needSecret,
         needAuth,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['streamId']),
         callback: (/** @type {ApiRequest} */ req) => stopAutoSync(req.body['streamId'])
     }

@@ -3,7 +3,7 @@ import apiMethodConst from '#constants/apiMethodConst.js';
 import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank, checkQueryKeyNotBlank } from '#utils/preCheckUtil.js';
 import { getAnimeCalendar, getAnimeInformation, getUserFavoitesAnime, getUserPlayHistory, searchAnime } from '#modules/anime/service/animeService.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
-import { allowLanHosts } from '#common/constants/allowHostsConst.js';
+import { allowLanCIDR as allowCIDR } from '#common/constants/allowHostsConst.js';
 import { getRssEpisodeSource } from '#modules/anime/service/rssService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
 import { SUBJECT_PLATFORM_SEARCH_MAPPING, SUBSCRIBE_FIN_VALUE } from '#modules/anime/constants/subjectConstant.js';
@@ -105,7 +105,7 @@ export default defineRoutes({
      */
     "/getEpisodeSource": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['rssSubsId', 'episode']),
@@ -122,7 +122,7 @@ export default defineRoutes({
      */
     "/getUserPlayHistory": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['pageNum', 'pageSize']),
@@ -139,7 +139,7 @@ export default defineRoutes({
      */
     "/saveProgress": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth,
         ignoreAccessPrint: true,
@@ -159,7 +159,7 @@ export default defineRoutes({
     */
     "/delProgress": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (req) => checkBodyKeysNotBlank(req, ['subjectId', 'episode']),
@@ -176,7 +176,7 @@ export default defineRoutes({
     */
     "/clearProgress": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         needAuth,
         callback: async req => {

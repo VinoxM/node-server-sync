@@ -14,7 +14,7 @@ import { checkCategoryExistsByInside, searchVideos } from '#modules/media/servic
 import { getMinioClientMatchers } from '#modules/media/service/mediaMinioService.js';
 import videoMinioRep from '#modules/media/repository/videoMinioRep.js';
 import videosRep from '#modules/media/repository/videosRep.js';
-import { allowLanHosts } from '#constants/allowHostsConst.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 import { decodeAuthorization } from '#modules/authorization/authorizationService.js';
 import { addUserFavorites, checkFavorites, getUserFavorites, removeUserFavorites } from '#modules/media/service/mediaFavoritesService.js';
 import { FAVORITES_TARGET_TYPE } from '#modules/media/constants/favoritesConst.js';
@@ -49,7 +49,7 @@ export default defineRoutes({
     "/getNewestCount": {
         method: GET,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         ignoreAccessPrint: true,
         ignoreReturnPrint: true,
         callback: (/** @type {ApiRequest} */ req) => videosRep.countForCardView(isInsideRequest(req))
@@ -62,7 +62,7 @@ export default defineRoutes({
     "/searchVideos": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
             const userInfo = await decodeAuthorization(req);
@@ -76,7 +76,7 @@ export default defineRoutes({
     "/getCategories": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: (/** @type {ApiRequest} */ req) => categoriesRep.selectByInside(isInsideRequest(req)).then(({ data }) => data)
     },
@@ -88,7 +88,7 @@ export default defineRoutes({
     "/getAuthors": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
             const categoryId = req.body['categoryId'];
@@ -109,7 +109,7 @@ export default defineRoutes({
     "/getTags": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'categoryId') && checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
             const { videoId, categoryId } = req.body;
@@ -126,7 +126,7 @@ export default defineRoutes({
     "/getVideoDetail": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'videoId'),
         callback: (/** @type {ApiRequest} */ req) => videosRep.selectForPlay(req.body.videoId)
     },
@@ -138,7 +138,7 @@ export default defineRoutes({
     "/getSources": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async (/** @type {ApiRequest} */ req) => videoMinioRep.selectSourceByVideoId(req.body['videoId']).then(({ data }) => data)
     },
@@ -150,7 +150,7 @@ export default defineRoutes({
     "/getBarrage": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, 'videoId'),
         callback: async (/** @type {ApiRequest} */ req) => videoMinioRep.selectBarrageByVideoId(req.body['videoId']).then(({ data }) => data)
     },
@@ -162,7 +162,7 @@ export default defineRoutes({
     "/videos/checkPolicy": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeysNotBlank(req, ['category']) && checkBodyKeyNotEmptyArray(req, 'rules'),
         callback: (/** @type {ApiRequest} */ req) => checkVideoFilterRules(req.body)
     },
@@ -173,7 +173,7 @@ export default defineRoutes({
     "/getClientMatchers": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         callback: (/** @type {ApiRequest} */ req) => getMinioClientMatchers(req.body)
     },
 
@@ -185,7 +185,7 @@ export default defineRoutes({
     "/getFavoritesVideo": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
@@ -201,7 +201,7 @@ export default defineRoutes({
     "/getFavoritesAuthor": {
         method: POST,
         ignoreSecret: true,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkInsideHeader(req),
         callback: async (/** @type {ApiRequest} */ req) => {
@@ -218,7 +218,7 @@ export default defineRoutes({
     "/addFavorites": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
         callback: async (/** @type {ApiRequest} */ req) => {
@@ -235,7 +235,7 @@ export default defineRoutes({
     "/removeFavorites": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyMatch(req, 'targetType', [Object.values(FAVORITES_TARGET_TYPE).join("|")]) && checkBodyKeyNotBlank(req, 'targetId'),
         callback: async (/** @type {ApiRequest} */ req) => {
@@ -252,7 +252,7 @@ export default defineRoutes({
     "/checkFavorites": {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotEmptyArray(req, 'payload'),
         callback: async (/** @type {ApiRequest} */ req) => {
@@ -270,7 +270,7 @@ export default defineRoutes({
     "/getVideoPlaylists": {
         method: GET,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (/** @type {ApiRequest} */ req) => checkQueryKeyNotBlank(req, 'videoId'),
         callback: (/** @type {ApiRequest} */ req) => getPlaylistByVideoId(req.query.videoId)
     }

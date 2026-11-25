@@ -2,18 +2,12 @@ import { defineRoutes } from '#utils/defineUtil.js';
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import * as qbitService from '#modules/download/qbitorrentService.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 
 const { POST } = apiMethodConst;
 
 /** 获取下载管理模块通信秘钥 */
 const needSecret = () => "mAou5820.download";
-
-/** 允许访问下载 API 的内网/局域网 CIDR 网段白名单 */
-const allowCIDR = [
-    '192.168.31.0/24',
-    '172.17.0.0/24',
-    '127.0.0.1'
-];
 
 /**
  * qBittorrent 下载管理路由模块 (`/download/*`)

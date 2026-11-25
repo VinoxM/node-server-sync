@@ -1,7 +1,7 @@
-import apiMethodConst from "#common/constants/apiMethodConst.js";
-import { needAuthSingleClient } from "#common/constants/authorizationConst.js";
-import { defineRoutes } from "#common/utils/defineUtil.js";
-import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from "#common/utils/preCheckUtil.js";
+import apiMethodConst from "#constants/apiMethodConst.js";
+import { needAuthSingleClient } from "#constants/authorizationConst.js";
+import { defineRoutes } from "#utils/defineUtil.js";
+import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysExists, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import {
     getExistsSeasons, getSubjectForEdit, getSubjectForEditView,
     handleSubjectView, searchSubjects, updateSubjectFin,
@@ -10,8 +10,8 @@ import {
 } from "#modules/anime/service/subject/subjectService.js";
 import { fetchAndCleanBangumiSubject, pullAnimeSubjects, pullCleanedBangumiSubject } from "#modules/anime/service/subject/subjectPullService.js";
 import { SUPPORTED_SUBJECT_API_PULL_UPDATE_COLUMN } from "#modules/anime/entity/subjectResultMap.js";
-import { allowLanHosts } from "#common/constants/allowHostsConst.js";
-import { getNextSeason } from "#common/utils/dateUtil.js";
+import { allowLanCIDR  as allowCIDR } from "#constants/allowHostsConst.js";
+import { getNextSeason } from "#utils/dateUtil.js";
 
 const { GET, POST } = apiMethodConst;
 const needAuth = needAuthSingleClient.MANAGE;
@@ -41,7 +41,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeysExists(req, ['name', 'season'])
             && __isNotBlank(req.body.season)
             && checkBodyKeyMatch(req, 'season', [SEASON_MATCHER]),
@@ -59,7 +59,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id'),
         callback: req => {
             const { id, season } = req.body;
@@ -75,7 +75,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'subjectId'),
         callback: req => {
             const { subjectId } = req.body;
@@ -91,7 +91,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'bangumiId'),
         callback: async req => {
             const bangumiId = req.body.bangumiId;
@@ -112,7 +112,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'bangumiId') && checkBodyKeyNotEmptyArray(req, 'updateProperties'),
         callback: req => {
             const { bangumiId, updateProperties = [] } = req.body;
@@ -130,7 +130,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeyMatch(req, 'season', [/[0-9]{4}-(01|04|07|10)/]),
         callback: req => {
             const { id, season } = req.body;
@@ -146,7 +146,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['id', 'hide']),
         callback: req => {
             const { id, hide } = req.body;
@@ -162,7 +162,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeyMatch(req, 'short', [/[01]/]),
         callback: req => {
             const { id, short } = req.body;
@@ -178,7 +178,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeyMatch(req, 'fin', [/[01]/]),
         callback: req => {
             const { id, fin } = req.body;
@@ -194,7 +194,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeyMatch(req, 'nsfw', [/[01]/]),
         callback: req => {
             const { id, nsfw } = req.body;
@@ -210,7 +210,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'id') && checkBodyKeysExists(req, ['summaryMulti']),
         callback: req => {
             const { id, summaryMulti } = req.body;
@@ -226,7 +226,7 @@ export default defineRoutes({
         method: POST,
         needAuth,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeysExists(req, ['updateProperties'])
             && checkBodyKeyMatch(req, 'forceUpdate', [/^[01]$/])
             && checkBodyKeyMatch(req, 'insertSubscribe', [/^[01]$/])

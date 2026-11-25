@@ -1,9 +1,9 @@
-import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeyMatch, checkBodyKeyNotBlank, checkBodyKeysExists, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
-import { defineRoutes } from "#common/utils/defineUtil.js";
+import { defineRoutes } from "#utils/defineUtil.js";
 import { getRssCardFailedViews, getSubjectSubscribeTasks, getSubscribeBySubjectId, updateSubscribe } from "#modules/anime/service/rssService.js";
-import { needAuthSingleClient } from "#common/constants/authorizationConst.js";
+import { needAuthSingleClient } from "#constants/authorizationConst.js";
 import { getEpisodeMatches } from "#modules/anime/service/rss/rssResultService.js";
 import { analysisRssSubscribe, createSubscribeBySubjectId } from "#modules/anime/service/rss/rssSubscribeService.js";
 
@@ -21,7 +21,7 @@ export default defineRoutes({
      */
     '/getRssMatchers': {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         callback: () => __env.get("rss.matchers", [])
     },
@@ -31,7 +31,7 @@ export default defineRoutes({
      */
     '/getEpisodeMatchers': {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         callback: () => getEpisodeMatches()
     },
@@ -42,7 +42,7 @@ export default defineRoutes({
     '/getCardFailedViews': {
         method: GET,
         needAuth: needAuthSingleClient.MANAGE,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         ignoreAccessPrint: true,
         ignoreReturnPrint: true,
         needSecret,
@@ -56,7 +56,7 @@ export default defineRoutes({
     '/getSubjectSubscribe': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         preCheck: (req) => checkBodyKeyNotBlank(req, 'subjectId'),
         callback: req => getSubscribeBySubjectId(req.body.subjectId)
@@ -70,7 +70,7 @@ export default defineRoutes({
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'subjectId'),
         callback: req => {
             const { subjectId } = req.body;
@@ -86,7 +86,7 @@ export default defineRoutes({
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeysNotBlank(req, ['subsId', 'startTime'])
             && checkBodyKeyMatch(req, 'goon', [/[01]/])
             && checkBodyKeysExists(req, ['url', 'regex']),
@@ -101,7 +101,7 @@ export default defineRoutes({
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: (req) => checkBodyKeyNotBlank(req, 'url'),
         callback: async (req) => {
             const results = await analysisRssSubscribe({ regex: req.body.regex, url: req.body.url });
@@ -117,7 +117,7 @@ export default defineRoutes({
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         preCheck: req => checkBodyKeyNotBlank(req, 'subjectId'),
         callback: req => getSubjectSubscribeTasks(req.body.subjectId)
     }

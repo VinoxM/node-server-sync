@@ -9,7 +9,7 @@ import rssTaskRep from "#modules/anime/repository/rss/rssTaskRep.js";
 import { filterUserRssFavoritesWithUid } from "#modules/account/service/rssFavoritesService.js";
 import { getAnimeEpisodesProgress, getAnimeProgressList } from "#modules/anime/service/animeProgressService.js";
 import { EPISODE_STATUS } from "#modules/anime/constants/rssTaskStatusConst.js";
-import { handleCalendar } from "#common/utils/subjectUtil.js";
+import { handleCalendar } from "#utils/subjectUtil.js";
 
 /**
  * 获取当前季度的全量番剧放送日历数据

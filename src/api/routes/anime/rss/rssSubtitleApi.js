@@ -5,8 +5,8 @@ import {
     recalculateEpisodeSubtitleFonts, retryUploadEpisodeSubtitle, updateEpisodeSubtitle
 } from '#modules/anime/service/rss/rssSubtitleService.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
-import { allowLanHosts } from '#common/constants/allowHostsConst.js';
-import { defineRoutes } from '#common/utils/defineUtil.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
+import { defineRoutes } from '#utils/defineUtil.js';
 
 const { POST } = apiMethodConst;
 const needSecret = () => "mAou5820.anime.rssSubtitle";
@@ -24,6 +24,7 @@ export default defineRoutes({
     '/updateSubtitle': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']) && checkBodyKeysExists(req, ['episode', 'title', 'fonts', 'rootPath', 'fileName', 'minioLink']),
         callback: req => updateEpisodeSubtitle(req.body)
@@ -36,6 +37,7 @@ export default defineRoutes({
     '/retryUploadEpisodeSubtitle': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']),
         callback: req => retryUploadEpisodeSubtitle(req.body.id)
@@ -48,6 +50,7 @@ export default defineRoutes({
     '/recalculateAssSubtitleFonts': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']),
         callback: req => recalculateEpisodeSubtitleFonts(req.body.id)
@@ -60,6 +63,7 @@ export default defineRoutes({
     '/deleteSubtitle': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']),
         callback: req => deleteEpisodeSubtitle(req.body.id)
@@ -72,6 +76,7 @@ export default defineRoutes({
     '/deleteSubtitleBatch': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'ids'),
         callback: req => deleteEpisodeSubtitleBatch(req.body.ids)
@@ -84,6 +89,7 @@ export default defineRoutes({
     '/deleteSubtitleFile': {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['id']),
         callback: req => deleteEpisodeSubtitleFile(req.body.id)
@@ -95,7 +101,7 @@ export default defineRoutes({
     '/getSubtitleMatchers': {
         method: POST,
         needSecret,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         callback: () => getRssSubtitleMatchers()
     }
 });

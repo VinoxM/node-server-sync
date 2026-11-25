@@ -4,6 +4,7 @@ import { checkBodyKeyNotBlank } from '#utils/preCheckUtil.js';
 import { defineRoutes } from '#utils/defineUtil.js';
 import { abortJob, cancelJob, emitJob, getScheduleSnapshots, gracefulShutdownSchedule, resumeJob, startSchedule } from '#jobs/scheduleDispatcher.js';
 import { needAuthSingleClient } from '#common/constants/authorizationConst.js';
+import { allowLanCIDR as allowCIDR } from '#constants/allowHostsConst.js';
 
 const { POST, GET } = apiMethodConst;
 const { JOB_NAME } = apiBodyConst;
@@ -23,6 +24,7 @@ export default defineRoutes({
      */
     "/reloadJobs": {
         method: POST,
+        allowCIDR,
         needSecret,
         needAuth,
         callback: () => {
@@ -36,6 +38,7 @@ export default defineRoutes({
      */
     "/getJobSnapshots": {
         method: GET,
+        allowCIDR,
         needSecret,
         needAuth,
         ignoreAccessPrint: true,
@@ -49,6 +52,7 @@ export default defineRoutes({
      */
     "/cancelJob": {
         method: POST,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
@@ -64,6 +68,7 @@ export default defineRoutes({
      */
     "/resumeJob": {
         method: POST,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
@@ -79,6 +84,7 @@ export default defineRoutes({
      */
     "/abortJob": {
         method: POST,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),
@@ -94,6 +100,7 @@ export default defineRoutes({
      */
     "/emitJob": {
         method: POST,
+        allowCIDR,
         needSecret,
         needAuth,
         preCheck: (/** @type {ApiRequest} */ req) => checkBodyKeyNotBlank(req, JOB_NAME),

@@ -1,4 +1,4 @@
-import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import apiMethodConst from "#constants/apiMethodConst.js";
 import { checkBodyKeyNotBlank, checkBodyKeyNotEmptyArray, checkBodyKeysNotBlank } from "#utils/preCheckUtil.js";
 import {
@@ -7,8 +7,8 @@ import {
     resumeTask, updateTaskStatus, addRssTaskFromWebhook,
     deleteTaskBatch
 } from "#modules/anime/service/rss/rssTaskService.js";
-import { NEED_AUTH_CLIENT, needAuthSingleClient } from "#common/constants/authorizationConst.js";
-import { defineRoutes } from "#common/utils/defineUtil.js";
+import { NEED_AUTH_CLIENT, needAuthSingleClient } from "#constants/authorizationConst.js";
+import { defineRoutes } from "#utils/defineUtil.js";
 
 const { POST } = apiMethodConst;
 const needSecret = () => "mAou5820.anime.rssTask";
@@ -26,6 +26,7 @@ export default defineRoutes({
     "/addTask": {
         method: POST,
         needAuth: needAuthSingleClient.ANIME,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['rssSubsId', 'rssResultId']),
         callback: req => addRssTaskFromWebhook(req.body.rssSubsId, req.body.rssResultId)
@@ -37,7 +38,7 @@ export default defineRoutes({
      */
     "/updateTaskStatus": {
         method: POST,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeysNotBlank(req, ['uuid', 'status']),
         callback: req => updateTaskStatus(req.body.uuid, req.body.status)
@@ -50,6 +51,7 @@ export default defineRoutes({
     "/taskInfo": {
         method: POST,
         needAuth: { clients: [NEED_AUTH_CLIENT.MANAGE, NEED_AUTH_CLIENT.ANIME] },
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => queryTaskTorrentInfo(req.body.taskIds)
@@ -62,6 +64,7 @@ export default defineRoutes({
     "/deleteTask": {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => deleteTask(req.body.taskId)
@@ -74,6 +77,7 @@ export default defineRoutes({
     "/deleteTaskBatch": {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotEmptyArray(req, 'taskIds'),
         callback: req => deleteTaskBatch(req.body.taskIds)
@@ -86,6 +90,7 @@ export default defineRoutes({
     "/pauseTask": {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => pauseTask(req.body.taskId)
@@ -98,6 +103,7 @@ export default defineRoutes({
     "/resumeTask": {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => resumeTask(req.body.taskId)
@@ -110,6 +116,7 @@ export default defineRoutes({
     "/completeTask": {
         method: POST,
         needAuth: needAuthSingleClient.MANAGE,
+        allowCIDR,
         needSecret,
         preCheck: req => checkBodyKeyNotBlank(req, 'taskId'),
         callback: req => completeTask(req.body.taskId)

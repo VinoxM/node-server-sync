@@ -1,5 +1,5 @@
 import { defineRoutes } from '#utils/defineUtil.js';
-import { allowLanHosts } from "#constants/allowHostsConst.js";
+import { allowLanCIDR as allowCIDR } from "#constants/allowHostsConst.js";
 import { checkQueryKeyValue } from "#utils/preCheckUtil.js";
 import { storeSSE } from "#modules/socket/sseStorage.js";
 import apiMethodConst from '#constants/apiMethodConst.js';
@@ -15,7 +15,7 @@ export default defineRoutes({
      */
     '/events': {
         method: GET,
-        allowHosts: allowLanHosts,
+        allowCIDR,
         ignoreTrace: true,
         ignoreSecret: true,
         maybeStream: true,
